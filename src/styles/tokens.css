@@ -1,0 +1,40 @@
+:root {
+  --mc-color-bg: #f5f6f7;
+  --mc-color-surface: #ffffff;
+  --mc-color-surface-hover: #f2f4f7;
+  --mc-color-border: #e4e6eb;
+  --mc-color-border-strong: #ced2d9;
+  --mc-color-text: #050505;
+  --mc-color-text-secondary: #65676b;
+  --mc-color-text-placeholder: #8d949e;
+  --mc-color-neutral: #65676b;
+  --mc-color-on-accent: #ffffff;
+  --mc-color-accent: #0064e0;
+  --mc-color-accent-hover: #0057c2;
+  --mc-color-accent-soft: rgba(0, 100, 224, 0.08);
+  --mc-color-accent-border: color-mix(in srgb, var(--mc-color-accent) 38%, var(--mc-color-border));
+  --mc-sidebar-w-collapsed: 52px;
+  --mc-sidebar-w-expanded: 220px;
+  --mc-color-success: #31a24c;
+  --mc-color-warning: #f7b928;
+  --mc-color-danger: #fa3e3e;
+  --mc-radius-sm: 6px;
+  --mc-radius-md: 8px;
+  --mc-radius-lg: 12px;
+  --mc-space-2: 8px;
+  --mc-space-3: 12px;
+  --mc-space-4: 16px;
+  --mc-space-6: 24px;
+  --mc-font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --mc-text-sm: 14px;
+  --mc-text-md: 16px;
+  --mc-text-lg: 20px;
+  --mc-topbar-h: 56px;
+  --mc-space-5: 20px;
+  --mc-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-transition-layout: 0.2s ease;
+  /** Sombra unificada para cards (ligera) */
+  --mc-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  /** Sombra al arrastrar tarjetas (Kanban): base + profundidad extra */
+  --mc-card-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.12), var(--mc-card-shadow);
+}
