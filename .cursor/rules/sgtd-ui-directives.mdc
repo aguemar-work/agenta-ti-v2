@@ -1,0 +1,48 @@
+---
+description: Directivas globales de layout, tipografía, cards, botones y UX de arrastre (SGTD web).
+globs: web/src/**/*.tsx, web/src/**/*.css
+---
+
+# UI / layout SGTD
+
+## Contenedor y sidebar
+
+- Cada vista bajo el `Outlet` de `AppShell` debe usar como **raíz** la constante `APP_PAGE_CLASS` (`web/src/lib/appLayout.ts`): `mc-module mx-auto w-full max-w-[1400px] flex flex-col gap-6`. No usar otros `max-w-*` en páginas de módulo.
+- Sidebar flotante: el contenido principal usa **margen izquierdo fijo** al ancho del sidebar colapsado (`mc-app-column`, `mc-sidebar-floating`).
+
+## Tipografía (cabecera de página)
+
+- Un solo **`<h1>`** por vista (título del módulo).
+- Un **`<h2>`** (o h3 si aplica) para **subtítulo breve** o **rango de fechas**. Sin párrafos descriptivos largos en la cabecera.
+- Títulos de bloque dentro de la página (notas, tablas, secciones) usar **`<div>`** con clases de énfasis, no duplicar jerarquía `h1`–`h2` en cada sección.
+
+## Cards y botones
+
+- Tarjetas de fila de tarea: **`.mc-task-item`** (lista / backlog / columnas) y **`.mc-task-kanban`** (tablero): mismo `border-radius` (`--mc-radius-lg`), `padding` (`--mc-space-5`), `box-shadow` (`--mc-card-shadow`), borde `1px solid`.
+- Eventos / notas en columnas tipo HOY: **`.mc-entity-card`** (misma cápsula).
+- Variante card suelta de `TaskItem`: **`.mc-task-card`**.
+- Contenedores de módulo: `mc-card`, `mc-hoy-col`, `mc-kpi-card`, `mc-kanban-board`, `mc-semana-backlog` comparten tokens de sombra/radio coherentes.
+- Primarias: `mc-btn`. Secundarias: `mc-btn-ghost` / `mc-btn-secondary`.
+
+## HOY
+
+- Completar: modal con resumen (`ModalCompletarTarea` + `completarTareaConResumen`).
+- Incidencias: histórico completado; sin completar desde esa columna.
+- Bitácora: **+ Nueva nota** / input rápido (`insertarNotaBitacoraRapida`).
+
+## MI SEMANA
+
+- Subtítulo (h2): **Semana dd/MM/AAAA - dd/MM/AAAA** (fechas locales).
+- Modal: pestañas **Tarea | Evento**; tarea → prioridad + objetivo; evento → horas + recurrencia.
+
+## OBJETIVOS
+
+- **Nuevo objetivo**; detalle con `getTareasPorObjetivo` y alta con `objetivo_id`.
+
+## PLANIFICACIÓN (jefe)
+
+- Sin duplicar KPIs de Métricas; carga por miembro + `log_accion` con **Marcar como leído**.
+
+## Drag and drop
+
+- Umbral **10px**; overlay `mc-drag-overlay-card`; placeholder `mc-drag-placeholder`; transiciones `--mc-transition-layout`.

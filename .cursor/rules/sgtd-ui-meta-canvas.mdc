@@ -1,0 +1,47 @@
+---
+description: UI SGTD — Meta Canvas; uso obligatorio de tokens y clases .mc-*
+globs: "**/*.{tsx,css}"
+alwaysApply: false
+---
+
+# UI — Meta Canvas (SGTD)
+
+## Fuente de verdad
+
+El sistema visual está definido en:
+
+- `.cursor/rules/DESIGN-SYSTEM.md`
+- `web/src/styles/tokens.css`
+- `web/src/index.css`
+
+## Reglas obligatorias
+
+- Usar únicamente tokens definidos en `:root` (sin hardcode).
+- Respetar layout base:
+  - Sidebar: 240px / 64px
+  - Main con scroll propio (`.mc-main`)
+- Estados de tareas = valores exactos de DB.
+- Espaciado: usar `gap` y `padding`, evitar `margin` en hijos.
+- Componentes base obligatorios:
+  - `.mc-btn`, `.mc-btn-secondary`, `.mc-btn-ghost`
+  - `.mc-input`
+  - `.mc-badge-*`
+  - `.mc-task-item`
+- Íconos: Lucide 16px / 20px.
+- Tipografía: Inter (400–600).
+
+## Restricciones
+
+- Máximo 1 botón primario por vista
+- Sin sombras (excepto modales/dropdowns)
+- Sin degradados
+- No inventar tokens ni estados
+
+## Validación
+
+Antes de implementar UI:
+
+- ¿Usa `.mc-task-item` o `.mc-card` correctamente?
+- ¿No hay valores hardcodeados?
+- ¿Respeta tokens?
+- ¿No hay margin innecesario?

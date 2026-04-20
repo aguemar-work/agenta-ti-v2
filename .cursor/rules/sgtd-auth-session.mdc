@@ -1,0 +1,65 @@
+---
+alwaysApply: true
+---
+
+description: SGTD - manejo obligatorio de sesión InsForge y refresh de JWT
+
+# Atuh y sesión (InsForge)
+## Regla crítica
+Nunca permitir que un JWT expirado genere errores visibles al usuario.
+No mostrar "Invalid Token" bajo ninguna circunstancia
+
+## Cliente InsForge 
+- Debe configurarse con:
+ - persistSession: true
+ - autoRefreshToken: true
+- Debe existir un único cliente signleton.
+
+## Interceptor obligatorio
+Para request a '/api/database/':
+- Si respuesta = 401:
+ - detectar si es error de token (JWT / sesión)
+ - ejecutar 'insforge.auth.refreshSession()'
+ - reintentar la petición UNA vez
+- Si falla nuevamente 
+- ejecutar `signOut()`
+  - redirigir a `/login`
+
+---
+
+## AuthProvider
+
+Debe:
+
+- exponer:
+  - user
+  - usuario (tabla `public.usuario`)
+  - loading
+
+- sincronizar sesión con `onAuthStateChange`
+
+- nunca leer token directamente de localStorage
+
+---
+
+## RBAC
+
+- El rol se obtiene desde `public.usuario`
+- Nunca usar claims JWT como fuente de verdad
+
+---
+
+## Rutas protegidas
+
+- Si `!user` → redirigir a `/login`
+- Nunca mostrar errores técnicos de sesión
+
+---
+
+## Checklist obligatorio
+
+- Cliente con persistencia y auto-refresh activo
+- Interceptor instalado una sola vez
+- AuthProvider en nivel root
+- Manejo correcto de 401
+- UI nunca expone errores de token

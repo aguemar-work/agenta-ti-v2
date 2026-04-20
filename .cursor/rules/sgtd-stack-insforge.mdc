@@ -1,0 +1,24 @@
+---
+description: Stack acordado SGTD — React + InsForge (Postgres/auth/realtime)
+alwaysApply: true
+---
+
+# Stack SGTD v1.2 (InsForge)
+
+## Recomendación
+
+- **App web:** React 18 + TypeScript + **Vite** (SPA responsive; despliegue simple). Alternativa si necesitas SSR con InsForge: Next.js (ver skill InsForge auth SSR).
+- **Backend datos:** **InsForge** (`insforge.dev`) — Postgres, auth (JWT/sesión según config InsForge), **RLS** como en Supabase. Cliente: `@insforge/sdk` según skills InsForge del repo (p. ej. `.agents/skills/insforge`).
+- **Estado async:** **TanStack Query** — listas HOY/semana/tablero, invalidación tras mutaciones, updates optimistas donde aplique.
+- **Sesión / PostgREST:** además del SDK, `web/src/lib/insforgeFetchInterceptor.ts` parchea `fetch` para `/api/database/`: **401 + token inválido** → `auth.refreshSession()` y **un reintento** (ver `sgtd-auth-session.mdc`).
+- **Drag & drop:** **@dnd-kit/core** (+ sortable si hace falta) — MI SEMANA y TABLERO.
+- **Routing:** **React Router** v6.
+- **UI:** tokens y patrones en `DESIGN-SYSTEM.md` (Inter, Lucide, clases `.mc-*`).
+- **Toasts:** **Sonner** (alineado al design system).
+- **Tailwind:** **3.4.x** (PostCSS + `tailwind.config.js`); no usar Tailwind v4 en este proyecto (requisito InsForge MCP / compatibilidad).
+- **Tareas atrasadas (regla negocio):** no solo en cliente; usar **función programada / cron en InsForge** o RPC al inicio de sesión + migraciones acordadas. Documentar el mecanismo elegido.
+
+## Reglas para el agente
+
+- Consultar skills del repo: `insforge` (frontend SDK), `insforge-cli` (SQL, deploy, secrets), `insforge-debug` ante errores.
+- No asumir columnas nuevas: el esquema canónico está en `CONTEXT.md` hasta que se apruebe un cambio explícito de schema.

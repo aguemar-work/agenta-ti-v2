@@ -1,0 +1,21 @@
+---
+description: SGTD — módulos, alcance v1.2 y restricciones de producto
+alwaysApply: true
+---
+
+# SGTD v1.2 — producto y alcance
+
+## Misión
+
+Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejecución diaria, gestión de imprevistos y métricas ponderadas por prioridad.
+
+Roles: **Jefe** y **Miembro**.
+
+---
+
+## Módulos (arquitectura funcional)
+
+Cada módulo debe implementarse como **feature independiente**:
+
+```bash
+src/features/<modulo>/

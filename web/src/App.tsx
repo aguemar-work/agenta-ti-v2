@@ -10,14 +10,12 @@ import { Metricas } from '@/pages/Metricas';
 import { MiSemana } from '@/pages/MiSemana';
 import { Objetivos } from '@/pages/Objetivos';
 import { Planificacion } from '@/pages/Planificacion';
-import { Registro } from '@/pages/Registro';
 import { Tablero } from '@/pages/Tablero';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/registro" element={<Registro />} />
       <Route
         element={
           <ProtectedRoute>

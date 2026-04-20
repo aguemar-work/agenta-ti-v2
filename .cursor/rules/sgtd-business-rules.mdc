@@ -1,0 +1,106 @@
+---
+description: SGTD — reglas de negocio obligatorias (tareas, métricas, log)
+alwaysApply: true
+---
+
+# Reglas de negocio SGTD
+
+## Fuente de verdad
+
+- Estados, tipos y enums deben coincidir con el schema de base de datos.
+- No crear valores nuevos en UI ni en lógica.
+
+---
+
+## Reglas obligatorias
+
+### 1. Tareas atrasadas
+
+- Si:
+  - `fecha_planificada < hoy`
+  - `estado IN ('pendiente','en_progreso','bloqueada')`
+
+- Entonces:
+  - `estado = 'atrasada'`
+
+- Esta lógica debe existir en backend (job, trigger o RPC).
+- La UI debe reflejar este estado de forma consistente.
+
+---
+
+### 2. Tarea LIBRE (backlog)
+
+- `tipo = 'libre'`
+- No debe tener:
+  - `fecha_planificada`
+  - `semana_planificada`
+
+- Al asignarse a un día:
+  - `tipo = 'planificada'`
+  - se define `fecha_planificada`
+
+---
+
+### 3. Imprevistos
+
+Toda tarea imprevista debe crearse como:
+
+- `tipo = 'no_planificada'`
+- `estado = 'completada'`
+- `es_imprevisto = true`
+- `fecha_planificada = hoy`
+
+---
+
+### 4. Log obligatorio
+
+Se debe registrar en `log_accion` con `justificacion` obligatoria al:
+
+- reprogramar fecha
+- cancelar
+- bloquear
+- eliminar tarea
+
+No permitir estas acciones sin justificación.
+
+---
+
+### 5. Métricas ponderadas
+
+- pesos:
+  - alta = 3
+  - media = 2
+  - baja = 1
+
+- cálculo:
+
+  % cumplimiento ponderado =
+  suma(pesos de tareas completadas planificadas) /
+  suma(pesos de tareas planificadas) × 100
+
+---
+
+### 6. Permisos en tareas (Tablero y general)
+
+- Miembro:
+  - puede ver todas las tareas
+  - solo puede modificar las propias
+
+- Las tareas ajenas:
+  - son solo lectura en UI
+  - deben estar restringidas por RLS en backend
+
+---
+
+### 7. Vista PLANIFICACIÓN
+
+- Solo accesible por rol Jefe
+- Es estrictamente de solo lectura
+- No permite crear, editar ni eliminar tareas
+
+---
+
+## Regla UI crítica
+
+- Los estados visuales (badges, columnas, etiquetas) deben coincidir exactamente con los valores de base de datos.
+- No inventar estados adicionales.

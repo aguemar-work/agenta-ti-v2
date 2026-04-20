@@ -1,0 +1,29 @@
+---
+description: SGTD - RBAC Jefe/Miembro; seguridad en backend y UI
+alwaysApply: true
+---
+
+# RBAC SGTD
+## Matriz (resumen)
+| Acción | Jefe | Miembro |
+|--------|:----:|:-------:|
+| Ver HOY de cualquier usuario | sí | no |
+| Planificar semana propia | sí | sí |
+| Vista PLANIFICACIÓN | sí | no |
+| Editar tareas de otros | sí | no |
+| CRUD objetivos | sí | no |
+| Métricas de todo el equipo | sí | no |
+| Log de acciones | sí | no |
+| Registrar imprevistos | sí | sí |
+| Crear tareas en objetivos | sí | sí |
+
+
+## Tablero (Miembro)
+
+Ve **todas** las tareas; solo edita/arrastra las **propias**. Las ajenas: solo lectura + candado en UI (`CONTEXT.md`).
+
+## Reglas de implementación
+
+1. **InsForge / Postgres:** políticas **RLS** (o equivalente) deben reflejar esta matriz. Ocultar en UI no sustituye autorización en datos.
+2. **JWT / sesión:** identificar `usuario.rol` en claims o tabla `usuario`; no confiar en flags solo en `localStorage`.
+3. **PLANIFICACIÓN:** solo Jefe; la UI no debe permitir crear/editar tareas desde esa vista.

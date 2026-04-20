@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/Button';
@@ -84,12 +84,6 @@ export function Login() {
           {busy ? 'Entrando…' : 'Entrar'}
         </Button>
       </form>
-      <p className="mt-4 text-center text-[var(--mc-text-sm)] text-[var(--mc-color-text-secondary)]">
-        ¿Sin cuenta?{' '}
-        <Link to="/registro" className="text-[var(--mc-color-accent)]">
-          Registrarse
-        </Link>
-      </p>
       </div>
     </div>
   );
