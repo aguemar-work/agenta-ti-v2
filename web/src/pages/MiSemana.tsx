@@ -44,6 +44,7 @@ function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
   return eventos.filter((e) => fechaLocalYmd(new Date(e.fecha_inicio)) === ymd);
 }
 
+/** Incluye `day-` (escritorio) y `day-mob-` (móvil) para no duplicar droppables con el mismo id en el DOM. */
 const collisionSemana: CollisionDetection = (args) => {
   const ptr = pointerWithin(args);
   const zonaPtr = ptr.find((c) => c.id === 'backlog' || String(c.id).startsWith('day-'));
@@ -160,7 +161,8 @@ export function MiSemana() {
         return;
       }
       if (oid.startsWith('day-')) {
-        const fecha = oid.slice(4);
+        // Primero `day-mob-` (más largo): si se hiciera al revés, `day-mob-…` quedaría `mob-…`.
+        const fecha = oid.replace('day-mob-', '').replace('day-', '');
         const sem = semanaIsoDesdeFecha(new Date(`${fecha}T12:00:00`));
         await mut.moverDia({ tareaId: tid, fecha, semana: sem, tipo: t.tipo });
         return;
@@ -394,7 +396,7 @@ export function MiSemana() {
                 const delDia = tareasPlan.filter((t) => t.fecha_planificada === ymd);
                 const carga = contadorCarga(delDia.length);
                 const esHoy = ymd === hoyYmd;
-                const ph = Boolean(activeDragId && overId === `day-${ymd}`);
+                const ph = Boolean(activeDragId && overId === `day-mob-${ymd}`);
                 return (
                   <div key={ymd} className={`mc-card !p-3 ${esHoy ? 'bg-[var(--mc-color-accent-soft)]' : ''}`.trim()}>
                     <div className="mb-2 flex items-center justify-between">
@@ -406,7 +408,7 @@ export function MiSemana() {
                     <button type="button" className="mc-btn-secondary mb-2 w-full text-xs" onClick={() => setModal({ modo: 'dia', fecha: ymd })}>
                       + Tarea / evento
                     </button>
-                    <SemanaDiaDrop id={`day-${ymd}`} className="flex flex-col gap-2" showPlaceholder={ph}>
+                    <SemanaDiaDrop id={`day-mob-${ymd}`} className="flex flex-col gap-2" showPlaceholder={ph}>
                       {delDia.map((t) => (
                         <DraggableTareaSemana
                           key={t.id}

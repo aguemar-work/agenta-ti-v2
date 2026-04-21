@@ -48,7 +48,12 @@ export function DraggableTareaSemana({
   const est = estadoEfectivoTablero(tarea, hoyYmd);
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
+    >
       <TaskItem
         variant="week"
         tarea={tarea}
@@ -62,6 +67,8 @@ export function DraggableTareaSemana({
               aria-label="Arrastrar tarea"
               {...listeners}
               {...attributes}
+              style={{ touchAction: 'none' }}
+              draggable={false}
             >
               <GripVertical size={16} />
             </button>
