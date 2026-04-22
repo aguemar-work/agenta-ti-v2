@@ -1,5 +1,5 @@
-import { Flag, Lock } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Flag, Lock, MoreHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { EstadoTarea, Tarea } from '@/types';
 
@@ -37,6 +37,7 @@ export type TaskItemProps = {
   onOpenDetalle?: (t: Tarea) => void;
   onEditar?: (t: Tarea) => void;
   onEliminar?: (t: Tarea) => void;
+  onBloquear?: (t: Tarea) => void;
   onReprogramar?: (t: Tarea) => void;
   onCompletar?: (t: Tarea) => void;
   onIniciar?: (t: Tarea) => void;
@@ -54,13 +55,29 @@ export function TaskItem({
   onOpenDetalle,
   onEditar,
   onEliminar,
+  onBloquear,
   onReprogramar,
   onCompletar,
   onIniciar,
 }: TaskItemProps) {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuAbierto) return;
+    function onPointerDown(ev: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(ev.target as Node)) {
+        setMenuAbierto(false);
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [menuAbierto]);
+
   const est = estadoVisual ?? tarea.estado;
   const incidenciaEstatica = tarea.es_imprevisto && tarea.tipo === 'no_planificada';
   const sinQuick = sinAccionesRapidas || incidenciaEstatica;
+  const estaCompletada = est === 'completada' || est === 'cancelada';
 
   const flagColor =
     tarea.prioridad === 'alta'
@@ -82,54 +99,101 @@ export function TaskItem({
     </div>
   );
 
-  const quickAcciones =
-    !sinQuick && !readOnly && (onIniciar || onCompletar) && est !== 'completada' && est !== 'cancelada' ? (
-      <div className="mt-2 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+  const ctaPrincipal =
+    !sinQuick && !readOnly && !estaCompletada ? (
+      <>
         {(est === 'pendiente' || est === 'atrasada') && onIniciar ? (
-          <button type="button" className="mc-btn !px-3 !py-2 text-xs" onClick={() => onIniciar(tarea)}>
+          <button
+            type="button"
+            className="mc-btn !px-3 !py-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onIniciar(tarea);
+            }}
+          >
             Iniciar
           </button>
         ) : null}
         {est === 'en_progreso' && onCompletar ? (
-          <button type="button" className="mc-btn !px-3 !py-2 text-xs" onClick={() => onCompletar(tarea)}>
+          <button
+            type="button"
+            className="mc-btn !px-3 !py-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompletar(tarea);
+            }}
+          >
             Completar
           </button>
         ) : null}
+      </>
+    ) : null;
+
+  const menuOpciones =
+    !readOnly && !estaCompletada && (onReprogramar || onEliminar || onBloquear || onEditar) ? (
+      <div ref={menuRef} className="relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="mc-btn-ghost !p-1 text-[var(--mc-color-text-secondary)]"
+          aria-label="Mas opciones"
+          onClick={() => setMenuAbierto((v) => !v)}
+        >
+          <MoreHorizontal size={16} />
+        </button>
+        {menuAbierto ? (
+          <div className="absolute right-0 top-7 z-20 min-w-[150px] rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] py-1 shadow-sm">
+            {onReprogramar ? (
+              <button
+                type="button"
+                className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs text-[var(--mc-color-warning)]"
+                onClick={() => {
+                  setMenuAbierto(false);
+                  onReprogramar(tarea);
+                }}
+              >
+                Reprogramar
+              </button>
+            ) : null}
+            {(est === 'pendiente' || est === 'atrasada' || est === 'en_progreso') && onBloquear ? (
+              <button
+                type="button"
+                className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs text-[var(--mc-color-warning)]"
+                onClick={() => {
+                  setMenuAbierto(false);
+                  onBloquear(tarea);
+                }}
+              >
+                Bloquear
+              </button>
+            ) : null}
+            {onEditar ? (
+              <button
+                type="button"
+                className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs text-[var(--mc-color-accent)]"
+                onClick={() => {
+                  setMenuAbierto(false);
+                  onEditar(tarea);
+                }}
+              >
+                Editar
+              </button>
+            ) : null}
+            {onEliminar ? (
+              <button
+                type="button"
+                className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs text-[var(--mc-color-danger)]"
+                onClick={() => {
+                  setMenuAbierto(false);
+                  onEliminar(tarea);
+                }}
+              >
+                Eliminar
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     ) : null;
-
-  const repr =
-    !readOnly && est === 'atrasada' && onReprogramar ? (
-      <button
-        type="button"
-        className="mc-btn-ghost mt-2 px-0 text-xs font-medium !text-[var(--mc-color-accent)]"
-        onClick={(e) => {
-          e.stopPropagation();
-          onReprogramar(tarea);
-        }}
-      >
-        Reprogramar…
-      </button>
-    ) : null;
-
-  const cuerpoClicable = (childrenTitle: ReactNode) => (
-    <div
-      role={onOpenDetalle ? 'button' : undefined}
-      tabIndex={onOpenDetalle ? 0 : undefined}
-      className={onOpenDetalle ? 'cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--mc-color-accent)]' : ''}
-      onClick={() => onOpenDetalle?.(tarea)}
-      onKeyDown={(e) => {
-        if (!onOpenDetalle) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpenDetalle(tarea);
-        }
-      }}
-    >
-      {childrenTitle}
-      {meta}
-    </div>
-  );
 
   if (variant === 'kanban') {
     return (
@@ -159,7 +223,7 @@ export function TaskItem({
           </div>
           {dragHandle}
         </div>
-        {quickAcciones}
+        {ctaPrincipal ? <div className="mt-2 flex flex-wrap gap-2">{ctaPrincipal}</div> : null}
       </article>
     );
   }
@@ -169,36 +233,37 @@ export function TaskItem({
       <article className={`mc-task-item ${readOnly ? 'opacity-70' : ''} ${atrasadaBar}`}>
         {dragHandle ? <div className="shrink-0 pt-0.5">{dragHandle}</div> : null}
         <div className="min-w-0 flex-1">
-          {cuerpoClicable(
-            <div className={`flex items-start gap-2 ${lineThrough}`}>
-              <h3 className="text-sm font-medium text-[var(--mc-color-text)]">{tarea.titulo}</h3>
-              {tarea.prioridad !== 'baja' ? <Flag size={16} style={{ color: flagColor }} aria-hidden /> : null}
-            </div>,
-          )}
-          {quickAcciones}
-          {!readOnly && (onEditar || onEliminar) ? (
-            <div className="mt-2 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-              {onEditar ? (
-                <button
-                  type="button"
-                  className="mc-btn-ghost px-0 text-xs font-medium !text-[var(--mc-color-accent)]"
-                  onClick={() => onEditar(tarea)}
-                >
-                  Editar
-                </button>
-              ) : null}
-              {onEliminar ? (
-                <button
-                  type="button"
-                  className="mc-btn-ghost px-0 text-xs font-medium !text-[var(--mc-color-danger)]"
-                  onClick={() => onEliminar(tarea)}
-                >
-                  Eliminar
-                </button>
-              ) : null}
+          <div className="flex items-start justify-between gap-2">
+            <div
+              className={`min-w-0 flex-1 ${onOpenDetalle ? 'cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--mc-color-accent)]' : ''}`}
+              role={onOpenDetalle ? 'button' : undefined}
+              tabIndex={onOpenDetalle ? 0 : undefined}
+              onClick={() => onOpenDetalle?.(tarea)}
+              onKeyDown={(e) => {
+                if (!onOpenDetalle) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenDetalle(tarea);
+                }
+              }}
+            >
+              <div className={`flex items-start gap-2 ${lineThrough}`}>
+                <h3 className="text-sm font-medium text-[var(--mc-color-text)]">{tarea.titulo}</h3>
+                {tarea.prioridad !== 'baja' ? <Flag size={16} style={{ color: flagColor }} aria-hidden /> : null}
+              </div>
+              {meta}
+            </div>
+            {!estaCompletada ? (
+              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                {menuOpciones}
+              </div>
+            ) : null}
+          </div>
+          {!estaCompletada ? (
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+              {ctaPrincipal}
             </div>
           ) : null}
-          {repr}
         </div>
       </article>
     );
@@ -229,8 +294,7 @@ export function TaskItem({
         {meta}
       </div>
       <div onClick={(e) => e.stopPropagation()}>
-        {quickAcciones}
-        {repr}
+        {ctaPrincipal ? <div className="mt-2 flex flex-wrap gap-2">{ctaPrincipal}</div> : null}
       </div>
     </article>
   );

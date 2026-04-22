@@ -251,3 +251,103 @@ export async function eliminarTareaConMotivo(input: {
   const { error: eDel } = await insforge.database.from('tarea').delete().eq('id', input.tareaId);
   if (eDel) throw eDel;
 }
+
+export async function bloquearTareaConLog(input: {
+  tareaId: string;
+  usuarioId: string;
+  justificacion: string;
+}): Promise<void> {
+  const insforge = getInsforge();
+  const just = input.justificacion.trim();
+  if (just.length < 10) {
+    throw new Error('La justificación debe tener al menos 10 caracteres.');
+  }
+  const { error: e1 } = await insforge.database
+    .from('tarea')
+    .update({ estado: 'bloqueada' })
+    .eq('id', input.tareaId);
+  if (e1) throw e1;
+  const { error: e2 } = await insforge.database.from('log_accion').insert([
+    {
+      tarea_id: input.tareaId,
+      usuario_id: input.usuarioId,
+      tipo_accion: 'editada',
+      valor_anterior: null,
+      valor_nuevo: { estado: 'bloqueada' },
+      justificacion: just,
+      leido_por_jefe: false,
+    },
+  ]);
+  if (e2) throw e2;
+}
+
+export async function reprogramarTareaConLog(input: {
+  tareaId: string;
+  usuarioId: string;
+  nuevaFecha: string;
+  justificacion: string;
+  nuevoEstado?: Tarea['estado'];
+}): Promise<void> {
+  const insforge = getInsforge();
+  const semana = semanaIsoDesdeFecha(new Date(`${input.nuevaFecha}T12:00:00`));
+  const patch: Record<string, unknown> = {
+    fecha_planificada: input.nuevaFecha,
+    semana_planificada: semana,
+  };
+  if (input.nuevoEstado) patch.estado = input.nuevoEstado;
+
+  const { error: e1 } = await insforge.database.from('tarea').update(patch).eq('id', input.tareaId);
+  if (e1) {
+    console.error('PATCH error:', JSON.stringify(e1));
+    throw e1;
+  }
+
+  const { error: e2 } = await insforge.database.from('log_accion').insert([
+    {
+      tarea_id: input.tareaId,
+      usuario_id: input.usuarioId,
+      tipo_accion: 'reprogramada',
+      valor_anterior: null,
+      valor_nuevo: { fecha_planificada: input.nuevaFecha, estado: input.nuevoEstado ?? null },
+      justificacion: input.justificacion,
+    },
+  ]);
+  if (e2) throw e2;
+}
+
+export async function desbloquearTareaConLog(input: {
+  tareaId: string;
+  usuarioId: string;
+  nuevaFecha: string;
+  justificacion: string;
+}): Promise<void> {
+  const insforge = getInsforge();
+  const semana = semanaIsoDesdeFecha(new Date(`${input.nuevaFecha}T12:00:00`));
+  const just = input.justificacion.trim();
+  if (just.length < 10) {
+    throw new Error('La justificación debe tener al menos 10 caracteres.');
+  }
+
+  const { error: e1 } = await insforge.database
+    .from('tarea')
+    .update({
+      estado: 'pendiente',
+      fecha_planificada: input.nuevaFecha,
+      semana_planificada: semana,
+    })
+    .eq('id', input.tareaId);
+  if (e1) throw e1;
+
+  const { error: e2 } = await insforge.database.from('log_accion').insert([
+    {
+      tarea_id: input.tareaId,
+      usuario_id: input.usuarioId,
+      tipo_accion: 'estado_cambiado',
+      valor_anterior: { estado: 'bloqueada' },
+      valor_nuevo: { estado: 'pendiente', fecha_planificada: input.nuevaFecha },
+      justificacion: just,
+      leido_por_jefe: false,
+    },
+  ]);
+  if (e2) throw e2;
+}

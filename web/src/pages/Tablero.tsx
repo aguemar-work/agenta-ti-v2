@@ -15,15 +15,15 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { ColumnaTableroId, FiltrosTablero } from '@/api/tablero';
-import { eliminarTareaConMotivo, actualizarTarea } from '@/api/semana';
+import { desbloquearTareaConLog, eliminarTareaConMotivo, actualizarTarea } from '@/api/semana';
 import { snapTareaFechaAlPorHacer } from '@/api/tablero';
 import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
 import { ColumnaKanban } from '@/components/tablero/ColumnaKanban';
 import { DraggableTareaTablero } from '@/components/tablero/DraggableTareaTablero';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
+import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
 import { ModalJustificacion } from '@/components/tareas/ModalJustificacion';
-import { TaskItem } from '@/components/tareas/TaskItem';
 import { agruparTareasTablero, useMoverColumnaMutation, useObjetivosTablero, useTareasTableroQuery, useUsuariosNombreTablero } from '@/hooks/useTablero';
 import { completarTareaConResumen } from '@/hooks/useTareas';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
@@ -33,6 +33,24 @@ import { useAuthStore } from '@/store/authStore';
 import type { EstadoTarea, Tarea } from '@/types';
 
 const COLUMNAS: ColumnaTableroId[] = ['pendiente', 'en_progreso', 'bloqueada', 'completada'];
+
+const overlayBadgeClass: Record<string, string> = {
+  pendiente: 'mc-badge-neutral',
+  en_progreso: 'mc-badge-info',
+  atrasada: 'mc-badge-danger',
+  bloqueada: 'mc-badge-warning',
+  completada: 'mc-badge-success',
+  reprogramada: 'mc-badge-neutral',
+};
+
+const overlayBadgeLabel: Record<string, string> = {
+  pendiente: 'Pendiente',
+  en_progreso: 'En progreso',
+  atrasada: 'Atrasada',
+  bloqueada: 'Bloqueada',
+  completada: 'Completada',
+  reprogramada: 'Reprogramada',
+};
 
 const collisionTablero: CollisionDetection = (args) => {
   const ptr = pointerWithin(args);
@@ -57,6 +75,7 @@ export function Tablero() {
   const [overColId, setOverColId] = useState<string | null>(null);
   const [detalleTareaId, setDetalleTareaId] = useState<string | null>(null);
   const [completarTarea, setCompletarTarea] = useState<Tarea | null>(null);
+  const [desbloquearTarea, setDesbloquearTarea] = useState<Tarea | null>(null);
 
   const filtros: FiltrosTablero = useMemo(() => {
     return {
@@ -104,12 +123,6 @@ export function Tablero() {
   const hoy = fechaLocalYmd(new Date());
   const columnas = useMemo(() => agruparTareasTablero(tareas, hoy), [tareas, hoy]);
 
-  const objetivoTitulo = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const o of objetivos) m.set(o.id, o.titulo);
-    return m;
-  }, [objetivos]);
-
   const tareaDragOverlay = useMemo(() => {
     if (!activeDragId) return null;
     const tid = String(activeDragId).replace('kanban-', '');
@@ -151,6 +164,11 @@ export function Tablero() {
       return;
     }
 
+    if (actual === 'completada' && esJefe) {
+      setModalJust({ tareaId: tid, nuevo: nuevo as EstadoTarea });
+      return;
+    }
+
     if (nuevo === 'pendiente' && actual === 'atrasada') {
       try {
         await snapTareaFechaAlPorHacer(tid, hoy);
@@ -188,6 +206,19 @@ export function Tablero() {
       setModalJust(null);
     } catch {
       toast.error('No se pudo guardar.');
+    }
+  }
+
+  async function confirmarDesbloqueo(input: { tareaId: string; nuevaFecha: string; justificacion: string }) {
+    try {
+      await desbloquearTareaConLog({ ...input, usuarioId: me.id });
+      setDesbloquearTarea(null);
+      toast.success('Tarea desbloqueada');
+      await qc.invalidateQueries({ queryKey: ['tablero'] });
+      await qc.invalidateQueries({ queryKey: ['semana'] });
+      await qc.invalidateQueries({ queryKey: ['tareas-hoy'] });
+    } catch {
+      toast.error('No se pudo desbloquear la tarea.');
     }
   }
 
@@ -285,6 +316,7 @@ export function Tablero() {
                 <ColumnaKanban
                   key={col}
                   columna={col}
+                  count={(columnas[col] ?? []).length}
                   showPlaceholder={Boolean(activeDragId && overColId === `col:${col}`)}
                 >
                   {(columnas[col] ?? []).map((t) => (
@@ -293,11 +325,13 @@ export function Tablero() {
                       tarea={t}
                       hoyYmd={hoy}
                       canDrag={puedeGestionar(t)}
+                      esJefe={esJefe}
                       asignadoNombre={nombres[t.asignado_a]}
-                      objetivoTitulo={t.objetivo_id ? objetivoTitulo.get(t.objetivo_id) ?? null : null}
                       onOpenDetalle={() => setDetalleTareaId(t.id)}
                       onIniciar={() => void iniciarDesdeTablero(t)}
                       onCompletar={() => setCompletarTarea(t)}
+                      onBloquear={() => setModalJust({ tareaId: t.id, nuevo: 'bloqueada' })}
+                      onDesbloquear={esJefe ? () => setDesbloquearTarea(t) : undefined}
                     />
                   ))}
                 </ColumnaKanban>
@@ -306,17 +340,32 @@ export function Tablero() {
           </div>
           <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
             {tareaDragOverlay ? (
-              <div className="mc-drag-overlay-card pointer-events-none max-w-[300px]">
-                <TaskItem
-                  variant="kanban"
-                  tarea={tareaDragOverlay}
-                  readOnly
-                  estadoVisual={estadoEfectivoTablero(tareaDragOverlay, hoy)}
-                  asignadoNombre={nombres[tareaDragOverlay.asignado_a]}
-                  objetivoTitulo={
-                    tareaDragOverlay.objetivo_id ? objetivoTitulo.get(tareaDragOverlay.objetivo_id) ?? null : null
-                  }
-                />
+              <div
+                className="mc-drag-overlay-card pointer-events-none max-w-[300px]"
+                style={{ transform: 'rotate(2deg)', boxShadow: '0 18px 44px -8px rgba(0,0,0,0.28)' }}
+              >
+                {(() => {
+                  const est = estadoEfectivoTablero(tareaDragOverlay, hoy);
+                  const atrasadaBar = est === 'atrasada' ? 'border-l-2 border-[var(--mc-color-danger)]' : '';
+                  const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
+                  return (
+                    <div className={`mc-card !p-3 flex flex-col gap-2 ${atrasadaBar} ${bloqueadaBar}`.trim()}>
+                      <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug line-clamp-2">
+                        {tareaDragOverlay.titulo}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`mc-badge ${overlayBadgeClass[est] ?? 'mc-badge-neutral'} text-[10px]`}>
+                          {overlayBadgeLabel[est] ?? est}
+                        </span>
+                        {nombres[tareaDragOverlay.asignado_a] ? (
+                          <span className="text-[10px] text-[var(--mc-color-text-secondary)]">
+                            {nombres[tareaDragOverlay.asignado_a]}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ) : null}
           </DragOverlay>
@@ -325,10 +374,20 @@ export function Tablero() {
 
       <ModalJustificacion
         open={modalJust !== null}
-        titulo="Bloquear tarea"
-        descripcion="Indica el motivo (mínimo 10 caracteres)."
+        titulo={modalJust?.nuevo === 'bloqueada' ? 'Bloquear tarea' : 'Mover tarea completada'}
+        descripcion={
+          modalJust?.nuevo === 'bloqueada'
+            ? 'Indica el motivo (mínimo 10 caracteres).'
+            : 'Indica la justificación del cambio de estado (mínimo 10 caracteres).'
+        }
         onClose={() => setModalJust(null)}
         onConfirm={confirmarJustificacion}
+      />
+
+      <ModalDesbloquear
+        tarea={desbloquearTarea}
+        onClose={() => setDesbloquearTarea(null)}
+        onConfirm={confirmarDesbloqueo}
       />
 
       <ModalCompletarTarea

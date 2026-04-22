@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { bloquearTareaConLog, reprogramarTareaConLog as reprogramarTareaConLogApi } from '@/api/semana';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { getInsforge } from '@/lib/insforge';
-import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Tarea, Usuario } from '@/types';
 
 const Q_HOY = 'tareas-hoy';
@@ -141,28 +141,15 @@ export async function reprogramarTareaConLog(input: {
   usuarioId: string;
   nuevaFecha: string;
   justificacion: string;
+  nuevoEstado?: Tarea['estado'];
 }): Promise<void> {
-  const insforge = getInsforge();
-  const semana = semanaIsoDesdeFecha(new Date(`${input.nuevaFecha}T12:00:00`));
+  return reprogramarTareaConLogApi(input);
+}
 
-  const { error: e1 } = await insforge.database
-    .from('tarea')
-    .update({
-      fecha_planificada: input.nuevaFecha,
-      semana_planificada: semana,
-    })
-    .eq('id', input.tareaId);
-  if (e1) throw e1;
-
-  const { error: e2 } = await insforge.database.from('log_accion').insert([
-    {
-      tarea_id: input.tareaId,
-      usuario_id: input.usuarioId,
-      tipo_accion: 'reprogramada',
-      valor_anterior: null,
-      valor_nuevo: { fecha_planificada: input.nuevaFecha },
-      justificacion: input.justificacion,
-    },
-  ]);
-  if (e2) throw e2;
+export async function bloquearTarea(input: {
+  tareaId: string;
+  usuarioId: string;
+  justificacion: string;
+}): Promise<void> {
+  return bloquearTareaConLog(input);
 }

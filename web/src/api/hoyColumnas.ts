@@ -31,17 +31,16 @@ export async function getIncidenciasAbiertas(usuarioId: string): Promise<Tarea[]
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
 }
 
-/** Incidencias / imprevistos ya cerrados (histórico en columna Hoy). */
-export async function getIncidenciasHistoricas(usuarioId: string, limit = 40): Promise<Tarea[]> {
+/** Todas las incidencias del día (abiertas + cerradas). */
+export async function getIncidenciasDelDia(usuarioId: string, ymd: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
     .from('tarea')
     .select('*')
     .eq('asignado_a', usuarioId)
-    .eq('estado', 'completada')
     .eq('es_imprevisto', true)
-    .order('fecha_completada', { ascending: false })
-    .limit(limit);
+    .eq('fecha_planificada', ymd)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
 }
@@ -91,7 +90,8 @@ export async function crearIncidenciaHoy(input: CrearIncidenciaInput): Promise<T
     titulo: input.titulo,
     descripcion: input.descripcion?.trim() || null,
     prioridad: input.prioridad,
-    estado: 'pendiente' as const,
+    estado: 'completada' as const,
+    fecha_completada: new Date().toISOString(),
     tipo: 'no_planificada' as const,
     fecha_planificada: input.fecha_planificada,
     semana_planificada: semana,

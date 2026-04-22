@@ -6,8 +6,8 @@ import {
   type DragOverEvent,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   pointerWithin,
-  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -21,18 +21,21 @@ import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { SemanaDiaDrop } from '@/components/semana/SemanaDiaDrop';
+import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
+import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { TaskItem } from '@/components/tareas/TaskItem';
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
-import { useMarcarAtrasadasAlMontar, useUsuariosParaSelector } from '@/hooks/useTareas';
+import { bloquearTarea, reprogramarTareaConLog, useMarcarAtrasadasAlMontar, useUsuariosParaSelector } from '@/hooks/useTareas';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
+import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { agregarDias, inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
 import { useAuthStore } from '@/store/authStore';
 import type { Evento, Tarea, TipoEvento } from '@/types';
 
-const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 function contadorCarga(n: number): string {
   if (n <= 2) return '🟢';
@@ -44,26 +47,16 @@ function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
   return eventos.filter((e) => fechaLocalYmd(new Date(e.fecha_inicio)) === ymd);
 }
 
-/** Incluye `day-` (escritorio) y `day-mob-` (móvil) para no duplicar droppables con el mismo id en el DOM. */
+/** Prioriza zonas de día (`day-*`) y backlog en la detección de colisiones. */
 const collisionSemana: CollisionDetection = (args) => {
   const ptr = pointerWithin(args);
-  const zonaPtr = ptr.find((c) => c.id === 'backlog' || String(c.id).startsWith('day-'));
+  const zonaPtr = ptr.find((c) => String(c.id).startsWith('day-'));
   if (zonaPtr) return [zonaPtr];
   const corners = closestCorners(args);
-  const zona = corners.find((c) => c.id === 'backlog' || String(c.id).startsWith('day-'));
+  const zona = corners.find((c) => String(c.id).startsWith('day-'));
   if (zona) return [zona];
   return corners;
 };
-
-function BacklogDrop({ children, showPlaceholder }: { children: React.ReactNode; showPlaceholder?: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id: 'backlog' });
-  return (
-    <div ref={setNodeRef} className={`mc-semana-backlog min-h-[200px] ${isOver ? 'mc-drop-target-active' : ''}`.trim()}>
-      {showPlaceholder ? <div className="mc-drag-placeholder" aria-hidden /> : null}
-      {children}
-    </div>
-  );
-}
 
 export function MiSemana() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -75,6 +68,9 @@ export function MiSemana() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [completarTareaId, setCompletarTareaId] = useState<string | null>(null);
+  const [bloquearTareaState, setBloquearTareaState] = useState<Tarea | null>(null);
+  const [reprDetalleTarea, setReprDetalleTarea] = useState<Tarea | null>(null);
+  const [reprDragTarea, setReprDragTarea] = useState<{ tarea: Tarea; fecha: string; semana: string } | null>(null);
 
   useEffect(() => {
     if (usuario?.id && seleccionId === undefined) {
@@ -95,24 +91,30 @@ export function MiSemana() {
   const uid = seleccionId ?? usuario?.id;
   const semanaISO = semanaIsoDesdeFecha(lunes);
   useMarcarAtrasadasAlMontar(uid);
-  const { tareasPlan, libres, eventos, isLoading, isError } = useMiSemanaData(uid, semanaISO, lunes);
+  const { tareasPlan, eventos, isError } = useMiSemanaData(uid, semanaISO, lunes);
   const mut = useMiSemanaMutations(uid, semanaISO);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    }),
+  );
 
   const diasSemana = useMemo(() => {
     const out: Date[] = [];
-    for (let i = 0; i < 7; i++) out.push(agregarDias(lunes, i));
+    for (let i = 0; i < 6; i++) out.push(agregarDias(lunes, i));
     return out;
   }, [lunes]);
 
   const tareaPorId = useMemo(() => {
     const m = new Map<string, Tarea>();
     for (const t of tareasPlan) m.set(t.id, t);
-    for (const t of libres) m.set(t.id, t);
     return m;
-  }, [tareasPlan, libres]);
-  const domingo = useMemo(() => agregarDias(lunes, 6), [lunes]);
+  }, [tareasPlan]);
+  const sabado = useMemo(() => agregarDias(lunes, 5), [lunes]);
   const tareaDetalle = detalleTareaId ? tareaPorId.get(detalleTareaId) ?? null : null;
   const tareaCompletar = completarTareaId ? tareaPorId.get(completarTareaId) ?? null : null;
   const activeTareaDrag = useMemo(() => {
@@ -133,15 +135,6 @@ export function MiSemana() {
     return esJefe || t.asignado_a === me.id;
   }
 
-  async function iniciarTareaSemana(t: Tarea) {
-    try {
-      await mut.iniciarTarea({ tareaId: t.id, usuarioId: me.id });
-      toast.success('Tarea en progreso');
-    } catch {
-      toast.error('No se pudo iniciar la tarea.');
-    }
-  }
-
   function onDragOver(ev: DragOverEvent) {
     setOverId(ev.over ? String(ev.over.id) : null);
   }
@@ -156,19 +149,37 @@ export function MiSemana() {
     if (!t) return;
     const oid = String(over.id);
     try {
-      if (oid === 'backlog') {
-        if (t.tipo === 'planificada') await mut.moverBacklog(tid);
-        return;
-      }
       if (oid.startsWith('day-')) {
-        // Primero `day-mob-` (más largo): si se hiciera al revés, `day-mob-…` quedaría `mob-…`.
-        const fecha = oid.replace('day-mob-', '').replace('day-', '');
+        const fecha = oid.slice(4);
         const sem = semanaIsoDesdeFecha(new Date(`${fecha}T12:00:00`));
+        if (t.tipo === 'planificada' && t.fecha_planificada && t.fecha_planificada !== fecha) {
+          setReprDragTarea({ tarea: t, fecha, semana: sem });
+          return;
+        }
         await mut.moverDia({ tareaId: tid, fecha, semana: sem, tipo: t.tipo });
-        return;
       }
     } catch {
       toast.error('No se pudo mover la tarea.');
+    }
+  }
+
+  async function confirmarReprDrag(input: { tareaId: string; nuevaFecha: string; justificacion: string }) {
+    if (!reprDragTarea) return;
+    const { tarea: t, semana } = reprDragTarea;
+    try {
+      const nuevoEstado = resolverEstadoReprogramacion(t, hoyYmd);
+      await reprogramarTareaConLog({
+        tareaId: input.tareaId,
+        usuarioId: me.id,
+        nuevaFecha: input.nuevaFecha,
+        justificacion: input.justificacion,
+        nuevoEstado,
+      });
+      setReprDragTarea(null);
+      toast.success('Tarea reprogramada');
+      await mut.moverDia({ tareaId: input.tareaId, fecha: input.nuevaFecha, semana, tipo: t.tipo });
+    } catch {
+      toast.error('No se pudo reprogramar la tarea.');
     }
   }
 
@@ -277,7 +288,7 @@ export function MiSemana() {
             Mi semana
           </h1>
           <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">
-            {fechaLocalDdMmYyyy(lunes)} — {fechaLocalDdMmYyyy(domingo)}
+            {fechaLocalDdMmYyyy(lunes)} — {fechaLocalDdMmYyyy(sabado)}
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -322,93 +333,75 @@ export function MiSemana() {
         }}
       >
         <div className="flex flex-col gap-6">
+          {(() => {
+            const conteos = { pendiente: 0, en_progreso: 0, atrasada: 0, reprogramada: 0, completada: 0 };
+            for (const t of tareasPlan) {
+              const est = estadoEfectivoTablero(t, hoyYmd);
+              if (est in conteos) conteos[est as keyof typeof conteos]++;
+            }
+            return (
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { key: 'pendiente', label: 'Pendientes', color: 'text-[var(--mc-color-text)]' },
+                  { key: 'en_progreso', label: 'En progreso', color: 'text-[var(--mc-color-accent)]' },
+                  { key: 'atrasada', label: 'Atrasadas', color: 'text-[var(--mc-color-danger)]' },
+                  { key: 'reprogramada', label: 'Reprogramadas', color: 'text-[var(--mc-color-text-secondary)]' },
+                  { key: 'completada', label: 'Completadas', color: 'text-[var(--mc-color-success)]' },
+                ].map(({ key, label, color }) => (
+                  <div key={key} className="mc-card flex min-w-[90px] flex-col gap-1 !p-3">
+                    <span className={`text-xl font-semibold ${color}`}>{conteos[key as keyof typeof conteos]}</span>
+                    <span className="text-xs text-[var(--mc-color-text-secondary)]">{label}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <section className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
               Agenda semanal
             </div>
-            <div className="mc-card !p-0 hidden overflow-hidden md:block">
-              <div className="grid grid-cols-7">
-                {diasSemana.map((d, idx) => {
-                  const ymd = fechaLocalYmd(d);
-                  const delDia = tareasPlan.filter((t) => t.fecha_planificada === ymd);
-                  const carga = contadorCarga(delDia.length);
-                  const br = (idx + 1) % 7 !== 0 ? 'border-r border-[var(--mc-color-border)]' : '';
-                  const esHoy = ymd === hoyYmd;
-                  const ph = Boolean(activeDragId && overId === `day-${ymd}`);
-                  return (
-                    <div
-                      key={ymd}
-                      className={`flex min-h-[220px] min-w-0 flex-col ${br} ${esHoy ? 'bg-[var(--mc-color-accent-soft)]' : ''}`.trim()}
-                    >
-                      <div
-                        className={`flex items-center justify-between gap-1 border-b border-[var(--mc-color-border)] px-2 py-2 ${esHoy ? 'bg-[var(--mc-color-accent-soft)]' : 'bg-[var(--mc-color-bg)]'}`}
-                      >
-                        <span className="text-xs font-semibold text-[var(--mc-color-text)]">
-                          {DIAS_CORTO[idx]} {d.getDate()}
-                        </span>
-                        <span className="text-xs" aria-hidden>
-                          {carga}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="mc-btn-ghost w-full justify-center border-b border-[var(--mc-color-border)] !py-2 text-xs"
-                        onClick={() => setModal({ modo: 'dia', fecha: ymd })}
-                      >
-                        +
-                      </button>
-                      <SemanaDiaDrop
-                        id={`day-${ymd}`}
-                        className="flex min-h-[120px] flex-1 flex-col gap-2 p-2"
-                        showPlaceholder={ph}
-                      >
-                        {delDia.map((t) => (
-                          <DraggableTareaSemana
-                            key={t.id}
-                            tarea={t}
-                            hoyYmd={hoyYmd}
-                            readOnly={!puedeGestionarTarea(t)}
-                            onOpenDetalle={(x) => setDetalleTareaId(x.id)}
-                            onEditar={(x) => setDetalleTareaId(x.id)}
-                            onEliminar={(x) => setDetalleTareaId(x.id)}
-                            onCompletar={puedeGestionarTarea(t) ? (x) => setCompletarTareaId(x.id) : undefined}
-                            onIniciar={puedeGestionarTarea(t) ? (x) => void iniciarTareaSemana(x) : undefined}
-                          />
-                        ))}
-                        {eventosEnDia(eventos, ymd).map((ev) => (
-                          <div key={ev.id} className="mc-entity-card !text-xs text-[var(--mc-color-text-secondary)]">
-                            <span className="font-medium text-[var(--mc-color-text)]">{ev.titulo}</span>
-                            <span className="block">
-                              {new Date(ev.fecha_inicio).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        ))}
-                      </SemanaDiaDrop>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-3 md:hidden">
+            <div className="mc-card !p-0 overflow-hidden">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:gap-0">
               {diasSemana.map((d, idx) => {
                 const ymd = fechaLocalYmd(d);
                 const delDia = tareasPlan.filter((t) => t.fecha_planificada === ymd);
                 const carga = contadorCarga(delDia.length);
                 const esHoy = ymd === hoyYmd;
-                const ph = Boolean(activeDragId && overId === `day-mob-${ymd}`);
+                const ph = Boolean(activeDragId && overId === `day-${ymd}`);
                 return (
-                  <div key={ymd} className={`mc-card !p-3 ${esHoy ? 'bg-[var(--mc-color-accent-soft)]' : ''}`.trim()}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-semibold">
-                        {DIAS_CORTO[idx]} {fechaLocalYmd(d)}
+                  <div
+                    key={ymd}
+                    className={`flex min-h-[220px] min-w-0 flex-col border-b border-[var(--mc-color-border)] md:border-b-0 md:border-r md:last:border-r-0 ${esHoy ? 'bg-[var(--mc-color-accent-soft)]' : ''}`.trim()}
+                  >
+                    <div className="flex items-center justify-between gap-1 border-b border-[var(--mc-color-border)] px-2 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className={`text-xs font-semibold ${esHoy ? 'text-[var(--mc-color-accent)]' : 'text-[var(--mc-color-text)]'}`}>
+                          {DIAS_CORTO[idx]} {d.getDate()}
+                          {esHoy ? ' · hoy' : ''}
+                        </span>
+                        {eventosEnDia(eventos, ymd).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {eventosEnDia(eventos, ymd).map((ev) => (
+                              <span key={ev.id} className="flex items-center gap-1 text-[10px] text-[var(--mc-color-warning)]">
+                                <span className="inline-block h-[6px] w-[6px] rounded-full bg-[var(--mc-color-warning)]" />
+                                {new Date(ev.fecha_inicio).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="text-xs" aria-hidden>
+                        {carga}
                       </span>
-                      <span>{carga}</span>
                     </div>
-                    <button type="button" className="mc-btn-secondary mb-2 w-full text-xs" onClick={() => setModal({ modo: 'dia', fecha: ymd })}>
+                    <button
+                      type="button"
+                      className="mc-btn-ghost w-full justify-center border-b border-[var(--mc-color-border)] !py-2 text-xs"
+                      onClick={() => setModal({ modo: 'dia', fecha: ymd })}
+                    >
                       + Tarea / evento
                     </button>
-                    <SemanaDiaDrop id={`day-mob-${ymd}`} className="flex flex-col gap-2" showPlaceholder={ph}>
+                    <SemanaDiaDrop id={`day-${ymd}`} className="flex min-h-[120px] flex-1 flex-col gap-2 p-2" showPlaceholder={ph}>
                       {delDia.map((t) => (
                         <DraggableTareaSemana
                           key={t.id}
@@ -416,62 +409,22 @@ export function MiSemana() {
                           hoyYmd={hoyYmd}
                           readOnly={!puedeGestionarTarea(t)}
                           onOpenDetalle={(x) => setDetalleTareaId(x.id)}
-                          onEditar={(x) => setDetalleTareaId(x.id)}
-                          onEliminar={(x) => setDetalleTareaId(x.id)}
-                          onCompletar={puedeGestionarTarea(t) ? (x) => setCompletarTareaId(x.id) : undefined}
-                          onIniciar={puedeGestionarTarea(t) ? (x) => void iniciarTareaSemana(x) : undefined}
                         />
-                      ))}
-                      {eventosEnDia(eventos, ymd).map((ev) => (
-                        <div key={ev.id} className="mc-entity-card !py-3 text-xs">
-                          <span className="font-medium text-[var(--mc-color-text)]">{ev.titulo}</span>
-                        </div>
                       ))}
                     </SemanaDiaDrop>
                   </div>
                 );
               })}
-            </div>
-          </section>
-
-          <section>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                Backlog
               </div>
-              <button type="button" className="mc-btn-secondary !px-3 !py-2 text-xs" onClick={() => setModal({ modo: 'libre' })}>
-                + Nueva libre
-              </button>
             </div>
-            <BacklogDrop showPlaceholder={Boolean(activeDragId && overId === 'backlog')}>
-              {isLoading ? (
-                <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
-              ) : libres.length === 0 ? (
-                <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin tareas libres.</p>
-              ) : (
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {libres.map((t) => (
-                    <li key={t.id}>
-                      <DraggableTareaSemana
-                        tarea={t}
-                        hoyYmd={hoyYmd}
-                        readOnly={!puedeGestionarTarea(t)}
-                        onOpenDetalle={(x) => setDetalleTareaId(x.id)}
-                        onEditar={(x) => setDetalleTareaId(x.id)}
-                        onEliminar={(x) => setDetalleTareaId(x.id)}
-                        onCompletar={puedeGestionarTarea(t) ? (x) => setCompletarTareaId(x.id) : undefined}
-                        onIniciar={puedeGestionarTarea(t) ? (x) => void iniciarTareaSemana(x) : undefined}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </BacklogDrop>
           </section>
 
-          <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+          <DragOverlay dropAnimation={{ duration: 180, easing: 'ease-out' }}>
             {activeTareaDrag ? (
-              <div className="mc-drag-overlay-card pointer-events-none max-w-[320px]">
+              <div
+                className="mc-drag-overlay-card pointer-events-none max-w-[320px]"
+                style={{ transform: 'rotate(2deg)', boxShadow: '0 18px 44px -8px rgba(0, 0, 0, 0.28)' }}
+              >
                 <TaskItem
                   variant="week"
                   tarea={activeTareaDrag}
@@ -501,6 +454,36 @@ export function MiSemana() {
         onClose={() => setCompletarTareaId(null)}
         onConfirm={confirmarCompletar}
       />
+      <ModalBloquear
+        tarea={bloquearTareaState}
+        onClose={() => setBloquearTareaState(null)}
+        onConfirm={async (input) => {
+          try {
+            await bloquearTarea({ ...input, usuarioId: me.id });
+            setBloquearTareaState(null);
+            toast.success('Tarea bloqueada');
+          } catch {
+            toast.error('No se pudo bloquear la tarea.');
+          }
+        }}
+      />
+      <ModalReprogramar
+        tarea={reprDragTarea?.tarea ?? null}
+        fechaFija={reprDragTarea?.fecha}
+        onClose={() => setReprDragTarea(null)}
+        onConfirm={confirmarReprDrag}
+      />
+      <ModalReprogramar
+        tarea={reprDetalleTarea}
+        onClose={() => setReprDetalleTarea(null)}
+        onConfirm={async (input) => {
+          if (!reprDetalleTarea) return;
+          const nuevoEstado = resolverEstadoReprogramacion(reprDetalleTarea, hoyYmd);
+          await reprogramarTareaConLog({ ...input, usuarioId: me.id, nuevoEstado });
+          setReprDetalleTarea(null);
+          toast.success('Tarea reprogramada');
+        }}
+      />
       <ModalDetalleTareaSemana
         open={detalleTareaId !== null}
         tarea={tareaDetalle}
@@ -510,6 +493,29 @@ export function MiSemana() {
         onClose={() => setDetalleTareaId(null)}
         onGuardar={guardarDetalle}
         onEliminar={eliminarDesdeDetalle}
+        onIniciar={async (t) => {
+          await mut.iniciarTarea({ tareaId: t.id, usuarioId: me.id });
+          toast.success('Tarea en progreso');
+          setDetalleTareaId(null);
+        }}
+        onCompletar={(t) => {
+          setCompletarTareaId(t.id);
+          setDetalleTareaId(null);
+        }}
+        onReprogramar={(t) => {
+          setReprDetalleTarea(t);
+          setDetalleTareaId(null);
+        }}
+        onBloquear={(t) => {
+          setBloquearTareaState(t);
+          setDetalleTareaId(null);
+        }}
+        onPlanificar={async (t, fecha) => {
+          const sem = semanaIsoDesdeFecha(new Date(`${fecha}T12:00:00`));
+          await mut.moverDia({ tareaId: t.id, fecha, semana: sem, tipo: t.tipo });
+          toast.success('Tarea planificada');
+          setDetalleTareaId(null);
+        }}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import {
   crearIncidenciaHoy,
   getEventosDelDia,
   getIncidenciasAbiertas,
-  getIncidenciasHistoricas,
+  getIncidenciasDelDia,
   getNotasBitacoraRecientes,
 } from '@/api/hoyColumnas';
 
@@ -25,7 +25,15 @@ export function useIncidenciasHistoricasHoy(usuarioId: string | undefined) {
   return useQuery({
     queryKey: [Q_INC_HIST, usuarioId],
     enabled: Boolean(usuarioId),
-    queryFn: () => getIncidenciasHistoricas(usuarioId!),
+    queryFn: () => getIncidenciasDelDia(usuarioId!, new Date().toISOString().slice(0, 10)),
+  });
+}
+
+export function useIncidenciasDelDia(usuarioId: string | undefined, ymd: string) {
+  return useQuery({
+    queryKey: [Q_INC_HOY, usuarioId, ymd],
+    enabled: Boolean(usuarioId),
+    queryFn: () => getIncidenciasDelDia(usuarioId!, ymd),
   });
 }
 

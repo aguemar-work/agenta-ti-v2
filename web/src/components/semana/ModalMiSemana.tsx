@@ -148,43 +148,47 @@ export function ModalMiSemana({
               <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
             </label>
             <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Prioridad
-              <select
-                className="mc-input mt-1"
-                value={prioridad}
-                onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
-              >
-                <option value="baja">Baja</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
-              </select>
-            </label>
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
               Descripción
               <textarea className="mc-input mt-1 min-h-[80px]" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
             </label>
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Vincular a objetivo
-              <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
-                <option value="">Sin objetivo</option>
-                {objetivos.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.titulo}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {usuariosAsignables.length > 0 ? (
-              <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                Responsable
-                <select className="mc-input mt-1" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
-                  {usuariosAsignables.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {modoOrigen === 'dia' ? (
+              <>
+                <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+                  Prioridad
+                  <select
+                    className="mc-input mt-1"
+                    value={prioridad}
+                    onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
+                  >
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </label>
+                <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+                  Vincular a objetivo
+                  <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+                    <option value="">Sin objetivo</option>
+                    {objetivos.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {usuariosAsignables.length > 0 ? (
+                  <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+                    Responsable
+                    <select className="mc-input mt-1" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
+                      {usuariosAsignables.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </>
             ) : null}
           </div>
         ) : (

@@ -55,3 +55,29 @@ export async function crearObjetivo(input: CrearObjetivoInput): Promise<Objetivo
   if (error) throw error;
   return parseObjetivo(inserted as Record<string, unknown>);
 }
+
+export async function eliminarObjetivo(input: {
+  objetivoId: string;
+  usuarioId: string;
+  motivo: string;
+}): Promise<void> {
+  const insforge = getInsforge();
+  const motivo = input.motivo.trim();
+  if (motivo.length < 10) throw new Error('Motivo mínimo 10 caracteres.');
+
+  const { error: eLog } = await insforge.database.from('log_accion').insert([
+    {
+      tarea_id: null,
+      usuario_id: input.usuarioId,
+      tipo_accion: 'eliminada',
+      valor_anterior: { objetivo_id: input.objetivoId },
+      valor_nuevo: null,
+      justificacion: motivo,
+      leido_por_jefe: false,
+    },
+  ]);
+  if (eLog) throw eLog;
+
+  const { error } = await insforge.database.from('objetivo').delete().eq('id', input.objetivoId);
+  if (error) throw error;
+}

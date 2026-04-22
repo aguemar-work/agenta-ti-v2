@@ -8,6 +8,7 @@ export type EstadoObjetivo = 'activo' | 'completado' | 'cancelado';
 export type EstadoTarea =
   | 'pendiente'
   | 'en_progreso'
+  | 'reprogramada'
   | 'completada'
   | 'bloqueada'
   | 'atrasada'
@@ -92,6 +93,8 @@ export interface NotaBitacora {
   usuario_id: Id;
   objetivo_id: Id | null;
   visibilidad: VisibilidadBitacora;
+  convertida_en: 'tarea' | 'evento' | null;
+  usuario?: { nombre: string } | null;
   created_at: string;
   updated_at: string;
 }

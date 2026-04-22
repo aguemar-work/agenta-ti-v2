@@ -3,7 +3,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
-import { TaskItem } from '@/components/tareas/TaskItem';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
 
@@ -12,10 +11,6 @@ type Props = {
   hoyYmd: string;
   readOnly?: boolean;
   onOpenDetalle?: (t: Tarea) => void;
-  onEditar?: (t: Tarea) => void;
-  onEliminar?: (t: Tarea) => void;
-  onCompletar?: (t: Tarea) => void;
-  onIniciar?: (t: Tarea) => void;
 };
 
 export function DraggableTareaSemana({
@@ -23,63 +18,78 @@ export function DraggableTareaSemana({
   hoyYmd,
   readOnly,
   onOpenDetalle,
-  onEditar,
-  onEliminar,
-  onCompletar,
-  onIniciar,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `tarea-${tarea.id}`,
     disabled: readOnly,
   });
 
-  const translate = CSS.Translate.toString(transform);
-  const style: CSSProperties = {
-    transform: isDragging ? `${translate} rotate(2deg)` : translate,
-    opacity: isDragging ? 0.25 : 1,
-    boxShadow: isDragging
-      ? '0 18px 44px -8px rgba(0, 0, 0, 0.28), 0 8px 16px -6px rgba(0, 0, 0, 0.16)'
-      : undefined,
-    zIndex: isDragging ? 40 : undefined,
-    position: isDragging ? 'relative' : undefined,
-    touchAction: readOnly ? undefined : 'none',
-  };
+  const style: CSSProperties = isDragging
+    ? {
+        // Sin transform mientras se arrastra: evita salto/flicker del original.
+        opacity: 0,
+        visibility: 'hidden',
+        touchAction: readOnly ? undefined : 'none',
+      }
+    : {
+        transform: CSS.Translate.toString(transform),
+        touchAction: readOnly ? undefined : 'none',
+      };
 
   const est = estadoEfectivoTablero(tarea, hoyYmd);
+  const atrasadaBar = est === 'atrasada' ? 'border-l-2 border-[var(--mc-color-danger)]' : '';
+  const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
+
+  const badgeClass: Record<string, string> = {
+    pendiente: 'mc-badge-neutral',
+    en_progreso: 'mc-badge-info',
+    atrasada: 'mc-badge-danger',
+    bloqueada: 'mc-badge-warning',
+    completada: 'mc-badge-success',
+    reprogramada: 'mc-badge-neutral',
+    cancelada: 'mc-badge-neutral',
+  };
+
+  const badgeLabel: Record<string, string> = {
+    pendiente: 'Pendiente',
+    en_progreso: 'En progreso',
+    atrasada: 'Atrasada',
+    bloqueada: 'Bloqueada',
+    completada: 'Completada',
+    reprogramada: 'Reprogramada',
+    cancelada: 'Cancelada',
+  };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      draggable={false}
-      onDragStart={(e) => e.preventDefault()}
-    >
-      <TaskItem
-        variant="week"
-        tarea={tarea}
-        readOnly={readOnly}
-        estadoVisual={est}
-        dragHandle={
-          !readOnly ? (
-            <button
-              type="button"
-              className="mc-btn-ghost !p-1 text-[var(--mc-color-text-secondary)]"
-              aria-label="Arrastrar tarea"
-              {...listeners}
-              {...attributes}
-              style={{ touchAction: 'none' }}
-              draggable={false}
-            >
-              <GripVertical size={16} />
-            </button>
-          ) : undefined
-        }
-        onOpenDetalle={onOpenDetalle}
-        onEditar={onEditar}
-        onEliminar={onEliminar}
-        onCompletar={onCompletar}
-        onIniciar={onIniciar}
-      />
+    <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>
+      <div
+        className={`mc-card !p-2 flex items-start gap-2 cursor-pointer hover:border-[var(--mc-color-border-hover)] ${atrasadaBar} ${bloqueadaBar}`.trim()}
+        onClick={() => onOpenDetalle?.(tarea)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea);
+        }}
+      >
+        {!readOnly ? (
+          <button
+            type="button"
+            className="mc-btn-ghost !p-0.5 mt-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
+            aria-label="Arrastrar tarea"
+            {...listeners}
+            {...attributes}
+            style={{ touchAction: 'none' }}
+            draggable={false}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={14} />
+          </button>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug mb-1 line-clamp-2">{tarea.titulo}</p>
+          <span className={`mc-badge ${badgeClass[est] ?? 'mc-badge-neutral'} text-[10px]`}>{badgeLabel[est] ?? est}</span>
+        </div>
+      </div>
     </div>
   );
 }

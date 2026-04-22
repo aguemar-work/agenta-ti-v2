@@ -18,6 +18,11 @@ type Props = {
     asignado_a?: string | null;
   }) => Promise<void>;
   onEliminar: (input: { tareaId: string; motivo: string }) => Promise<void>;
+  onIniciar?: (t: Tarea) => Promise<void>;
+  onCompletar?: (t: Tarea) => void;
+  onReprogramar?: (t: Tarea) => void;
+  onBloquear?: (t: Tarea) => void;
+  onPlanificar?: (t: Tarea, fecha: string) => Promise<void>;
 };
 
 export function ModalDetalleTareaSemana({
@@ -29,6 +34,11 @@ export function ModalDetalleTareaSemana({
   onClose,
   onGuardar,
   onEliminar,
+  onIniciar,
+  onCompletar,
+  onReprogramar,
+  onBloquear,
+  onPlanificar,
 }: Props) {
   const [editando, setEditando] = useState(false);
   const [titulo, setTitulo] = useState('');
@@ -56,6 +66,25 @@ export function ModalDetalleTareaSemana({
 
   const tareaActual = tarea;
   const motivoOk = motivoEliminar.trim().length >= 10;
+  const badgeClass: Record<string, string> = {
+    pendiente: 'mc-badge-neutral',
+    en_progreso: 'mc-badge-info',
+    atrasada: 'mc-badge-danger',
+    bloqueada: 'mc-badge-warning',
+    completada: 'mc-badge-success',
+    reprogramada: 'mc-badge-neutral',
+    cancelada: 'mc-badge-neutral',
+  };
+
+  const badgeLabel: Record<string, string> = {
+    pendiente: 'Pendiente',
+    en_progreso: 'En progreso',
+    atrasada: 'Atrasada',
+    bloqueada: 'Bloqueada',
+    completada: 'Completada',
+    reprogramada: 'Reprogramada',
+    cancelada: 'Cancelada',
+  };
 
   async function guardar() {
     if (readOnly || !titulo.trim()) return;
@@ -94,30 +123,32 @@ export function ModalDetalleTareaSemana({
       <div className="mc-modal max-w-[680px]" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Detalle de tarea</h2>
 
-        {!editando ? (
-          <div className="mt-3 space-y-2 text-sm text-[var(--mc-color-text)]">
-            <p>
-              <span className="font-medium">Titulo:</span> {tarea.titulo}
-            </p>
-            <p>
-              <span className="font-medium">Prioridad:</span> {tarea.prioridad}
-            </p>
-            <p>
-              <span className="font-medium">Estado:</span> {tarea.estado}
-            </p>
-            <p>
-              <span className="font-medium">Descripcion:</span> {tarea.descripcion ?? 'Sin descripcion'}
-            </p>
-            <p>
-              <span className="font-medium">Objetivo:</span>{' '}
-              {tarea.objetivo_id ? objetivos.find((o) => o.id === tarea.objetivo_id)?.titulo ?? 'Objetivo vinculado' : 'Sin objetivo'}
-            </p>
-            <p>
-              <span className="font-medium">Responsable:</span>{' '}
-              {usuariosAsignables.find((u) => u.id === tarea.asignado_a)?.nombre ?? tarea.asignado_a}
+        {!editando && !pidiendoMotivo ? (
+          <div className="mt-4 space-y-2 text-sm text-[var(--mc-color-text)]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`mc-badge ${badgeClass[tarea.estado] ?? 'mc-badge-neutral'}`}>{badgeLabel[tarea.estado] ?? tarea.estado}</span>
+              <span className="text-xs text-[var(--mc-color-text-secondary)]">
+                {tarea.prioridad === 'alta' ? '🔴' : tarea.prioridad === 'media' ? '🟡' : '⚪'} {tarea.prioridad}
+              </span>
+              {tarea.fecha_planificada ? (
+                <span className="text-xs text-[var(--mc-color-text-secondary)]">· {tarea.fecha_planificada}</span>
+              ) : null}
+            </div>
+            {tarea.descripcion ? (
+              <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.descripcion}</p>
+            ) : (
+              <p className="text-sm italic text-[var(--mc-color-text-secondary)]">Sin descripción.</p>
+            )}
+            {tarea.objetivo_id ? (
+              <p className="text-xs text-[var(--mc-color-text-secondary)]">
+                Objetivo: {objetivos.find((o) => o.id === tarea.objetivo_id)?.titulo ?? '—'}
+              </p>
+            ) : null}
+            <p className="text-xs text-[var(--mc-color-text-secondary)]">
+              Responsable: {usuariosAsignables.find((u) => u.id === tarea.asignado_a)?.nombre ?? tarea.asignado_a}
             </p>
           </div>
-        ) : (
+        ) : editando ? (
           <div className="mt-3">
             <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
               Titulo
@@ -159,28 +190,102 @@ export function ModalDetalleTareaSemana({
               </label>
             ) : null}
           </div>
-        )}
+        ) : null}
 
-        {!readOnly ? (
+        {!readOnly && !editando && !pidiendoMotivo ? (
+          tarea.tipo === 'libre' ? (
+            <div className="mt-4 border-t border-[var(--mc-color-border)] pt-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Acciones</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {onPlanificar ? <PlanificarInline tarea={tarea} onPlanificar={onPlanificar} /> : null}
+                <button
+                  type="button"
+                  className="mc-btn-ghost text-xs !text-[var(--mc-color-danger)]"
+                  onClick={() => setPidiendoMotivo(true)}
+                >
+                  Eliminar
+                </button>
+              </div>
+              {pidiendoMotivo ? (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+                    Motivo de eliminación (mín. 10 caracteres)
+                    <textarea
+                      className="mc-input mt-1 min-h-[80px]"
+                      value={motivoEliminar}
+                      onChange={(e) => setMotivoEliminar(e.target.value)}
+                      placeholder="Indica el motivo…"
+                    />
+                  </label>
+                  <div className="mt-2 flex justify-end">
+                    <button type="button" className="mc-btn text-xs" onClick={() => void eliminar()} disabled={busy || !motivoOk}>
+                      {busy ? 'Eliminando…' : 'Confirmar eliminación'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 border-t border-[var(--mc-color-border)] pt-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Acciones</p>
+              <div className="flex flex-wrap gap-2">
+                {(tarea.estado === 'pendiente' || tarea.estado === 'atrasada' || tarea.estado === 'reprogramada') && onIniciar ? (
+                  <button type="button" className="mc-btn text-xs" onClick={() => void onIniciar(tarea)}>
+                    Iniciar
+                  </button>
+                ) : null}
+                {tarea.estado === 'en_progreso' && onCompletar ? (
+                  <button type="button" className="mc-btn text-xs" onClick={() => onCompletar(tarea)}>
+                    Completar
+                  </button>
+                ) : null}
+                {(tarea.estado === 'pendiente' || tarea.estado === 'atrasada' || tarea.estado === 'reprogramada') && onReprogramar ? (
+                  <button
+                    type="button"
+                    className="mc-btn-secondary text-xs !text-[var(--mc-color-warning)]"
+                    onClick={() => onReprogramar(tarea)}
+                  >
+                    Reprogramar
+                  </button>
+                ) : null}
+                {(tarea.estado === 'pendiente' ||
+                  tarea.estado === 'atrasada' ||
+                  tarea.estado === 'en_progreso' ||
+                  tarea.estado === 'reprogramada') &&
+                onBloquear ? (
+                  <button
+                    type="button"
+                    className="mc-btn-secondary text-xs !text-[var(--mc-color-warning)]"
+                    onClick={() => onBloquear(tarea)}
+                  >
+                    Bloquear
+                  </button>
+                ) : null}
+                {tarea.estado !== 'completada' && tarea.estado !== 'cancelada' ? (
+                  <button type="button" className="mc-btn-secondary text-xs" onClick={() => setEditando(true)}>
+                    Editar
+                  </button>
+                ) : null}
+                <button type="button" className="mc-btn-ghost text-xs !text-[var(--mc-color-danger)]" onClick={() => setPidiendoMotivo(true)}>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          )
+        ) : null}
+
+        {!readOnly && (editando || pidiendoMotivo) ? (
           <div className="mt-4 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className="mc-btn-secondary text-xs" onClick={() => setEditando((v) => !v)} disabled={busy}>
-                {editando ? 'Cancelar edición' : 'Editar'}
-              </button>
-              {editando ? (
+            {editando ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className="mc-btn-secondary text-xs" onClick={() => setEditando(false)} disabled={busy}>
+                  Cancelar edición
+                </button>
                 <button type="button" className="mc-btn text-xs" onClick={() => void guardar()} disabled={busy || !titulo.trim()}>
                   {busy ? 'Guardando…' : 'Guardar cambios'}
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className="mc-btn-ghost text-xs !text-[var(--mc-color-danger)]"
-                onClick={() => setPidiendoMotivo((v) => !v)}
-                disabled={busy}
-              >
-                Eliminar
-              </button>
-            </div>
+              </div>
+            ) : null}
             {pidiendoMotivo ? (
               <div className="mt-3">
                 <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
@@ -208,6 +313,31 @@ export function ModalDetalleTareaSemana({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlanificarInline({ tarea, onPlanificar }: { tarea: Tarea; onPlanificar: (t: Tarea, fecha: string) => Promise<void> }) {
+  const [fecha, setFecha] = useState('');
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="flex items-center gap-2">
+      <input type="date" className="mc-input !py-1 text-xs" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      <button
+        type="button"
+        className="mc-btn text-xs"
+        disabled={!fecha || busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await onPlanificar(tarea, fecha);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? '…' : 'Planificar'}
+      </button>
     </div>
   );
 }

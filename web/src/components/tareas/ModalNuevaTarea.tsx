@@ -54,12 +54,12 @@ export function ModalNuevaTarea({
     if (!titulo.trim()) return;
     setBusy(true);
     try {
-      const asignado = asignadoId.trim() || usuarioActualId;
+      const asignado = modo === 'incidencia' ? usuarioActualId : (asignadoId.trim() || usuarioActualId);
       await onSubmit({
         titulo: titulo.trim(),
         prioridad,
         descripcion: descripcion.trim(),
-        objetivo_id: objetivoId || null,
+        objetivo_id: modo === 'incidencia' ? null : (objetivoId || null),
         asignado_a: asignado,
       });
       setTitulo('');
@@ -83,12 +83,16 @@ export function ModalNuevaTarea({
               ? 'Nueva incidencia'
               : `Nueva tarea · ${fechaDia ?? ''}`}
         </h2>
+        {modo === 'incidencia' ? (
+          <p className="mt-2 text-xs text-[var(--mc-color-text-secondary)]">Se registrará como imprevisto del día de hoy.</p>
+        ) : (
+          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+            Fecha límite
+            <input type="date" className="mc-input mt-1" readOnly value={fechaLimiteYmd} aria-readonly />
+          </label>
+        )}
         <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Fecha límite
-          <input type="date" className="mc-input mt-1" readOnly value={fechaLimiteYmd} aria-readonly />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Título
+          {modo === 'incidencia' ? 'Título del incidente' : 'Título'}
           <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
         </label>
         <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
@@ -104,26 +108,28 @@ export function ModalNuevaTarea({
           </select>
         </label>
         <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Descripción
+          {modo === 'incidencia' ? '¿Qué ocurrió y cómo se resolvió?' : 'Descripción'}
           <textarea
             className="mc-input mt-1 min-h-[90px] resize-y"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Describe la tarea..."
+            placeholder={modo === 'incidencia' ? 'Describe el incidente y la solución aplicada…' : 'Describe la tarea...'}
           />
         </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Vincular a objetivo
-          <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
-            <option value="">Sin objetivo</option>
-            {objetivos.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.titulo}
-              </option>
-            ))}
-          </select>
-        </label>
-        {usuariosAsignables.length > 0 ? (
+        {modo !== 'incidencia' ? (
+          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
+            Vincular a objetivo
+            <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+              <option value="">Sin objetivo</option>
+              {objetivos.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.titulo}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {modo !== 'incidencia' && usuariosAsignables.length > 0 ? (
           <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
             Asignado a
             <select className="mc-input mt-1" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
@@ -140,7 +146,7 @@ export function ModalNuevaTarea({
             Cancelar
           </button>
           <button type="button" className="mc-btn" onClick={() => void submit()} disabled={busy || !titulo.trim()}>
-            {busy ? 'Guardando…' : 'Crear'}
+            {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar' : 'Crear'}
           </button>
         </div>
       </div>
