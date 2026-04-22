@@ -4,18 +4,22 @@ import { AppShell } from '@/components/layout/AppShell';
 import { JefeRoute } from '@/components/routing/JefeRoute';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { Bitacora } from '@/pages/Bitacora';
+import { ForgotPassword } from '@/pages/ForgotPassword';
 import { Hoy } from '@/pages/Hoy';
 import { Login } from '@/pages/Login';
 import { Metricas } from '@/pages/Metricas';
 import { MiSemana } from '@/pages/MiSemana';
 import { Objetivos } from '@/pages/Objetivos';
 import { Planificacion } from '@/pages/Planificacion';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { Tablero } from '@/pages/Tablero';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
           <ProtectedRoute>

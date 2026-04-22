@@ -4,8 +4,11 @@ import { createRoot } from 'react-dom/client';
 import App from '@/App.tsx';
 import { getInsforgeEnv } from '@/lib/insforge';
 import { installInsforgeFetchInterceptor } from '@/lib/insforgeFetchInterceptor';
+import { setAppIcons } from '@/lib/setAppIcons';
 import { AppProviders } from '@/providers/AppProviders';
 import '@/index.css';
+
+setAppIcons();
 
 if (getInsforgeEnv()) {
   installInsforgeFetchInterceptor();

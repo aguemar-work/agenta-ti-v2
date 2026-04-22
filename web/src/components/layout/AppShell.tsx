@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
+import { AppBrandIcon, AppLogo } from '@/components/brand/AppLogo';
 import { Button } from '@/components/ui/Button';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
@@ -30,6 +31,16 @@ export function AppShell() {
     <div className="mc-app-root">
       <aside className="mc-sidebar mc-sidebar-floating">
         <nav className="mc-sidebar-inner" aria-label="Módulos">
+          <div className="mx-auto mb-1 flex w-full shrink-0 justify-center border-b border-[var(--mc-color-border)] px-2 pb-2">
+            <NavLink
+              to="/hoy"
+              title="Inicio"
+              aria-label="Inicio"
+              className="flex h-9 w-9 items-center justify-center rounded-[var(--mc-radius-md)] text-[var(--mc-color-text-secondary)] transition-colors hover:bg-[var(--mc-color-surface-hover)] hover:text-[var(--mc-color-text)]"
+            >
+              <AppBrandIcon size={26} />
+            </NavLink>
+          </div>
           <NavLink
             to="/hoy"
             className={({ isActive }) =>
@@ -121,9 +132,7 @@ export function AppShell() {
 
       <div className="mc-app-column">
         <header className="flex h-[var(--mc-topbar-h)] shrink-0 items-center gap-4 border-b border-[var(--mc-color-border)] bg-[var(--mc-color-surface)] px-4">
-          <span className="font-semibold text-[var(--mc-color-text)]" style={{ fontSize: 'var(--mc-text-md)' }}>
-            SGTD
-          </span>
+          <AppLogo height={28} className="shrink-0" />
           <div className="flex-1" />
           <span
             className="hidden text-[var(--mc-color-text-secondary)] sm:inline"
