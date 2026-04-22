@@ -18,7 +18,7 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
   const canSubmit = fecha.length > 0 && just.trim().length >= 10 && !busy;
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !tarea) return;
     setBusy(true);
     try {
       await onConfirm({ tareaId: tarea.id, nuevaFecha: fecha, justificacion: just.trim() });

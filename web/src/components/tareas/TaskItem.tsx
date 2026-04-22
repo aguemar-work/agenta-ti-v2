@@ -10,15 +10,17 @@ const estadoLabel: Record<EstadoTarea, string> = {
   bloqueada: 'Bloqueada',
   atrasada: 'Atrasada',
   cancelada: 'Cancelada',
+  reprogramada: 'Reprogramada', // ← agregar
 };
 
 const estadoBadge: Record<EstadoTarea, string> = {
-  pendiente: 'mc-badge-neutral',
-  en_progreso: 'mc-badge-neutral',
-  completada: 'mc-badge-success',
-  bloqueada: 'mc-badge-warning',
-  atrasada: 'mc-badge-danger',
-  cancelada: 'mc-badge-neutral',
+  pendiente:    'mc-badge-neutral',
+  en_progreso:  'mc-badge-neutral',
+  completada:   'mc-badge-success',
+  bloqueada:    'mc-badge-warning',
+  atrasada:     'mc-badge-danger',
+  cancelada:    'mc-badge-neutral',
+  reprogramada: 'mc-badge-neutral', // ← agregar
 };
 
 export type TaskItemVariant = 'card' | 'week' | 'kanban';
