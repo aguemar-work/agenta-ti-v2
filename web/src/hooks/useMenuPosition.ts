@@ -45,7 +45,6 @@ export function useMenuPosition() {
         if (!el) return;
 
         const rect = el.getBoundingClientRect();
-        const vw = window.innerWidth;
         const vh = window.innerHeight;
 
         const hayEspacioAbajo = rect.bottom + MENU_H + GAP <= vh;
