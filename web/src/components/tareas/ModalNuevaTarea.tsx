@@ -3,10 +3,11 @@
  * Migrado a <Modal> — Sprint 4.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
 type Modo = 'libre' | 'dia' | 'incidencia';
@@ -46,41 +47,37 @@ export function ModalNuevaTarea({
   onClose,
   onSubmit,
 }: Props) {
-  const [titulo, setTitulo] = useState('');
-  const [prioridad, setPrioridad] = useState<Tarea['prioridad']>('media');
-  const [descripcion, setDescripcion] = useState('');
-  const [objetivoId, setObjetivoId] = useState('');
-  const [asignadoId, setAsignadoId] = useState(usuarioActualId);
   const [busy, setBusy] = useState(false);
 
-  const reset = useCallback(() => {
-    setTitulo('');
-    setPrioridad('media');
-    setDescripcion('');
-    setObjetivoId('');
-    setAsignadoId(usuarioActualId);
-  }, [usuarioActualId]);
-
-  useEffect(() => {
-    if (open) reset();
-  }, [open, modo, reset]);
+  const initialForm = useMemo(
+    () => ({
+      titulo: '',
+      prioridad: 'media' as Tarea['prioridad'],
+      descripcion: '',
+      objetivoId: '',
+      asignadoId: usuarioActualId,
+    }),
+    [usuarioActualId],
+  );
+  const draftKey = `tarea-nueva-${modo}-${usuarioActualId}`;
+  const { form, setForm, hasChanges, clearDraft } = useDraftForm(draftKey, initialForm);
 
   const fechaLimiteYmd = modo === 'dia' && fechaDia ? fechaDia : fechaReferencia;
-  const canSubmit = titulo.trim().length > 0 && !busy;
+  const canSubmit = form.titulo.trim().length > 0 && !busy;
 
   async function submit() {
     if (!canSubmit) return;
     setBusy(true);
     try {
-      const asignado = modo === 'incidencia' ? usuarioActualId : (asignadoId.trim() || usuarioActualId);
+      const asignado = modo === 'incidencia' ? usuarioActualId : (form.asignadoId.trim() || usuarioActualId);
       await onSubmit({
-        titulo: titulo.trim(),
-        prioridad,
-        descripcion: descripcion.trim(),
-        objetivo_id: modo === 'incidencia' ? null : (objetivoId || null),
+        titulo: form.titulo.trim(),
+        prioridad: form.prioridad,
+        descripcion: form.descripcion.trim(),
+        objetivo_id: modo === 'incidencia' ? null : (form.objetivoId || null),
         asignado_a: asignado,
       });
-      reset();
+      clearDraft();
       onClose();
     } finally {
       setBusy(false);
@@ -88,7 +85,7 @@ export function ModalNuevaTarea({
   }
 
   function handleClose() {
-    reset();
+    clearDraft();
     onClose();
   }
 
@@ -98,6 +95,7 @@ export function ModalNuevaTarea({
       onClose={handleClose}
       title={TITULO_MODAL[modo](fechaDia)}
       size="md"
+      hasUnsavedChanges={hasChanges}
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={busy}>
@@ -128,8 +126,8 @@ export function ModalNuevaTarea({
           <input
             id="new-titulo"
             className="mc-input"
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
+            value={form.titulo}
+            onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))}
             required
             autoFocus
           />
@@ -140,8 +138,8 @@ export function ModalNuevaTarea({
           <select
             id="new-prioridad"
             className="mc-input"
-            value={prioridad}
-            onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
+            value={form.prioridad}
+            onChange={(e) => setForm((prev) => ({ ...prev, prioridad: e.target.value as Tarea['prioridad'] }))}
           >
             <option value="baja">Baja</option>
             <option value="media">Media</option>
@@ -157,8 +155,8 @@ export function ModalNuevaTarea({
             id="new-desc"
             className="mc-input"
             style={{ minHeight: 90, resize: 'vertical' }}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
+            value={form.descripcion}
+            onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
             placeholder={
               modo === 'incidencia'
                 ? 'Describe el incidente y la solución aplicada…'
@@ -173,8 +171,8 @@ export function ModalNuevaTarea({
             <select
               id="new-objetivo"
               className="mc-input"
-              value={objetivoId}
-              onChange={(e) => setObjetivoId(e.target.value)}
+              value={form.objetivoId}
+              onChange={(e) => setForm((prev) => ({ ...prev, objetivoId: e.target.value }))}
             >
               <option value="">Sin objetivo</option>
               {objetivos.map((o) => (
@@ -192,8 +190,8 @@ export function ModalNuevaTarea({
             <select
               id="new-asignado"
               className="mc-input"
-              value={asignadoId}
-              onChange={(e) => setAsignadoId(e.target.value)}
+              value={form.asignadoId}
+              onChange={(e) => setForm((prev) => ({ ...prev, asignadoId: e.target.value }))}
             >
               {usuariosAsignables.map((u) => (
                 <option key={u.id} value={u.id}>

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
-import type { EstadoObjetivo } from '@/types';
+import type { EstadoObjetivo, Tarea } from '@/types';
 
 export function Objetivos() {
   const {
@@ -14,16 +14,17 @@ export function Objetivos() {
     objetivoSel, objetivoEliminar,
     seleccionId, setSeleccionId,
     menuObjId, setMenuObjId, menuRef,
-    modalNuevo, setModalNuevo,
-    tituloObj, setTituloObj,
-    descObj, setDescObj,
-    limiteObj, setLimiteObj,
-    responsableObjId, setResponsableObjId,
+    modalNuevo,
+    nuevoObjetivoForm,
+    setNuevoObjetivoForm,
+    nuevoObjetivoHasChanges,
+    cerrarModalNuevoObjetivo,
     creandoObj,
     modalTarea, setModalTarea,
-    nuevaTareaTitulo, setNuevaTareaTitulo,
-    nuevaTareaPrioridad, setNuevaTareaPrioridad,
-    nuevaTareaAsignadoId, setNuevaTareaAsignadoId,
+    tareaObjetivoForm,
+    setTareaObjetivoForm,
+    tareaObjetivoHasChanges,
+    cerrarModalTareaObjetivo,
     addingTarea,
     eliminarObjId, setEliminarObjId,
     motivoEliminar, setMotivoEliminar,
@@ -39,8 +40,8 @@ export function Objetivos() {
 
   if (!usuario) return null;
 
-  const canSubmitNuevo = !creandoObj && tituloObj.trim().length > 0
-    && (esJefe ? responsableObjId.trim().length > 0 : true);
+  const canSubmitNuevo = !creandoObj && nuevoObjetivoForm.titulo.trim().length > 0
+    && (esJefe ? nuevoObjetivoForm.responsableId.trim().length > 0 : true);
 
   return (
     <div className={APP_PAGE_CLASS}>
@@ -205,12 +206,13 @@ export function Objetivos() {
       {/* ── Modal: nuevo objetivo ───────────────────────────────────────── */}
       <Modal
         open={modalNuevo}
-        onClose={() => setModalNuevo(false)}
+        onClose={cerrarModalNuevoObjetivo}
         title="Nuevo objetivo"
         size="sm"
+        hasUnsavedChanges={nuevoObjetivoHasChanges}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setModalNuevo(false)} disabled={creandoObj}>Cancelar</Button>
+            <Button variant="ghost" onClick={cerrarModalNuevoObjetivo} disabled={creandoObj}>Cancelar</Button>
             <Button onClick={() => void submitNuevoObjetivo()} disabled={!canSubmitNuevo}>
               {creandoObj ? 'Guardando…' : 'Crear objetivo'}
             </Button>
@@ -227,22 +229,22 @@ export function Objetivos() {
 
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-titulo">Título</label>
-            <input id="obj-titulo" className="mc-input" value={tituloObj} onChange={(e) => setTituloObj(e.target.value)} autoFocus required />
+            <input id="obj-titulo" className="mc-input" value={nuevoObjetivoForm.titulo} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, titulo: e.target.value }))} autoFocus required />
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-desc">Descripción (opcional)</label>
-            <textarea id="obj-desc" className="mc-input" style={{ minHeight: 80 }} value={descObj} onChange={(e) => setDescObj(e.target.value)} />
+            <textarea id="obj-desc" className="mc-input" style={{ minHeight: 80 }} value={nuevoObjetivoForm.descripcion} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, descripcion: e.target.value }))} />
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-limite">Fecha límite (opcional)</label>
-            <input id="obj-limite" type="date" className="mc-input" value={limiteObj} onChange={(e) => setLimiteObj(e.target.value)} />
+            <input id="obj-limite" type="date" className="mc-input" value={nuevoObjetivoForm.limite} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, limite: e.target.value }))} />
           </div>
 
           {/* Selector de responsable — solo para jefe */}
           {esJefe && (
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="obj-resp">Responsable</label>
-              <select id="obj-resp" className="mc-input" value={responsableObjId} onChange={(e) => setResponsableObjId(e.target.value)}>
+              <select id="obj-resp" className="mc-input" value={nuevoObjetivoForm.responsableId} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, responsableId: e.target.value }))}>
                 <option value="">Selecciona…</option>
                 {usuariosActivos.map((u) => (
                   <option key={u.id} value={u.id}>{u.nombre}</option>
@@ -256,13 +258,14 @@ export function Objetivos() {
       {/* ── Modal: añadir tarea ─────────────────────────────────────────── */}
       <Modal
         open={modalTarea && Boolean(seleccionId)}
-        onClose={() => setModalTarea(false)}
+        onClose={cerrarModalTareaObjetivo}
         title="Añadir tarea al objetivo"
         size="sm"
+        hasUnsavedChanges={tareaObjetivoHasChanges}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setModalTarea(false)} disabled={addingTarea}>Cancelar</Button>
-            <Button onClick={addTareaVinculada} disabled={addingTarea || !nuevaTareaTitulo.trim()}>
+            <Button variant="ghost" onClick={cerrarModalTareaObjetivo} disabled={addingTarea}>Cancelar</Button>
+            <Button onClick={addTareaVinculada} disabled={addingTarea || !tareaObjetivoForm.titulo.trim()}>
               {addingTarea ? 'Guardando…' : 'Añadir tarea'}
             </Button>
           </>
@@ -274,13 +277,13 @@ export function Objetivos() {
           )}
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
             Título
-            <input className="mc-input" value={nuevaTareaTitulo} onChange={(e) => setNuevaTareaTitulo(e.target.value)}
+            <input className="mc-input" value={tareaObjetivoForm.titulo} onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, titulo: e.target.value }))}
               placeholder="Ej: Configurar firewall perimetral…" autoFocus required />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
             Prioridad
-            <select className="mc-input" value={nuevaTareaPrioridad}
-              onChange={(e) => setNuevaTareaPrioridad(e.target.value as typeof nuevaTareaPrioridad)}>
+            <select className="mc-input" value={tareaObjetivoForm.prioridad}
+              onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, prioridad: e.target.value as Tarea['prioridad'] }))}>
               <option value="baja">Baja</option>
               <option value="media">Media</option>
               <option value="alta">Alta</option>
@@ -290,8 +293,8 @@ export function Objetivos() {
           {esJefe && usuariosActivos.length > 0 && (
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
               Responsable
-              <select className="mc-input" value={nuevaTareaAsignadoId}
-                onChange={(e) => setNuevaTareaAsignadoId(e.target.value)}>
+              <select className="mc-input" value={tareaObjetivoForm.asignadoId}
+                onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, asignadoId: e.target.value }))}>
                 {usuariosActivos.map((u) => (
                   <option key={u.id} value={u.id}>{u.nombre}</option>
                 ))}

@@ -6,15 +6,30 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { crearObjetivo, eliminarObjetivo, getTareasPorObjetivo } from '@/api/objetivos';
 import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
 import { crearTareaLibre } from '@/api/semana';
 import { Q_KPIS, Q_OBJ_PROG, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
+import { useDraftForm } from '@/hooks/useDraftForm';
 import { useAuthStore } from '@/store/authStore';
 import type { Tarea } from '@/types';
+
+type NuevoObjetivoDraft = {
+  titulo: string;
+  descripcion: string;
+  limite: string;
+  responsableId: string;
+};
+
+/** Modal «Añadir tarea al objetivo» — borrador en localStorage */
+type ObjetivoTareaNuevaDraft = {
+  titulo: string;
+  prioridad: Tarea['prioridad'];
+  asignadoId: string;
+};
 
 export const Q_TAREAS_OBJ = 'objetivo-tareas';
 const MIN_MOTIVO = 10;
@@ -53,26 +68,44 @@ export function useObjetivosPage() {
   }, [menuObjId]);
 
   const [modalNuevo, setModalNuevo] = useState(false);
-  const [tituloObj, setTituloObj] = useState('');
-  const [descObj, setDescObj] = useState('');
-  const [limiteObj, setLimiteObj] = useState('');
-  const [responsableObjId, setResponsableObjId] = useState('');
+  const nuevoObjInitial = useMemo<NuevoObjetivoDraft>(
+    () => ({
+      titulo: '',
+      descripcion: '',
+      limite: '',
+      responsableId: usuario?.id ?? '',
+    }),
+    [usuario?.id],
+  );
+  const {
+    form: nuevoObjetivoForm,
+    setForm: setNuevoObjetivoForm,
+    hasChanges: nuevoObjetivoHasChanges,
+    clearDraft: clearNuevoObjetivoDraft,
+  } = useDraftForm('objetivo-nuevo', nuevoObjInitial, { enabled: modalNuevo });
 
   const [modalTarea, setModalTarea] = useState(false);
-  const [nuevaTareaTitulo, setNuevaTareaTitulo] = useState('');
-  const [nuevaTareaPrioridad, setNuevaTareaPrioridad] = useState<Tarea['prioridad']>('media');
-  const [nuevaTareaAsignadoId, setNuevaTareaAsignadoId] = useState('');
+  const tareaObjetivoInitial = useMemo<ObjetivoTareaNuevaDraft>(
+    () => ({
+      titulo: '',
+      prioridad: 'media',
+      asignadoId: usuario?.id ?? '',
+    }),
+    [usuario?.id],
+  );
+  const {
+    form: tareaObjetivoForm,
+    setForm: setTareaObjetivoForm,
+    hasChanges: tareaObjetivoHasChanges,
+    clearDraft: clearTareaObjetivoDraft,
+  } = useDraftForm('objetivo-tarea-nueva', tareaObjetivoInitial, {
+    enabled: modalTarea && Boolean(seleccionId),
+  });
 
   const [eliminarObjId, setEliminarObjId] = useState<string | null>(null);
   const [motivoEliminar, setMotivoEliminar] = useState('');
   const objetivoEliminar = objetivos.find((o) => o.id === eliminarObjId) ?? null;
   const motivoOk = motivoEliminar.trim().length >= MIN_MOTIVO;
-
-  useEffect(() => {
-    if (!usuario?.id) return;
-    setNuevaTareaAsignadoId(usuario.id);
-    setResponsableObjId(usuario.id);
-  }, [usuario?.id]);
 
   const mutCrearObj = useMutation({
     mutationFn: crearObjetivo,
@@ -82,7 +115,7 @@ export function useObjetivosPage() {
         qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS] }),
         qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS, usuario?.id] }),
       ]);
-      setTituloObj(''); setDescObj(''); setLimiteObj('');
+      clearNuevoObjetivoDraft();
       setModalNuevo(false);
       toast.success('Objetivo creado');
     },
@@ -114,9 +147,7 @@ export function useObjetivosPage() {
         qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
         qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
       ]);
-      setNuevaTareaTitulo('');
-      setNuevaTareaPrioridad('media');
-      setNuevaTareaAsignadoId(usuario?.id ?? '');
+      clearTareaObjetivoDraft();
       setModalTarea(false);
       toast.success('Tarea añadida al objetivo');
     },
@@ -130,15 +161,15 @@ export function useObjetivosPage() {
   }
 
   async function submitNuevoObjetivo() {
-    if (!usuario || !tituloObj.trim()) return;
+    if (!usuario || !nuevoObjetivoForm.titulo.trim()) return;
     // Miembro siempre es responsable de sus propios objetivos — RLS lo refuerza
-    const responsable = esJefe ? responsableObjId.trim() : usuario.id;
+    const responsable = esJefe ? nuevoObjetivoForm.responsableId.trim() : usuario.id;
     if (!responsable) return;
     try {
       await mutCrearObj.mutateAsync({
-        titulo: tituloObj.trim(),
-        descripcion: descObj.trim() || null,
-        fecha_limite: limiteObj.trim() || null,
+        titulo: nuevoObjetivoForm.titulo.trim(),
+        descripcion: nuevoObjetivoForm.descripcion.trim() || null,
+        fecha_limite: nuevoObjetivoForm.limite.trim() || null,
         creado_por: usuario.id,
         responsable_id: responsable,
       });
@@ -146,15 +177,20 @@ export function useObjetivosPage() {
   }
 
   function addTareaVinculada() {
-    if (!seleccionId || !nuevaTareaTitulo.trim() || !usuario) return;
+    if (!seleccionId || !tareaObjetivoForm.titulo.trim() || !usuario) return;
     mutAddTarea.mutate({
-      titulo: nuevaTareaTitulo.trim(),
-      prioridad: nuevaTareaPrioridad,
+      titulo: tareaObjetivoForm.titulo.trim(),
+      prioridad: tareaObjetivoForm.prioridad,
       descripcion: null,
-      asignado_a: nuevaTareaAsignadoId.trim() || null,
+      asignado_a: tareaObjetivoForm.asignadoId.trim() || null,
       creado_por: usuario.id,
       objetivo_id: seleccionId,
     });
+  }
+
+  function cerrarModalTareaObjetivo() {
+    clearTareaObjetivoDraft();
+    setModalTarea(false);
   }
 
   async function confirmarEliminar() {
@@ -165,8 +201,12 @@ export function useObjetivosPage() {
   }
 
   function abrirModalNuevo() {
-    if (usuario) setResponsableObjId(usuario.id);
     setModalNuevo(true);
+  }
+
+  function cerrarModalNuevoObjetivo() {
+    clearNuevoObjetivoDraft();
+    setModalNuevo(false);
   }
 
   function cerrarEliminar() { setEliminarObjId(null); setMotivoEliminar(''); }
@@ -180,15 +220,16 @@ export function useObjetivosPage() {
     seleccionId, setSeleccionId,
     menuObjId, setMenuObjId, menuRef,
     modalNuevo, setModalNuevo,
-    tituloObj, setTituloObj,
-    descObj, setDescObj,
-    limiteObj, setLimiteObj,
-    responsableObjId, setResponsableObjId,
+    nuevoObjetivoForm,
+    setNuevoObjetivoForm,
+    nuevoObjetivoHasChanges,
+    cerrarModalNuevoObjetivo,
     creandoObj: mutCrearObj.isPending,
     modalTarea, setModalTarea,
-    nuevaTareaTitulo, setNuevaTareaTitulo,
-    nuevaTareaPrioridad, setNuevaTareaPrioridad,
-    nuevaTareaAsignadoId, setNuevaTareaAsignadoId,
+    tareaObjetivoForm,
+    setTareaObjetivoForm,
+    tareaObjetivoHasChanges,
+    cerrarModalTareaObjetivo,
     addingTarea: mutAddTarea.isPending,
     eliminarObjId, setEliminarObjId,
     motivoEliminar, setMotivoEliminar,

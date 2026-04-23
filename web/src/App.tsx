@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import type { ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/AppShell';
@@ -17,6 +18,7 @@ const Tablero = lazy(() => import('@/pages/Tablero').then((m) => ({ default: m.T
 const Objetivos = lazy(() => import('@/pages/Objetivos').then((m) => ({ default: m.Objetivos })));
 const Bitacora = lazy(() => import('@/pages/Bitacora').then((m) => ({ default: m.Bitacora })));
 const Metricas = lazy(() => import('@/pages/Metricas').then((m) => ({ default: m.Metricas })));
+const OrdenesTrabajo = lazy(() => import('@/pages/OrdenesTrabajo').then((m) => ({ default: m.OrdenesTrabajo })));
 
 function PageSpinner() {
   return (
@@ -29,7 +31,7 @@ function PageSpinner() {
   );
 }
 
-function RouteWrapper({ children, label }: { children: React.ReactNode; label: string }) {
+function RouteWrapper({ children, label }: { children: ReactNode; label: string }) {
   const { pathname } = useLocation();
   return (
     <SectionErrorBoundary label={label} resetKey={pathname}>
@@ -72,6 +74,7 @@ export default function App() {
         <Route path="objetivos" element={<RouteWrapper label="Objetivos"><Objetivos /></RouteWrapper>} />
         <Route path="bitacora" element={<RouteWrapper label="Bitácora"><Bitacora /></RouteWrapper>} />
         <Route path="metricas" element={<RouteWrapper label="Métricas"><Metricas /></RouteWrapper>} />
+        <Route path="ordenes-trabajo" element={<RouteWrapper label="Órdenes de trabajo"><OrdenesTrabajo /></RouteWrapper>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/hoy" replace />} />

@@ -8,12 +8,29 @@
  *   eliminar  — motivo obligatorio
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { useDraftForm } from '@/hooks/useDraftForm';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import type { Objetivo, Tarea, Usuario } from '@/types';
+
+type EditarTareaDraft = {
+  titulo: string;
+  prioridad: Tarea['prioridad'];
+  descripcion: string;
+  objetivoId: string;
+  asignadoId: string;
+};
+
+const EDITAR_IDLE: EditarTareaDraft = {
+  titulo: '',
+  prioridad: 'media',
+  descripcion: '',
+  objetivoId: '',
+  asignadoId: '',
+};
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -81,23 +98,34 @@ export function ModalDetalleTareaSemana({
   onPlanificar,
 }: Props) {
   const [vista, setVista] = useState<Vista>('detalle');
-  const [titulo, setTitulo] = useState('');
-  const [prioridad, setPrioridad] = useState<Tarea['prioridad']>('media');
-  const [descripcion, setDescripcion] = useState('');
-  const [objetivoId, setObjetivoId] = useState('');
-  const [asignadoId, setAsignadoId] = useState('');
   const [motivoEliminar, setMotivoEliminar] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const initialEditar = useMemo<EditarTareaDraft>(() => {
+    if (!tarea) return EDITAR_IDLE;
+    return {
+      titulo: tarea.titulo,
+      prioridad: tarea.prioridad,
+      descripcion: tarea.descripcion ?? '',
+      objetivoId: tarea.objetivo_id ?? '',
+      asignadoId: tarea.asignado_a ?? '',
+    };
+  }, [tarea]);
+
+  const editarDraftKey = tarea ? `tarea-detalle-editar-${tarea.id}` : '__tarea-detalle-idle__';
+  const {
+    form: editarForm,
+    setForm: setEditarForm,
+    hasChanges: editarHasChanges,
+    clearDraft: clearEditarDraft,
+  } = useDraftForm(editarDraftKey, initialEditar, {
+    enabled: Boolean(open && tarea && vista === 'editar'),
+  });
 
   useEffect(() => {
     if (!tarea) return;
     setVista('detalle');
     setMotivoEliminar('');
-    setTitulo(tarea.titulo);
-    setPrioridad(tarea.prioridad);
-    setDescripcion(tarea.descripcion ?? '');
-    setObjetivoId(tarea.objetivo_id ?? '');
-    setAsignadoId(tarea.asignado_a ?? '');
   }, [tarea?.id]);
 
   const motivoLen = motivoEliminar.trim().length;
@@ -106,17 +134,18 @@ export function ModalDetalleTareaSemana({
     [ELIM_HINT_ID, motivoLen > 0 && !motivoOk ? ELIM_ERR_ID : null].filter(Boolean).join(' ') || undefined;
 
   async function guardar() {
-    if (readOnly || !tarea || !titulo.trim()) return;
+    if (readOnly || !tarea || !editarForm.titulo.trim()) return;
     setBusy(true);
     try {
       await onGuardar({
         tareaId: tarea.id,
-        titulo: titulo.trim(),
-        prioridad,
-        descripcion: descripcion.trim(),
-        objetivo_id: objetivoId || null,
-        asignado_a: asignadoId || null,
+        titulo: editarForm.titulo.trim(),
+        prioridad: editarForm.prioridad,
+        descripcion: editarForm.descripcion.trim(),
+        objetivo_id: editarForm.objetivoId || null,
+        asignado_a: editarForm.asignadoId || null,
       });
+      clearEditarDraft();
       setVista('detalle');
     } finally {
       setBusy(false);
@@ -128,7 +157,7 @@ export function ModalDetalleTareaSemana({
     setBusy(true);
     try {
       await onEliminar({ tareaId: tarea.id, motivo: motivoEliminar.trim() });
-      onClose();
+      handleModalClose();
     } finally {
       setBusy(false);
     }
@@ -138,10 +167,10 @@ export function ModalDetalleTareaSemana({
     if (vista === 'editar') {
       return (
         <>
-          <Button variant="ghost" onClick={() => setVista('detalle')} disabled={busy}>
+          <Button variant="ghost" onClick={() => { clearEditarDraft(); setVista('detalle'); }} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={() => void guardar()} disabled={busy || !titulo.trim()}>
+          <Button onClick={() => void guardar()} disabled={busy || !editarForm.titulo.trim()}>
             {busy ? 'Guardando…' : 'Guardar cambios'}
           </Button>
         </>
@@ -160,7 +189,7 @@ export function ModalDetalleTareaSemana({
       );
     }
     return (
-      <Button variant="ghost" onClick={onClose} disabled={busy}>
+      <Button variant="ghost" onClick={handleModalClose} disabled={busy}>
         Cerrar
       </Button>
     );
@@ -271,8 +300,8 @@ export function ModalDetalleTareaSemana({
               <input
                 id="edit-titulo"
                 className="mc-input"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
+                value={editarForm.titulo}
+                onChange={(e) => setEditarForm((p) => ({ ...p, titulo: e.target.value }))}
                 autoFocus
                 required
               />
@@ -282,8 +311,8 @@ export function ModalDetalleTareaSemana({
               <select
                 id="edit-prioridad"
                 className="mc-input"
-                value={prioridad}
-                onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
+                value={editarForm.prioridad}
+                onChange={(e) => setEditarForm((p) => ({ ...p, prioridad: e.target.value as Tarea['prioridad'] }))}
               >
                 <option value="baja">Baja</option>
                 <option value="media">Media</option>
@@ -296,13 +325,13 @@ export function ModalDetalleTareaSemana({
                 id="edit-desc"
                 className="mc-input"
                 style={{ minHeight: 90, resize: 'vertical' }}
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                value={editarForm.descripcion}
+                onChange={(e) => setEditarForm((p) => ({ ...p, descripcion: e.target.value }))}
               />
             </div>
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="edit-objetivo">Objetivo</label>
-              <select id="edit-objetivo" className="mc-input" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+              <select id="edit-objetivo" className="mc-input" value={editarForm.objetivoId} onChange={(e) => setEditarForm((p) => ({ ...p, objetivoId: e.target.value }))}>
                 <option value="">Sin objetivo</option>
                 {objetivos.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -314,7 +343,7 @@ export function ModalDetalleTareaSemana({
             {usuariosAsignables.length > 0 && (
               <div className="mc-field">
                 <label className="mc-field-label" htmlFor="edit-resp">Responsable</label>
-                <select id="edit-resp" className="mc-input" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
+                <select id="edit-resp" className="mc-input" value={editarForm.asignadoId} onChange={(e) => setEditarForm((p) => ({ ...p, asignadoId: e.target.value }))}>
                   {usuariosAsignables.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.nombre}
@@ -369,12 +398,19 @@ export function ModalDetalleTareaSemana({
     }
   }
 
+  function handleModalClose() {
+    clearEditarDraft();
+    setVista('detalle');
+    onClose();
+  }
+
   return (
     <Modal
       open={open && tarea !== null}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={MODAL_TITULO[vista]}
       size="lg"
+      hasUnsavedChanges={vista === 'editar' && editarHasChanges}
       footer={renderFooter()}
     >
       {renderCuerpo()}

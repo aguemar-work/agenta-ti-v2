@@ -1,6 +1,15 @@
 import {
-  BarChart2, Calendar, CalendarRange, ChevronLeft, ChevronRight,
-  ClipboardList, LayoutGrid, LogOut, NotebookPen, Target,
+  BarChart2,
+  Calendar,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  LayoutGrid,
+  LogOut,
+  NotebookPen,
+  Target,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
@@ -18,6 +27,7 @@ const NAV_ITEMS = [
   { to: '/objetivos', label: 'Objetivos', icon: Target, roles: ['jefe', 'miembro'] },
   { to: '/bitacora', label: 'Bitacora', icon: NotebookPen, roles: ['jefe', 'miembro'] },
   { to: '/metricas', label: 'Metricas', icon: BarChart2, roles: ['jefe', 'miembro'] },
+  { to: '/ordenes-trabajo', label: 'OT', icon: FileText, roles: ['jefe', 'miembro'] },
 ] as const;
 
 const BOTTOM_NAV_ITEMS = ['/hoy', '/semana', '/tablero', '/objetivos', '/bitacora'] as const;
@@ -72,13 +82,13 @@ export function AppShell() {
       --mc-bottom-nav-h: 60px;
       --mc-scroll-pad-bottom: calc(var(--mc-bottom-nav-h) + 8px);
     }
-    .mc-app-root { display:flex; height:100%; overflow:hidden; }
+    .mc-app-root { display:flex; height:100%; overflow-y:hidden; overflow-x:clip; }
     .mc-sidebar {
       width:var(--mc-sidebar-w); flex-shrink:0;
       display:flex; flex-direction:column;
       border-right:1px solid var(--mc-color-border);
       background:var(--mc-color-surface);
-      transition:width 0.2s ease; overflow:hidden;
+      transition:width 0.2s ease; overflow-x:visible; overflow-y:hidden;
     }
     .mc-sidebar.collapsed { width:var(--mc-sidebar-w-collapsed); }
     .mc-sidebar-link {
@@ -186,7 +196,7 @@ export function AppShell() {
               {collapsed ? <AppBrandIcon size={28} /> : <AppLogo height={28} className="shrink-0" />}
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {visibleNav.map(({ to, label, icon: Icon }) => (
                 <div key={to} className="mc-tip" data-tip={label}>
                   <NavLink to={to} end className={({ isActive }) => `mc-sidebar-link${isActive ? ' mc-sidebar-link--active' : ''}`}>

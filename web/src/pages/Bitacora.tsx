@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { ModalConvertirEvento } from '@/components/bitacora/ModalConvertirEvento';
 import { ModalConvertirTarea } from '@/components/bitacora/ModalConvertirTarea';
 import { useBitacoraMutations, useNotasBitacora } from '@/hooks/useBitacora';
+import { useDraftForm } from '@/hooks/useDraftForm';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { useAuthStore } from '@/store/authStore';
 import type { NotaBitacora, TipoEvento, VisibilidadBitacora } from '@/types';
@@ -21,12 +22,16 @@ const visBadge: Record<VisibilidadBitacora, string> = {
   privado: 'mc-badge-neutral',
 };
 
+const NOTA_INICIAL = { contenido: '', visibilidad: 'todos' as VisibilidadBitacora };
+
 export function Bitacora() {
   const usuario = useAuthStore((s) => s.usuario);
   const esJefe = usuario?.rol === 'jefe';
 
-  const [contenido, setContenido] = useState('');
-  const [visibilidad, setVisibilidad] = useState<VisibilidadBitacora>('todos');
+  const { form: notaForm, setForm: setNotaForm, clearDraft: clearNotaDraft } = useDraftForm(
+    'bitacora-nota-nueva',
+    NOTA_INICIAL,
+  );
   const [notaParaTarea, setNotaParaTarea] = useState<NotaBitacora | null>(null);
   const [notaParaEvento, setNotaParaEvento] = useState<NotaBitacora | null>(null);
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
@@ -38,14 +43,15 @@ export function Bitacora() {
   const me = usuario;
 
   async function guardarNota() {
-    if (!contenido.trim()) return;
+    if (!notaForm.contenido.trim()) return;
     try {
       await mut.insertarNota({
         usuario_id: me.id,
-        contenido: contenido.trim(),
-        visibilidad,
+        contenido: notaForm.contenido.trim(),
+        visibilidad: notaForm.visibilidad,
       });
-      setContenido('');
+      clearNotaDraft();
+      setNotaForm(NOTA_INICIAL);
       toast.success('Nota guardada');
     } catch (err) {
       console.error('[guardarNota]', err);
@@ -112,8 +118,8 @@ export function Bitacora() {
           <textarea
             className="mc-input min-h-[100px] resize-y text-sm"
             placeholder="Escribe una nota rápida..."
-            value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
+            value={notaForm.contenido}
+            onChange={(e) => setNotaForm((p) => ({ ...p, contenido: e.target.value }))}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && e.metaKey) {
                 e.preventDefault();
@@ -128,8 +134,8 @@ export function Bitacora() {
             <select
               id="bitacora-vis"
               className="mc-input !w-auto !py-1 text-xs"
-              value={visibilidad}
-              onChange={(e) => setVisibilidad(e.target.value as VisibilidadBitacora)}
+              value={notaForm.visibilidad}
+              onChange={(e) => setNotaForm((p) => ({ ...p, visibilidad: e.target.value as VisibilidadBitacora }))}
             >
               <option value="todos">Equipo</option>
               <option value="solo_jefe">Jefe</option>
@@ -138,7 +144,7 @@ export function Bitacora() {
           </div>
           <Button
             className="ml-auto"
-            disabled={!contenido.trim() || mut.isPending}
+            disabled={!notaForm.contenido.trim() || mut.isPending}
             onClick={() => void guardarNota()}
           >
             + Guardar nota
