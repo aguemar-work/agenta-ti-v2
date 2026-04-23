@@ -29,7 +29,7 @@ export function OrdenesTrabajo() {
   const {
     usuario, esJefe,
     ordenes, isLoading, isError, pendientesCount,
-    tiposActivos, tiposInactivos, loadTipos,
+    tiposActivos, tiposInactivos,
     filtroEstado, setFiltroEstado,
     modalForm, setModalForm, editandoOT,
     viendoOT, setViendoOT,
@@ -212,10 +212,7 @@ export function OrdenesTrabajo() {
             </Button>
           </div>
 
-          {loadTipos ? (
-            <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 
               {/* Tipos activos */}
               {tiposActivos.map((tipo) => (
@@ -308,8 +305,7 @@ export function OrdenesTrabajo() {
                   Sin tipos de trabajo configurados.
                 </p>
               )}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
