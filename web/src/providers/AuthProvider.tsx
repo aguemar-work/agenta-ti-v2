@@ -24,7 +24,8 @@ export function AuthProvider({ children }: Props) {
     try {
       const usuario = await asegurarUsuario(data.user);
       setAuth(data.user, usuario);
-    } catch {
+    } catch (err) {
+      console.error('[bootstrap]', err);
       clear();
       setLoading(false);
     }

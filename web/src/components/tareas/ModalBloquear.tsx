@@ -1,5 +1,13 @@
-import { useState } from 'react';
+/**
+ * components/tareas/ModalBloquear.tsx
+ * Migrado a <Modal> — Sprint 4 hallazgo 2.2.
+ * Patrón de referencia para migrar los demás modales.
+ */
 
+import { useEffect, useState } from 'react';
+
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { Tarea } from '@/types';
 
 type Props = {
@@ -8,14 +16,19 @@ type Props = {
   onConfirm: (input: { tareaId: string; justificacion: string }) => Promise<void>;
 };
 
+const MIN_JUST = 10;
+
 export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
   const [just, setJust] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (!tarea) return null;
-
-  const justOk = just.trim().length >= 10;
+  const len = just.trim().length;
+  const justOk = len >= MIN_JUST;
   const canSubmit = justOk && !busy;
+
+  useEffect(() => {
+    setJust('');
+  }, [tarea?.id]);
 
   async function submit() {
     if (!tarea || !canSubmit) return;
@@ -29,40 +42,64 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
     }
   }
 
+  const hintId = 'modal-bloquear-just-hint';
+
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div
-        className="mc-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bloquear-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="bloquear-title" className="text-base font-semibold text-[var(--mc-color-text)]">
-          Bloquear tarea
-        </h2>
-        <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
-        <p className="mt-3 text-xs text-[var(--mc-color-text-secondary)]">
-          Indica el motivo del bloqueo (mínimo 10 caracteres). El jefe podrá revisarlo y desbloquearla.
-        </p>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Justificación
-          <textarea
-            className="mc-input mt-1 min-h-[96px]"
-            value={just}
-            onChange={(e) => setJust(e.target.value)}
-            placeholder="Describe por qué está bloqueada esta tarea…"
-          />
-        </label>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
+    <Modal
+      open={tarea !== null}
+      onClose={onClose}
+      title="Bloquear tarea"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
-          </button>
-          <button type="button" className="mc-btn" onClick={() => void submit()} disabled={!canSubmit}>
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
             {busy ? 'Guardando…' : 'Bloquear'}
-          </button>
+          </Button>
+        </>
+      }
+    >
+      {tarea && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-[var(--mc-color-text-secondary)]">
+            {tarea.titulo}
+          </p>
+          <p id={hintId} className="text-sm text-[var(--mc-color-text-secondary)]">
+            Indica el motivo del bloqueo (mínimo {MIN_JUST} caracteres). El jefe podrá revisarlo y desbloquearla.
+          </p>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="bloq-just">
+              <span className="flex justify-between">
+                <span>Justificación</span>
+                <span
+                  aria-live="polite"
+                  className={`mc-char-count ${justOk ? 'mc-char-count-ok' : ''}`}
+                >
+                  {len}/{MIN_JUST}
+                </span>
+              </span>
+            </label>
+            <textarea
+              id="bloq-just"
+              className="mc-input"
+              style={{ minHeight: 96, resize: 'vertical' }}
+              value={just}
+              onChange={(e) => setJust(e.target.value)}
+              placeholder="Describe por qué está bloqueada esta tarea…"
+              aria-describedby={hintId}
+              aria-invalid={len > 0 && !justOk}
+              autoFocus
+            />
+          </div>
+          {len > 0 && !justOk && (
+            <p role="status" className="text-xs text-[var(--mc-color-danger)]">
+              Mínimo {MIN_JUST} caracteres (llevas {len}/{MIN_JUST})
+            </p>
+          )}
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

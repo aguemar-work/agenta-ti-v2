@@ -23,10 +23,10 @@ export function useBitacoraMutations(usuarioId: string | undefined, esJefe: bool
   const qc = useQueryClient();
 
   const invalidate = async () => {
-    await qc.invalidateQueries({ queryKey: [Q_BITACORA, usuarioId, esJefe] });
-    await qc.invalidateQueries({ queryKey: ['hoy-notas-bitacora', usuarioId] });
-    await qc.invalidateQueries({ queryKey: ['semana'] });
-    await qc.invalidateQueries({ queryKey: ['tareas-hoy', usuarioId] });
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_BITACORA, usuarioId, esJefe] });
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: ['hoy-notas-bitacora', usuarioId] });
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] });
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy', usuarioId] });
   };
 
   const mInsertar = useMutation({

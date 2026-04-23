@@ -1,153 +1,268 @@
 import {
-  BarChart2,
-  Calendar,
-  CalendarRange,
-  ClipboardList,
-  LayoutGrid,
-  LogOut,
-  NotebookPen,
-  Target,
+  BarChart2, Calendar, CalendarRange, ChevronLeft, ChevronRight,
+  ClipboardList, LayoutGrid, LogOut, NotebookPen, Target,
 } from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 import { AppBrandIcon, AppLogo } from '@/components/brand/AppLogo';
-import { Button } from '@/components/ui/Button';
+import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
+
+const NAV_ITEMS = [
+  { to: '/hoy', label: 'Hoy', icon: Calendar, roles: ['jefe', 'miembro'] },
+  { to: '/semana', label: 'Mi semana', icon: CalendarRange, roles: ['jefe', 'miembro'] },
+  { to: '/planificacion', label: 'Planificacion', icon: ClipboardList, roles: ['jefe'] },
+  { to: '/tablero', label: 'Tablero', icon: LayoutGrid, roles: ['jefe', 'miembro'] },
+  { to: '/objetivos', label: 'Objetivos', icon: Target, roles: ['jefe', 'miembro'] },
+  { to: '/bitacora', label: 'Bitacora', icon: NotebookPen, roles: ['jefe', 'miembro'] },
+  { to: '/metricas', label: 'Metricas', icon: BarChart2, roles: ['jefe', 'miembro'] },
+] as const;
+
+const BOTTOM_NAV_ITEMS = ['/hoy', '/semana', '/tablero', '/objetivos', '/bitacora'] as const;
+
+function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('mc-sidebar-collapsed') === 'true'; }
+    catch { return false; }
+  });
+  function toggle() {
+    setCollapsed((v) => {
+      const next = !v;
+      try { localStorage.setItem('mc-sidebar-collapsed', String(next)); } catch { }
+      return next;
+    });
+  }
+  return { collapsed, toggle };
+}
+
+function getInitials(nombre?: string): string {
+  if (!nombre) return '?';
+  const parts = nombre.trim().split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 export function AppShell() {
   const navigate = useNavigate();
   const usuario = useAuthStore((s) => s.usuario);
   const clear = useAuthStore((s) => s.clear);
+  const { collapsed, toggle } = useSidebarCollapsed();
+
+  const visibleNav = NAV_ITEMS.filter((item) =>
+    !usuario?.rol || (item.roles as readonly string[]).includes(usuario.rol),
+  );
+  const bottomNav = visibleNav.filter((item) =>
+    (BOTTOM_NAV_ITEMS as readonly string[]).includes(item.to),
+  );
 
   async function handleLogout() {
-    const insforge = getInsforge();
-    await insforge.auth.signOut();
+    await getInsforge().auth.signOut();
     clear();
     navigate('/login', { replace: true });
   }
 
-  return (
-    <div className="mc-app-root">
-      <aside className="mc-sidebar mc-sidebar-floating">
-        <nav className="mc-sidebar-inner" aria-label="Módulos">
-          <div className="mx-auto mb-1 flex w-full shrink-0 justify-center border-b border-[var(--mc-color-border)] px-2 pb-2">
-            <NavLink
-              to="/hoy"
-              title="Inicio"
-              aria-label="Inicio"
-              className="flex h-9 w-9 items-center justify-center rounded-[var(--mc-radius-md)] text-[var(--mc-color-text-secondary)] transition-colors hover:bg-[var(--mc-color-surface-hover)] hover:text-[var(--mc-color-text)]"
-            >
-              <AppBrandIcon size={26} />
-            </NavLink>
-          </div>
-          <NavLink
-            to="/hoy"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Hoy"
-          >
-            <span className="mc-sidebar-icon">
-              <Calendar size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Hoy</span>
-          </NavLink>
-          <NavLink
-            to="/semana"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Mi semana"
-          >
-            <span className="mc-sidebar-icon">
-              <CalendarRange size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Mi semana</span>
-          </NavLink>
-          {usuario?.rol === 'jefe' ? (
-            <NavLink
-              to="/planificacion"
-              className={({ isActive }) =>
-                `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-              }
-              title="Planificación"
-            >
-              <span className="mc-sidebar-icon">
-                <ClipboardList size={20} strokeWidth={1.75} aria-hidden />
-              </span>
-              <span className="mc-sidebar-link-text">Planificación</span>
-            </NavLink>
-          ) : null}
-          <NavLink
-            to="/tablero"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Tablero"
-          >
-            <span className="mc-sidebar-icon">
-              <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Tablero</span>
-          </NavLink>
-          <NavLink
-            to="/objetivos"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Objetivos"
-          >
-            <span className="mc-sidebar-icon">
-              <Target size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Objetivos</span>
-          </NavLink>
-          <NavLink
-            to="/bitacora"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Bitácora"
-          >
-            <span className="mc-sidebar-icon">
-              <NotebookPen size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Bitácora</span>
-          </NavLink>
-          <NavLink
-            to="/metricas"
-            className={({ isActive }) =>
-              `mc-sidebar-link ${isActive ? 'mc-sidebar-link--active' : ''}`.trim()
-            }
-            title="Métricas"
-          >
-            <span className="mc-sidebar-icon">
-              <BarChart2 size={20} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className="mc-sidebar-link-text">Métricas</span>
-          </NavLink>
-        </nav>
-      </aside>
+  const initials = getInitials(usuario?.nombre);
 
-      <div className="mc-app-column">
-        <header className="flex h-[var(--mc-topbar-h)] shrink-0 items-center gap-4 border-b border-[var(--mc-color-border)] bg-[var(--mc-color-surface)] px-4">
-          <AppLogo height={28} className="shrink-0" />
-          <div className="flex-1" />
-          <span
-            className="hidden text-[var(--mc-color-text-secondary)] sm:inline"
-            style={{ fontSize: 'var(--mc-text-sm)' }}
-          >
-            {usuario?.nombre}
-          </span>
-          <Button variant="ghost" className="!p-2" onClick={() => void handleLogout()} title="Cerrar sesión">
-            <LogOut size={18} aria-hidden />
-          </Button>
-        </header>
-        <main className="mc-main">
-          <Outlet />
-        </main>
+  const CSS = `
+    :root {
+      --mc-sidebar-w: 220px;
+      --mc-sidebar-w-collapsed: 56px;
+      --mc-bottom-nav-h: 60px;
+      --mc-scroll-pad-bottom: calc(var(--mc-bottom-nav-h) + 8px);
+    }
+    .mc-app-root { display:flex; height:100%; overflow:hidden; }
+    .mc-sidebar {
+      width:var(--mc-sidebar-w); flex-shrink:0;
+      display:flex; flex-direction:column;
+      border-right:1px solid var(--mc-color-border);
+      background:var(--mc-color-surface);
+      transition:width 0.2s ease; overflow:hidden;
+    }
+    .mc-sidebar.collapsed { width:var(--mc-sidebar-w-collapsed); }
+    .mc-sidebar-link {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 12px; border-radius:var(--mc-radius-md);
+      color:var(--mc-color-text-secondary); text-decoration:none;
+      font-size:var(--mc-text-sm); font-weight:500;
+      white-space:nowrap; transition:background 0.13s,color 0.13s; min-width:0;
+    }
+    .mc-sidebar-link:hover { background:var(--mc-color-surface-hover); color:var(--mc-color-text); }
+    .mc-sidebar-link--active {
+      background:color-mix(in srgb, var(--mc-color-accent) 10%, transparent);
+      color:var(--mc-color-accent);
+    }
+    .mc-sidebar-link .link-label {
+      overflow:hidden; opacity:1;
+      transition:opacity 0.15s, max-width 0.2s; max-width:160px;
+    }
+    .mc-sidebar.collapsed .link-label { opacity:0; max-width:0; }
+    .mc-tip { position:relative; }
+    .mc-tip::after {
+      content:attr(data-tip);
+      position:absolute; left:calc(100% + 8px); top:50%;
+      transform:translateY(-50%);
+      background:var(--mc-color-text); color:var(--mc-color-surface);
+      font-size:12px; font-weight:500; white-space:nowrap;
+      padding:4px 10px; border-radius:var(--mc-radius-sm);
+      pointer-events:none; opacity:0; transition:opacity 0.1s ease; z-index:200;
+    }
+    .mc-sidebar.collapsed .mc-tip:hover::after { opacity:1; }
+    .mc-sidebar-profile {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px; min-width:0; overflow:hidden;
+    }
+    .mc-sidebar-avatar {
+      width:32px; height:32px; border-radius:50%;
+      background:color-mix(in srgb, var(--mc-color-accent) 12%, transparent);
+      color:var(--mc-color-accent);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:600; flex-shrink:0; user-select:none;
+    }
+    .mc-sidebar-profile-info {
+      flex:1; min-width:0; overflow:hidden;
+      opacity:1; max-width:140px;
+      transition:opacity 0.15s, max-width 0.2s;
+    }
+    .mc-sidebar.collapsed .mc-sidebar-profile-info { opacity:0; max-width:0; }
+    .mc-sidebar-profile-name {
+      font-size:13px; font-weight:500; color:var(--mc-color-text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0;
+    }
+    .mc-sidebar-profile-role {
+      font-size:11px; color:var(--mc-color-text-secondary); white-space:nowrap; margin:0;
+    }
+    .mc-sidebar-logout {
+      display:flex; align-items:center; justify-content:center;
+      width:30px; height:30px; border-radius:var(--mc-radius-md);
+      border:none; background:none; cursor:pointer;
+      color:var(--mc-color-text-secondary); flex-shrink:0;
+      transition:background 0.13s, color 0.13s;
+    }
+    .mc-sidebar-logout:hover { background:var(--mc-color-surface-hover); color:var(--mc-color-danger); }
+    .mc-app-column { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+    .mc-main { flex:1; min-height:0; overflow-y:auto; width:100%; padding:var(--mc-space-6); box-sizing:border-box; }
+    .mc-module { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+    .mc-mobile-topbar {
+      display:none; height:var(--mc-topbar-h,56px); flex-shrink:0;
+      align-items:center; padding:0 16px;
+      border-bottom:1px solid var(--mc-color-border);
+      background:var(--mc-color-surface); gap:8px;
+    }
+    .mc-bottom-nav {
+      display:none; position:fixed; bottom:0; left:0; right:0;
+      height:var(--mc-bottom-nav-h);
+      background:var(--mc-color-surface);
+      border-top:1px solid var(--mc-color-border); z-index:40;
+    }
+    .mc-bottom-nav-inner { display:flex; align-items:stretch; height:100%; }
+    .mc-bottom-nav-link {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:3px; text-decoration:none;
+      color:var(--mc-color-text-secondary);
+      font-size:10px; font-weight:500;
+      transition:color 0.13s; padding:6px 4px 8px;
+    }
+    .mc-bottom-nav-link.active,
+    .mc-bottom-nav-link--active { color:var(--mc-color-accent); }
+    @media (max-width:767px) {
+      .mc-sidebar       { display:none; }
+      .mc-bottom-nav    { display:block; }
+      .mc-mobile-topbar { display:flex; }
+      .mc-main          { padding-bottom:var(--mc-scroll-pad-bottom) !important; }
+    }
+  `;
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div className="mc-app-root">
+
+        <SectionErrorBoundary label="Sidebar">
+          <nav id="mc-sidebar-nav" className={`mc-sidebar${collapsed ? ' collapsed' : ''}`} aria-label="Navegacion principal">
+            <div style={{ height: 'var(--mc-topbar-h,56px)', display: 'flex', alignItems: 'center', padding: '0 12px', borderBottom: '1px solid var(--mc-color-border)', flexShrink: 0, overflow: 'hidden' }}>
+              {collapsed ? <AppBrandIcon size={28} /> : <AppLogo height={28} className="shrink-0" />}
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {visibleNav.map(({ to, label, icon: Icon }) => (
+                <div key={to} className="mc-tip" data-tip={label}>
+                  <NavLink to={to} end className={({ isActive }) => `mc-sidebar-link${isActive ? ' mc-sidebar-link--active' : ''}`}>
+                    {({ isActive }) => (
+                      <>
+                        <Icon size={18} aria-hidden style={{ flexShrink: 0 }} />
+                        <span className="link-label" aria-hidden={collapsed}>{label}</span>
+                        {isActive && <span className="sr-only">(pagina actual)</span>}
+                      </>
+                    )}
+                  </NavLink>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--mc-color-border)', flexShrink: 0 }}>
+              <div className="mc-sidebar-profile mc-tip" data-tip={collapsed ? usuario?.nombre : undefined}>
+                <div className="mc-sidebar-avatar" aria-hidden>{initials}</div>
+                <div className="mc-sidebar-profile-info">
+                  <p className="mc-sidebar-profile-name">{usuario?.nombre}</p>
+                  <p className="mc-sidebar-profile-role">{usuario?.rol === 'jefe' ? 'Jefe' : 'Miembro'}</p>
+                </div>
+                <button type="button" className="mc-sidebar-logout" onClick={() => void handleLogout()} aria-label="Cerrar sesion">
+                  <LogOut size={16} aria-hidden />
+                </button>
+              </div>
+
+              <div style={{ padding: '0 8px 8px' }}>
+                <button type="button" onClick={toggle} aria-expanded={!collapsed} aria-controls="mc-sidebar-nav"
+                  aria-label={collapsed ? 'Expandir menu lateral' : 'Colapsar menu lateral'}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end', gap: 8, padding: '7px 10px', borderRadius: 'var(--mc-radius-md)', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--mc-color-text-secondary)', fontSize: '12px', fontWeight: 500, transition: 'background 0.13s' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--mc-color-surface-hover)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                >
+                  {collapsed ? <ChevronRight size={16} aria-hidden /> : <><span>Colapsar</span><ChevronLeft size={16} aria-hidden /></>}
+                </button>
+              </div>
+            </div>
+          </nav>
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary label="Contenido Principal">
+          <div className="mc-app-column">
+            <div className="mc-mobile-topbar">
+              <AppBrandIcon size={28} />
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: '13px', color: 'var(--mc-color-text-secondary)' }}>{usuario?.nombre}</span>
+              <button type="button" className="mc-sidebar-logout" onClick={() => void handleLogout()} aria-label="Cerrar sesion">
+                <LogOut size={18} aria-hidden />
+              </button>
+            </div>
+            <main className="mc-main" id="main-content" tabIndex={-1}>
+              <Outlet />
+            </main>
+          </div>
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary label="Bottom Nav">
+          <nav className="mc-bottom-nav" aria-label="Navegacion inferior">
+            <div className="mc-bottom-nav-inner">
+              {bottomNav.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} end className={({ isActive }) => `mc-bottom-nav-link${isActive ? ' mc-bottom-nav-link--active' : ''}`}>
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={20} aria-hidden />
+                      <span>{label}</span>
+                      {isActive && <span className="sr-only">(pagina actual)</span>}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
+        </SectionErrorBoundary>
+
       </div>
-    </div>
+    </>
   );
 }

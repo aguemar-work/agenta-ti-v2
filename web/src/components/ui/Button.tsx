@@ -1,26 +1,54 @@
+/**
+ * components/ui/Button.tsx
+ * Reemplaza los overrides !px-3 !py-2 text-xs dispersos por props tipadas.
+ *
+ * Antes:  <button className="mc-btn !px-3 !py-2 text-xs">
+ * Ahora:  <Button size="sm">
+ *
+ * Antes:  <button className="mc-btn !bg-[var(--mc-color-danger)]">
+ * Ahora:  <Button variant="danger">
+ */
+
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size = 'default' | 'sm' | 'xs';
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
-  variant?: 'primary' | 'ghost';
+  variant?: Variant;
+  size?: Size;
+};
+
+const VARIANT_CLASS: Record<Variant, string> = {
+  primary: 'mc-btn',
+  secondary: 'mc-btn-secondary',
+  ghost: 'mc-btn-ghost',
+  danger: 'mc-btn-danger',
+};
+
+const SIZE_CLASS: Record<Size, string> = {
+  default: '',
+  sm: 'mc-btn-sm',
+  xs: 'mc-btn-xs',
 };
 
 export function Button({
   children,
   variant = 'primary',
+  size = 'default',
   className = '',
   type = 'button',
   ...rest
 }: Props) {
-  const base =
-    'inline-flex items-center justify-center rounded-[var(--mc-radius-md)] px-4 py-2 text-[var(--mc-text-sm)] font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none';
-  const styles =
-    variant === 'primary'
-      ? 'bg-[var(--mc-color-accent)] text-white hover:bg-[var(--mc-color-accent-hover)]'
-      : 'bg-transparent text-[var(--mc-color-text)] hover:bg-[var(--mc-color-surface-hover)] border border-[var(--mc-color-border)]';
+  const classes = [
+    VARIANT_CLASS[variant],
+    SIZE_CLASS[size],
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
-    <button type={type} className={`${base} ${styles} ${className}`.trim()} {...rest}>
+    <button type={type} className={classes} {...rest}>
       {children}
     </button>
   );

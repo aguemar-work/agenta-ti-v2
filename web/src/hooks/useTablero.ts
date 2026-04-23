@@ -46,12 +46,12 @@ export function useMoverColumnaMutation() {
     mutationFn: (p: { tareaId: string; nuevoEstado: EstadoTarea; usuarioActorId: string; justificacion?: string }) =>
       moverTareaColumna(p.tareaId, p.nuevoEstado, p.usuarioActorId, p.justificacion),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: [Q_TAB] });
-      await qc.invalidateQueries({ queryKey: ['tareas-hoy'] });
-      await qc.invalidateQueries({ queryKey: ['semana'] });
-      await qc.invalidateQueries({ queryKey: ['planificacion'] });
-      await qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] });
-      await qc.invalidateQueries({ queryKey: [Q_KPIS] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TAB] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS] });
     },
   });
 }

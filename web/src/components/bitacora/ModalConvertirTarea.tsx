@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
 import type { NotaBitacora, Tarea } from '@/types';
 
@@ -29,8 +31,6 @@ export function ModalConvertirTarea({ nota, onClose, onConfirm }: Props) {
     }
   }, [nota]);
 
-  if (!nota) return null;
-
   const canSubmit = titulo.trim().length > 0 && fecha.length > 0 && !busy;
 
   async function submit() {
@@ -45,39 +45,45 @@ export function ModalConvertirTarea({ nota, onClose, onConfirm }: Props) {
   }
 
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Convertir en tarea</h2>
-        <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">Revisa y completa los datos antes de crear.</p>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Titulo
-          <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Fecha planificada
-          <input type="date" className="mc-input mt-1" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Prioridad
-          <select className="mc-input mt-1" value={prioridad} onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}>
+    <Modal
+      open={nota !== null}
+      onClose={onClose}
+      title="Convertir en tarea"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
+            {busy ? 'Creando...' : 'Crear tarea'}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-[var(--mc-color-text-secondary)]">Revisa y completa los datos antes de crear.</p>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-title">Título</label>
+          <input id="conv-title" className="mc-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
+        </div>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-fecha">Fecha planificada</label>
+          <input id="conv-fecha" type="date" className="mc-input" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </div>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-prioridad">Prioridad</label>
+          <select id="conv-prioridad" className="mc-input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}>
             <option value="baja">Baja</option>
             <option value="media">Media</option>
             <option value="alta">Alta</option>
           </select>
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Descripcion
-          <textarea className="mc-input mt-1 min-h-[80px]" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-        </label>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
-            Cancelar
-          </button>
-          <button type="button" className="mc-btn" onClick={() => void submit()} disabled={!canSubmit}>
-            {busy ? 'Creando...' : 'Crear tarea'}
-          </button>
+        </div>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-desc">Descripción</label>
+          <textarea id="conv-desc" className="mc-input" style={{ minHeight: 80, resize: 'vertical' }} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

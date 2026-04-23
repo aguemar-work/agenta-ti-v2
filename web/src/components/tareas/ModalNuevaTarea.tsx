@@ -1,5 +1,12 @@
-import { useEffect, useState } from 'react';
+/**
+ * components/tareas/ModalNuevaTarea.tsx
+ * Migrado a <Modal> — Sprint 4.
+ */
 
+import { useCallback, useEffect, useState } from 'react';
+
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
 type Modo = 'libre' | 'dia' | 'incidencia';
@@ -7,11 +14,9 @@ type Modo = 'libre' | 'dia' | 'incidencia';
 type Props = {
   modo: Modo;
   fechaDia?: string;
-  /** Día canónico `YYYY-MM-DD` (p. ej. hoy) para incidencias o respaldo. */
   fechaReferencia: string;
   open: boolean;
   objetivos?: Pick<Objetivo, 'id' | 'titulo'>[];
-  /** UUID del usuario en sesión: se usa si "Asignado a" queda vacío. */
   usuarioActualId: string;
   usuariosAsignables?: Pick<Usuario, 'id' | 'nombre'>[];
   onClose: () => void;
@@ -22,6 +27,12 @@ type Props = {
     objetivo_id?: string | null;
     asignado_a: string;
   }) => Promise<void>;
+};
+
+const TITULO_MODAL: Record<Modo, (fechaDia?: string) => string> = {
+  libre: () => 'Nueva tarea libre',
+  incidencia: () => 'Nueva incidencia',
+  dia: (f = '') => `Nueva tarea · ${f}`,
 };
 
 export function ModalNuevaTarea({
@@ -42,16 +53,23 @@ export function ModalNuevaTarea({
   const [asignadoId, setAsignadoId] = useState(usuarioActualId);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (open) setAsignadoId(usuarioActualId);
-  }, [open, usuarioActualId]);
+  const reset = useCallback(() => {
+    setTitulo('');
+    setPrioridad('media');
+    setDescripcion('');
+    setObjetivoId('');
+    setAsignadoId(usuarioActualId);
+  }, [usuarioActualId]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (open) reset();
+  }, [open, modo, reset]);
 
   const fechaLimiteYmd = modo === 'dia' && fechaDia ? fechaDia : fechaReferencia;
+  const canSubmit = titulo.trim().length > 0 && !busy;
 
   async function submit() {
-    if (!titulo.trim()) return;
+    if (!canSubmit) return;
     setBusy(true);
     try {
       const asignado = modo === 'incidencia' ? usuarioActualId : (asignadoId.trim() || usuarioActualId);
@@ -62,43 +80,66 @@ export function ModalNuevaTarea({
         objetivo_id: modo === 'incidencia' ? null : (objetivoId || null),
         asignado_a: asignado,
       });
-      setTitulo('');
-      setPrioridad('media');
-      setDescripcion('');
-      setObjetivoId('');
-      setAsignadoId(usuarioActualId);
+      reset();
       onClose();
     } finally {
       setBusy(false);
     }
   }
 
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-semibold text-[var(--mc-color-text)]">
-          {modo === 'libre'
-            ? 'Nueva tarea libre'
-            : modo === 'incidencia'
-              ? 'Nueva incidencia'
-              : `Nueva tarea · ${fechaDia ?? ''}`}
-        </h2>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title={TITULO_MODAL[modo](fechaDia)}
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={handleClose} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
+            {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar' : 'Crear'}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
         {modo === 'incidencia' ? (
-          <p className="mt-2 text-xs text-[var(--mc-color-text-secondary)]">Se registrará como imprevisto del día de hoy.</p>
+          <p className="text-sm text-[var(--mc-color-text-secondary)]">
+            Se registrará como imprevisto del día de hoy.
+          </p>
         ) : (
-          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Fecha límite
-            <input type="date" className="mc-input mt-1" readOnly value={fechaLimiteYmd} aria-readonly />
-          </label>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
+            <input id="new-fecha" type="date" className="mc-input" readOnly value={fechaLimiteYmd} aria-readonly="true" />
+          </div>
         )}
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          {modo === 'incidencia' ? 'Título del incidente' : 'Título'}
-          <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Prioridad
+
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="new-titulo">
+            {modo === 'incidencia' ? 'Título del incidente' : 'Título'}
+          </label>
+          <input
+            id="new-titulo"
+            className="mc-input"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="new-prioridad">Prioridad</label>
           <select
-            className="mc-input mt-1"
+            id="new-prioridad"
+            className="mc-input"
             value={prioridad}
             onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
           >
@@ -106,20 +147,35 @@ export function ModalNuevaTarea({
             <option value="media">Media</option>
             <option value="alta">Alta</option>
           </select>
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          {modo === 'incidencia' ? '¿Qué ocurrió y cómo se resolvió?' : 'Descripción'}
+        </div>
+
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="new-desc">
+            {modo === 'incidencia' ? '¿Qué ocurrió y cómo se resolvió?' : 'Descripción'}
+          </label>
           <textarea
-            className="mc-input mt-1 min-h-[90px] resize-y"
+            id="new-desc"
+            className="mc-input"
+            style={{ minHeight: 90, resize: 'vertical' }}
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            placeholder={modo === 'incidencia' ? 'Describe el incidente y la solución aplicada…' : 'Describe la tarea...'}
+            placeholder={
+              modo === 'incidencia'
+                ? 'Describe el incidente y la solución aplicada…'
+                : 'Describe la tarea…'
+            }
           />
-        </label>
-        {modo !== 'incidencia' ? (
-          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Vincular a objetivo
-            <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+        </div>
+
+        {modo !== 'incidencia' && (
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-objetivo">Vincular a objetivo</label>
+            <select
+              id="new-objetivo"
+              className="mc-input"
+              value={objetivoId}
+              onChange={(e) => setObjetivoId(e.target.value)}
+            >
               <option value="">Sin objetivo</option>
               {objetivos.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -127,29 +183,27 @@ export function ModalNuevaTarea({
                 </option>
               ))}
             </select>
-          </label>
-        ) : null}
-        {modo !== 'incidencia' && usuariosAsignables.length > 0 ? (
-          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Asignado a
-            <select className="mc-input mt-1" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
+          </div>
+        )}
+
+        {modo !== 'incidencia' && usuariosAsignables.length > 0 && (
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-asignado">Asignado a</label>
+            <select
+              id="new-asignado"
+              className="mc-input"
+              value={asignadoId}
+              onChange={(e) => setAsignadoId(e.target.value)}
+            >
               {usuariosAsignables.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.id === usuarioActualId ? `${u.nombre} (tú)` : u.nombre}
                 </option>
               ))}
             </select>
-          </label>
-        ) : null}
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
-            Cancelar
-          </button>
-          <button type="button" className="mc-btn" onClick={() => void submit()} disabled={busy || !titulo.trim()}>
-            {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar' : 'Crear'}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

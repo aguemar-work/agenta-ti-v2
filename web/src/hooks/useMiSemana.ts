@@ -57,14 +57,14 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
   const invalidate = async () => {
     if (!usuarioId) return;
     await Promise.all([
-      qc.invalidateQueries({ queryKey: Q.plan(usuarioId, semanaISO) }),
-      qc.invalidateQueries({ queryKey: Q.lib(usuarioId) }),
-      qc.invalidateQueries({ queryKey: Q.ev(usuarioId, semanaISO) }),
-      qc.invalidateQueries({ queryKey: ['tareas-hoy', usuarioId] }),
-      qc.invalidateQueries({ queryKey: ['tablero'] }),
-      qc.invalidateQueries({ queryKey: ['planificacion'] }),
-      qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-      qc.invalidateQueries({ queryKey: [Q_KPIS] }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.plan(usuarioId, semanaISO) }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.lib(usuarioId) }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.ev(usuarioId, semanaISO) }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy', usuarioId] }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'] }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG] }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS] }),
     ]);
   };
 

@@ -1,311 +1,145 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
-
-import { crearObjetivo, eliminarObjetivo, getTareasPorObjetivo } from '@/api/objetivos';
-import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
-import { crearTareaLibre } from '@/api/semana';
-import { Q_KPIS, Q_OBJ_PROG, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { useAuthStore } from '@/store/authStore';
-import type { EstadoObjetivo, Tarea } from '@/types';
-
-const estadoObjLabel: Record<EstadoObjetivo, string> = {
-  activo: 'Activo',
-  completado: 'Completado',
-  cancelado: 'Cancelado',
-};
-
-const estadoBadge: Record<EstadoObjetivo, string> = {
-  activo: 'mc-badge-accent',
-  completado: 'mc-badge-success',
-  cancelado: 'mc-badge-neutral',
-};
-
-const estadoTareaBadge: Record<string, string> = {
-  pendiente: 'mc-badge-neutral',
-  en_progreso: 'mc-badge-info',
-  atrasada: 'mc-badge-danger',
-  bloqueada: 'mc-badge-warning',
-  completada: 'mc-badge-success',
-  reprogramada: 'mc-badge-neutral',
-};
-
-const estadoTareaLabel: Record<string, string> = {
-  pendiente: 'Pendiente',
-  en_progreso: 'En progreso',
-  atrasada: 'Atrasada',
-  bloqueada: 'Bloqueada',
-  completada: 'Completada',
-  reprogramada: 'Reprogramada',
-};
-
-const Q_TAREAS_OBJ = 'objetivo-tareas';
+import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
+import type { EstadoObjetivo } from '@/types';
 
 export function Objetivos() {
-  const qc = useQueryClient();
-  const usuario = useAuthStore((s) => s.usuario);
-  const esJefe = usuario?.rol === 'jefe';
-
-  const { data: objetivos = [], isLoading: loadO, isError } = useObjetivosProgreso();
-
-  const [seleccionId, setSeleccionId] = useState<string | null>(null);
-  const [menuObjId, setMenuObjId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Modal nuevo objetivo
-  const [modalNuevo, setModalNuevo] = useState(false);
-  const [tituloObj, setTituloObj] = useState('');
-  const [descObj, setDescObj] = useState('');
-  const [limiteObj, setLimiteObj] = useState('');
-  const [responsableObjId, setResponsableObjId] = useState('');
-
-  // Modal añadir tarea
-  const [modalTarea, setModalTarea] = useState(false);
-  const [nuevaTareaTitulo, setNuevaTareaTitulo] = useState('');
-  const [nuevaTareaPrioridad, setNuevaTareaPrioridad] = useState<Tarea['prioridad']>('media');
-  const [nuevaTareaAsignadoId, setNuevaTareaAsignadoId] = useState('');
-
-  // Modal eliminar objetivo
-  const [eliminarObjId, setEliminarObjId] = useState<string | null>(null);
-  const [motivoEliminar, setMotivoEliminar] = useState('');
-
-  const { data: tareasVinc = [], isLoading: loadTareas } = useQuery({
-    queryKey: [Q_TAREAS_OBJ, seleccionId],
-    enabled: Boolean(seleccionId),
-    queryFn: () => getTareasPorObjetivo(seleccionId!),
-  });
-
-  const { data: usuariosActivos = [] } = useQuery({
-    queryKey: ['usuarios-asignacion-objetivos'],
-    queryFn: () => getUsuariosActivosParaAsignacion(),
-  });
-
-  const objetivoSel = objetivos.find((o) => o.id === seleccionId) ?? null;
-  const objetivoEliminar = objetivos.find((o) => o.id === eliminarObjId) ?? null;
-
-  useEffect(() => {
-    if (!usuario?.id) return;
-    setNuevaTareaAsignadoId(usuario.id);
-    setResponsableObjId(usuario.id);
-  }, [usuario?.id]);
-
-  // Cerrar menú al click fuera
-  useEffect(() => {
-    if (!menuObjId) return;
-    function handler(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuObjId(null);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuObjId]);
-
-  const mutCrearObj = useMutation({
-    mutationFn: crearObjetivo,
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS, usuario?.id] }),
-      ]);
-      setTituloObj(''); setDescObj(''); setLimiteObj('');
-      setModalNuevo(false);
-      toast.success('Objetivo creado');
-    },
-    onError: () => toast.error('No se pudo crear el objetivo.'),
-  });
-
-  const mutEliminarObj = useMutation({
-    mutationFn: (input: { objetivoId: string; usuarioId: string; motivo: string }) =>
-      eliminarObjetivo(input),
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS, usuario?.id] }),
-      ]);
-      if (seleccionId === eliminarObjId) setSeleccionId(null);
-      setEliminarObjId(null);
-      setMotivoEliminar('');
-      toast.success('Objetivo eliminado');
-    },
-    onError: () => toast.error('No se pudo eliminar el objetivo.'),
-  });
-
-  const mutAddTarea = useMutation({
-    mutationFn: crearTareaLibre,
-    onSuccess: async (_, vars) => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: [Q_TAREAS_OBJ, vars.objetivo_id] }),
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-        qc.invalidateQueries({ queryKey: ['tablero'] }),
-        qc.invalidateQueries({ queryKey: ['semana'] }),
-      ]);
-      setNuevaTareaTitulo('');
-      setNuevaTareaPrioridad('media');
-      setNuevaTareaAsignadoId(usuario?.id ?? '');
-      setModalTarea(false);
-      toast.success('Tarea añadida al objetivo');
-    },
-    onError: () => toast.error('No se pudo añadir la tarea.'),
-  });
+  const {
+    usuario, esJefe,
+    objetivos, loadO, isError,
+    tareasVinc, loadTareas,
+    usuariosActivos,
+    objetivoSel, objetivoEliminar,
+    seleccionId, setSeleccionId,
+    menuObjId, setMenuObjId, menuRef,
+    modalNuevo, setModalNuevo,
+    tituloObj, setTituloObj,
+    descObj, setDescObj,
+    limiteObj, setLimiteObj,
+    responsableObjId, setResponsableObjId,
+    creandoObj,
+    modalTarea, setModalTarea,
+    nuevaTareaTitulo, setNuevaTareaTitulo,
+    nuevaTareaPrioridad, setNuevaTareaPrioridad,
+    nuevaTareaAsignadoId, setNuevaTareaAsignadoId,
+    addingTarea,
+    eliminarObjId, setEliminarObjId,
+    motivoEliminar, setMotivoEliminar,
+    motivoOk, MIN_MOTIVO,
+    eliminandoObj,
+    puedeEliminar,
+    submitNuevoObjetivo,
+    addTareaVinculada,
+    confirmarEliminar,
+    abrirModalNuevo,
+    cerrarEliminar,
+  } = useObjetivosPage();
 
   if (!usuario) return null;
-  const me = usuario;
 
-  async function submitNuevoObjetivo() {
-    if (!tituloObj.trim() || !responsableObjId.trim()) return;
-    try {
-      await mutCrearObj.mutateAsync({
-        titulo: tituloObj.trim(),
-        descripcion: descObj.trim() || null,
-        fecha_limite: limiteObj.trim() || null,
-        creado_por: me.id,
-        responsable_id: responsableObjId.trim(),
-      });
-    } catch {
-      // toast ya lo maneja onError
-    }
-  }
-
-  function addTareaVinculada() {
-    if (!seleccionId || !nuevaTareaTitulo.trim()) return;
-    mutAddTarea.mutate({
-      titulo: nuevaTareaTitulo.trim(),
-      prioridad: nuevaTareaPrioridad,
-      descripcion: null,
-      asignado_a: nuevaTareaAsignadoId.trim() || null,
-      creado_por: me.id,
-      objetivo_id: seleccionId,
-    });
-  }
-
-  function puedeEliminarObjetivo(objetivoId: string): boolean {
-    const obj = objetivos.find((o) => o.id === objetivoId);
-    if (!obj) return false;
-    return esJefe || obj.creado_por === me.id;
-  }
+  const canSubmitNuevo = !creandoObj && tituloObj.trim().length > 0
+    && (esJefe ? responsableObjId.trim().length > 0 : true);
 
   return (
     <div className={APP_PAGE_CLASS}>
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="mc-page-header">
         <div>
-          <h1 className="font-semibold text-[var(--mc-color-text)]" style={{ fontSize: 'var(--mc-text-lg)' }}>
-            Objetivos
-          </h1>
-          <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">
-            Gestión estratégica
-          </h2>
+          <h1 className="mc-page-title">Objetivos</h1>
+          <h2 className="mc-page-subtitle">Gestión estratégica</h2>
         </div>
-        <button
-          type="button"
-          className="mc-btn !px-4 !py-2 text-sm"
-          onClick={() => {
-            setResponsableObjId(me.id);
-            setModalNuevo(true);
-          }}
-        >
+        <Button onClick={abrirModalNuevo}>
           + Nuevo objetivo
-        </button>
-      </div>
+        </Button>
+      </header>
 
-      {isError ? <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los objetivos.</p> : null}
+      {isError && <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los objetivos.</p>}
 
-      {/* Layout principal */}
+      {/* ── Layout principal ────────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
 
-        {/* Tabla de objetivos */}
+        {/* Tabla */}
         <div className="mc-card !p-0 overflow-hidden">
-          <div className="border-b border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-              Lista de objetivos
-            </span>
+          <div className="mc-section-header">
+            <span>Lista de objetivos</span>
           </div>
-          {/* Headers */}
           <div className="grid grid-cols-[1fr_80px_160px_80px_32px] gap-3 border-b border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-4 py-2">
             {['Objetivo', 'Estado', 'Progreso', 'Límite', ''].map((h) => (
-              <span key={h} className="text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                {h}
-              </span>
+              <span key={h} className="text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">{h}</span>
             ))}
           </div>
+
           {loadO ? (
             <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
           ) : objetivos.length === 0 ? (
-            <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Sin objetivos.</p>
+            <div className="mc-empty">
+              <p className="mc-empty-title">Sin objetivos</p>
+            </div>
           ) : (
             objetivos.map((o) => (
               <div
                 key={o.id}
-                className={`grid cursor-pointer grid-cols-[1fr_80px_160px_80px_32px] items-center gap-3 border-b border-[var(--mc-color-border)] px-4 py-3 last:border-b-0 hover:bg-[var(--mc-color-bg-secondary)] ${seleccionId === o.id ? 'bg-[var(--mc-color-accent-soft)]' : ''}`.trim()}
+                className={[
+                  'grid cursor-pointer grid-cols-[1fr_80px_160px_80px_32px] items-center gap-3',
+                  'border-b border-[var(--mc-color-border)] px-4 py-3 last:border-b-0',
+                  'hover:bg-[var(--mc-color-bg-secondary)]',
+                  seleccionId === o.id ? 'bg-[var(--mc-color-accent-soft)]' : '',
+                ].join(' ').trim()}
                 onClick={() => setSeleccionId(o.id)}
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--mc-color-text)]">{o.titulo}</p>
-                  {o.descripcion ? (
+                  {o.descripcion && (
                     <p className="mt-0.5 truncate text-xs text-[var(--mc-color-text-secondary)]">{o.descripcion}</p>
-                  ) : null}
+                  )}
                 </div>
-                <span className={`mc-badge ${estadoBadge[o.estado]} text-[10px]`}>
-                  {estadoObjLabel[o.estado]}
+                <span className={`mc-badge ${OBJETIVO_BADGE[o.estado as EstadoObjetivo]} text-[10px]`}>
+                  {OBJETIVO_LABEL[o.estado as EstadoObjetivo]}
                 </span>
                 <div className="flex flex-col gap-1">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--mc-color-border)]">
-                    <div
-                      className="h-full rounded-full bg-[var(--mc-color-accent)]"
-                      style={{ width: `${o.pct}%` }}
-                    />
+                    <div className="h-full rounded-full bg-[var(--mc-color-accent)]" style={{ width: `${o.pct}%` }} />
                   </div>
                   <span className="text-[10px] text-[var(--mc-color-text-secondary)]">
                     {o.completadas}/{o.total_tareas} · {o.pct}%
                   </span>
                 </div>
-                <span className="text-xs text-[var(--mc-color-text-secondary)]">
-                  {o.fecha_limite ?? '—'}
-                </span>
+                <span className="text-xs text-[var(--mc-color-text-secondary)]">{o.fecha_limite ?? '—'}</span>
+
                 {/* Menú ⋯ */}
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     className="mc-btn-ghost !p-1 text-[var(--mc-color-text-secondary)]"
                     onClick={() => setMenuObjId(menuObjId === o.id ? null : o.id)}
+                    aria-label="Opciones"
+                    aria-expanded={menuObjId === o.id}
                   >
                     ···
                   </button>
-                  {menuObjId === o.id ? (
+                  {menuObjId === o.id && (
                     <div
                       ref={menuRef}
                       className="absolute right-0 top-7 z-20 min-w-[160px] rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] py-1"
+                      role="menu"
                     >
-                      {(esJefe || o.creado_por === me.id) ? (
-                        <button
-                          type="button"
-                          className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
-                          onClick={() => {
-                            setMenuObjId(null);
-                            // abrir modal edición — por implementar
-                          }}
-                        >
+                      {(esJefe || o.creado_por === usuario.id) && (
+                        <button type="button" className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
+                          role="menuitem" onClick={() => setMenuObjId(null)}>
                           Editar
                         </button>
-                      ) : null}
-                      {puedeEliminarObjetivo(o.id) ? (
-                        <button
-                          type="button"
-                          className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs !text-[var(--mc-color-danger)]"
-                          onClick={() => {
-                            setMenuObjId(null);
-                            setEliminarObjId(o.id);
-                          }}
-                        >
+                      )}
+                      {puedeEliminar(o.id) && (
+                        <button type="button" className="mc-btn-danger mc-btn-sm w-full justify-start px-3"
+                          role="menuitem" onClick={() => { setMenuObjId(null); setEliminarObjId(o.id); }}>
                           Eliminar
                         </button>
-                      ) : null}
+                      )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             ))
@@ -315,67 +149,48 @@ export function Objetivos() {
         {/* Panel lateral */}
         <div className="mc-card flex flex-col gap-4">
           {!objetivoSel ? (
-            <p className="text-sm text-[var(--mc-color-text-secondary)]">
-              Selecciona un objetivo para ver sus tareas.
-            </p>
+            <p className="text-sm text-[var(--mc-color-text-secondary)]">Selecciona un objetivo para ver sus tareas.</p>
           ) : (
             <>
-              {/* Header del objetivo */}
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium text-[var(--mc-color-text)]">{objetivoSel.titulo}</p>
-                  {objetivoSel.descripcion ? (
+                  {objetivoSel.descripcion && (
                     <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{objetivoSel.descripcion}</p>
-                  ) : null}
+                  )}
                 </div>
-                <span className={`mc-badge ${estadoBadge[objetivoSel.estado]} shrink-0 text-[10px]`}>
-                  {estadoObjLabel[objetivoSel.estado]}
+                <span className={`mc-badge ${OBJETIVO_BADGE[objetivoSel.estado as EstadoObjetivo]} shrink-0 text-[10px]`}>
+                  {OBJETIVO_LABEL[objetivoSel.estado as EstadoObjetivo]}
                 </span>
               </div>
-
-              {/* Barra de progreso */}
               <div className="flex flex-col gap-1">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--mc-color-border)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--mc-color-accent)]"
-                    style={{ width: `${objetivoSel.pct}%` }}
-                  />
+                  <div className="h-full rounded-full bg-[var(--mc-color-accent)]" style={{ width: `${objetivoSel.pct}%` }} />
                 </div>
                 <span className="text-xs text-[var(--mc-color-text-secondary)]">
                   {objetivoSel.completadas} de {objetivoSel.total_tareas} tareas completadas · {objetivoSel.pct}%
                 </span>
               </div>
-
-              {/* Tareas vinculadas */}
               <div className="border-t border-[var(--mc-color-border)] pt-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                    Tareas vinculadas
-                  </span>
-                  <button
-                    type="button"
-                    className="mc-btn-secondary !px-2 !py-1 text-xs"
-                    onClick={() => setModalTarea(true)}
-                  >
+                <div className="mc-section-header !border-none !bg-transparent !p-0">
+                  <span>Tareas vinculadas</span>
+                  <Button variant="secondary" size="xs" onClick={() => setModalTarea(true)}>
                     + Añadir
-                  </button>
+                  </Button>
                 </div>
                 {loadTareas ? (
                   <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
                 ) : tareasVinc.length === 0 ? (
-                  <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin tareas vinculadas.</p>
+                  <div className="mc-empty !p-6">
+                    <p className="mc-empty-title">Sin tareas vinculadas</p>
+                  </div>
                 ) : (
                   <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto">
                     {tareasVinc.map((t) => (
-                      <div
-                        key={t.id}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-[var(--mc-color-bg-secondary)] px-3 py-2"
-                      >
-                        <p className="min-w-0 flex-1 truncate text-xs text-[var(--mc-color-text)]">
-                          {t.titulo}
-                        </p>
-                        <span className={`mc-badge ${estadoTareaBadge[t.estado] ?? 'mc-badge-neutral'} shrink-0 text-[9px]`}>
-                          {estadoTareaLabel[t.estado] ?? t.estado}
+                      <div key={t.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--mc-color-bg-secondary)] px-3 py-2">
+                        <p className="min-w-0 flex-1 truncate text-xs text-[var(--mc-color-text)]">{t.titulo}</p>
+                        <span className={`mc-badge ${TAREA_BADGE[t.estado] ?? 'mc-badge-neutral'} shrink-0 text-[9px]`}>
+                          {TAREA_LABEL[t.estado] ?? t.estado}
                         </span>
                       </div>
                     ))}
@@ -387,139 +202,142 @@ export function Objetivos() {
         </div>
       </div>
 
-      {/* Modal nuevo objetivo */}
-      {modalNuevo ? (
-        <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={() => setModalNuevo(false)}>
-          <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Nuevo objetivo</h2>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Título
-              <input className="mc-input mt-1" value={tituloObj} onChange={(e) => setTituloObj(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Descripción (opcional)
-              <textarea className="mc-input mt-1 min-h-[80px]" value={descObj} onChange={(e) => setDescObj(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Fecha límite (opcional)
-              <input type="date" className="mc-input mt-1" value={limiteObj} onChange={(e) => setLimiteObj(e.target.value)} />
-            </label>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Responsable
-              <select className="mc-input mt-1" value={responsableObjId} onChange={(e) => setResponsableObjId(e.target.value)}>
+      {/* ── Modal: nuevo objetivo ───────────────────────────────────────── */}
+      <Modal
+        open={modalNuevo}
+        onClose={() => setModalNuevo(false)}
+        title="Nuevo objetivo"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModalNuevo(false)} disabled={creandoObj}>Cancelar</Button>
+            <Button onClick={() => void submitNuevoObjetivo()} disabled={!canSubmitNuevo}>
+              {creandoObj ? 'Guardando…' : 'Crear objetivo'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {/* Si es miembro, mostrar aviso de que el objetivo es para sí mismo */}
+          {!esJefe && (
+            <p className="mc-empty-desc !max-w-none !bg-[var(--mc-color-bg-secondary)] !p-3 !text-left">
+              El objetivo se creará con <strong>{usuario.nombre}</strong> como responsable.
+            </p>
+          )}
+
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="obj-titulo">Título</label>
+            <input id="obj-titulo" className="mc-input" value={tituloObj} onChange={(e) => setTituloObj(e.target.value)} autoFocus required />
+          </div>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="obj-desc">Descripción (opcional)</label>
+            <textarea id="obj-desc" className="mc-input" style={{ minHeight: 80 }} value={descObj} onChange={(e) => setDescObj(e.target.value)} />
+          </div>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="obj-limite">Fecha límite (opcional)</label>
+            <input id="obj-limite" type="date" className="mc-input" value={limiteObj} onChange={(e) => setLimiteObj(e.target.value)} />
+          </div>
+
+          {/* Selector de responsable — solo para jefe */}
+          {esJefe && (
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="obj-resp">Responsable</label>
+              <select id="obj-resp" className="mc-input" value={responsableObjId} onChange={(e) => setResponsableObjId(e.target.value)}>
                 <option value="">Selecciona…</option>
                 {usuariosActivos.map((u) => (
                   <option key={u.id} value={u.id}>{u.nombre}</option>
                 ))}
               </select>
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="mc-btn-ghost" onClick={() => setModalNuevo(false)}>Cancelar</button>
-              <button
-                type="button"
-                className="mc-btn"
-                disabled={mutCrearObj.isPending || !tituloObj.trim() || !responsableObjId.trim()}
-                onClick={() => void submitNuevoObjetivo()}
-              >
-                {mutCrearObj.isPending ? 'Guardando…' : 'Crear objetivo'}
-              </button>
             </div>
-          </div>
+          )}
         </div>
-      ) : null}
+      </Modal>
 
-      {/* Modal añadir tarea */}
-      {modalTarea && seleccionId ? (
-        <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={() => setModalTarea(false)}>
-          <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Añadir tarea al objetivo</h2>
-            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{objetivoSel?.titulo}</p>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Título
-              <input
-                className="mc-input mt-1"
-                value={nuevaTareaTitulo}
-                onChange={(e) => setNuevaTareaTitulo(e.target.value)}
-                placeholder="Ej: Configurar firewall perimetral…"
-              />
-            </label>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Prioridad
-              <select className="mc-input mt-1" value={nuevaTareaPrioridad} onChange={(e) => setNuevaTareaPrioridad(e.target.value as Tarea['prioridad'])}>
-                <option value="baja">Baja</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
+      {/* ── Modal: añadir tarea ─────────────────────────────────────────── */}
+      <Modal
+        open={modalTarea && Boolean(seleccionId)}
+        onClose={() => setModalTarea(false)}
+        title="Añadir tarea al objetivo"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModalTarea(false)} disabled={addingTarea}>Cancelar</Button>
+            <Button onClick={addTareaVinculada} disabled={addingTarea || !nuevaTareaTitulo.trim()}>
+              {addingTarea ? 'Guardando…' : 'Añadir tarea'}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {objetivoSel && (
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--mc-color-text-secondary)' }}>{objetivoSel.titulo}</p>
+          )}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+            Título
+            <input className="mc-input" value={nuevaTareaTitulo} onChange={(e) => setNuevaTareaTitulo(e.target.value)}
+              placeholder="Ej: Configurar firewall perimetral…" autoFocus required />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+            Prioridad
+            <select className="mc-input" value={nuevaTareaPrioridad}
+              onChange={(e) => setNuevaTareaPrioridad(e.target.value as typeof nuevaTareaPrioridad)}>
+              <option value="baja">Baja</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+            </select>
+          </label>
+          {/* Selector de asignado solo para jefe */}
+          {esJefe && usuariosActivos.length > 0 && (
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+              Responsable
+              <select className="mc-input" value={nuevaTareaAsignadoId}
+                onChange={(e) => setNuevaTareaAsignadoId(e.target.value)}>
+                {usuariosActivos.map((u) => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
               </select>
             </label>
-            {usuariosActivos.length > 0 ? (
-              <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                Responsable
-                <select className="mc-input mt-1" value={nuevaTareaAsignadoId} onChange={(e) => setNuevaTareaAsignadoId(e.target.value)}>
-                  {usuariosActivos.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nombre}</option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="mc-btn-ghost" onClick={() => setModalTarea(false)}>Cancelar</button>
-              <button
-                type="button"
-                className="mc-btn"
-                disabled={mutAddTarea.isPending || !nuevaTareaTitulo.trim()}
-                onClick={() => addTareaVinculada()}
-              >
-                {mutAddTarea.isPending ? 'Guardando…' : 'Añadir tarea'}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      ) : null}
+      </Modal>
 
-      {/* Modal eliminar objetivo */}
-      {eliminarObjId ? (
-        <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={() => setEliminarObjId(null)}>
-          <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Eliminar objetivo</h2>
-            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">
-              {objetivoEliminar?.titulo} · Esta acción no se puede deshacer.
+      {/* ── Modal: eliminar objetivo ────────────────────────────────────── */}
+      <Modal
+        open={Boolean(eliminarObjId)}
+        onClose={cerrarEliminar}
+        title="Eliminar objetivo"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={cerrarEliminar} disabled={eliminandoObj}>Cancelar</Button>
+            <Button variant="danger" onClick={() => void confirmarEliminar()} disabled={eliminandoObj || !motivoOk}>
+              {eliminandoObj ? 'Eliminando…' : 'Confirmar eliminación'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {objetivoEliminar && (
+            <p className="text-sm text-[var(--mc-color-text-secondary)]">
+              {objetivoEliminar.titulo} · Esta acción no se puede deshacer.
             </p>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Motivo (mín. 10 caracteres)
-              <textarea
-                className="mc-input mt-1 min-h-[80px]"
-                value={motivoEliminar}
-                onChange={(e) => setMotivoEliminar(e.target.value)}
-                placeholder="Indica el motivo de la eliminación…"
-              />
+          )}
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="del-motivo">
+              <span className="flex justify-between">
+                Motivo de eliminación
+                <span aria-live="polite" className={`mc-char-count ${!motivoOk ? 'mc-char-count-error' : ''}`}>
+                  {motivoEliminar.trim().length}/{MIN_MOTIVO}
+                </span>
+              </span>
             </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="mc-btn-ghost" onClick={() => { setEliminarObjId(null); setMotivoEliminar(''); }}>
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="mc-btn !bg-[var(--mc-color-danger)]"
-                disabled={mutEliminarObj.isPending || motivoEliminar.trim().length < 10}
-                onClick={async () => {
-                  if (!eliminarObjId) return;
-                  try {
-                    await mutEliminarObj.mutateAsync({
-                      objetivoId: eliminarObjId,
-                      usuarioId: me.id,
-                      motivo: motivoEliminar.trim(),
-                    });
-                  } catch {
-                    // toast ya lo maneja onError
-                  }
-                }}
-              >
-                {mutEliminarObj.isPending ? 'Eliminando…' : 'Confirmar eliminación'}
-              </button>
-            </div>
+            <textarea id="del-motivo" className="mc-input" style={{ minHeight: 80 }} value={motivoEliminar}
+              onChange={(e) => setMotivoEliminar(e.target.value)}
+              placeholder="Indica el motivo de la eliminación…" autoFocus
+              aria-invalid={motivoEliminar.length > 0 && !motivoOk} />
           </div>
         </div>
-      ) : null}
+      </Modal>
     </div>
   );
 }

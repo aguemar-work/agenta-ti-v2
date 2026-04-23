@@ -1,271 +1,79 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-
-import { insertarNotaBitacoraRapida } from '@/api/hoyColumnas';
-import { eliminarTareaConMotivo, actualizarTarea } from '@/api/semana';
-import { getObjetivosActivos } from '@/api/objetivos';
-import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
-import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
+import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { TaskItem } from '@/components/tareas/TaskItem';
-import {
-  crearIncidenciaHoy,
-  Q_INC_HOY,
-  Q_NOTAS_HOY,
-  useEventosHoy,
-  useIncidenciasDelDia,
-  useNotasBitacoraHoy,
-} from '@/hooks/useHoyColumnas';
-import { Q_KPIS, Q_OBJ_PROG } from '@/hooks/useObjetivosMetricas';
-import { useMoverColumnaMutation } from '@/hooks/useTablero';
-import {
-  bloquearTarea,
-  completarTareaConResumen,
-  reprogramarTareaConLog,
-  useMarcarAtrasadasAlMontar,
-  useTareasHoy,
-  useUsuariosParaSelector,
-} from '@/hooks/useTareas';
-import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
+import { Button } from '@/components/ui/Button';
+import { useHoyPage } from '@/hooks/useHoyPage';
+import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { useAuthStore } from '@/store/authStore';
-import type { Tarea, VisibilidadBitacora } from '@/types';
+import type { VisibilidadBitacora } from '@/types';
 
 const visLabel: Record<VisibilidadBitacora, string> = {
-  todos: 'Equipo',
+  todos:     'Equipo',
   solo_jefe: 'Jefe',
-  privado: 'Privado',
+  privado:   'Privado',
 };
 
 export function Hoy() {
-  const qc = useQueryClient();
-  const usuario = useAuthStore((s) => s.usuario);
-  const esJefe = usuario?.rol === 'jefe';
-
-  const [seleccionId, setSeleccionId] = useState<string | undefined>();
-  const [reprTarea, setReprTarea] = useState<Tarea | null>(null);
-  const [modalInc, setModalInc] = useState(false);
-  const [completarTarea, setCompletarTarea] = useState<Tarea | null>(null);
-  const [bloquearTareaState, setBloquearTareaState] = useState<Tarea | null>(null);
-  const [detalleTareaId, setDetalleTareaId] = useState<string | null>(null);
-  const [notaRapida, setNotaRapida] = useState('');
-
-  useEffect(() => {
-    if (usuario?.id && seleccionId === undefined) {
-      setSeleccionId(usuario.id);
-    }
-  }, [usuario?.id, seleccionId]);
-
-  const { data: usuariosJefe } = useUsuariosParaSelector(Boolean(esJefe));
-
-  const asignado = seleccionId ?? usuario?.id;
-  const hoyYmd = fechaLocalYmd(new Date());
-
-  useMarcarAtrasadasAlMontar(asignado);
-  const { data: tareas = [], isLoading, isError } = useTareasHoy(asignado);
-  const { data: incidenciasHist = [], isLoading: loadInc } = useIncidenciasDelDia(asignado, hoyYmd);
-  const { data: eventos = [], isLoading: loadEv } = useEventosHoy(asignado, hoyYmd);
-  const { data: notas = [], isLoading: loadNotas } = useNotasBitacoraHoy(asignado);
-
-  const { data: objetivosActivos = [] } = useQuery({
-    queryKey: ['objetivos-activos-hoy'],
-    queryFn: () => getObjetivosActivos(),
-  });
-  const { data: usuariosAsignables = [] } = useQuery({
-    queryKey: ['usuarios-asignacion-hoy'],
-    queryFn: () => getUsuariosActivosParaAsignacion(),
-  });
-
-  const moverCol = useMoverColumnaMutation();
-
-  const mutGuardarDetalle = useMutation({
-    mutationFn: (input: {
-      tareaId: string;
-      titulo: string;
-      prioridad: Tarea['prioridad'];
-      descripcion: string;
-      objetivo_id?: string | null;
-      asignado_a?: string | null;
-    }) => actualizarTarea(input),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado] });
-      await qc.invalidateQueries({ queryKey: ['tablero'] });
-      await qc.invalidateQueries({ queryKey: ['semana'] });
-    },
-  });
-
-  const mutEliminarDetalle = useMutation({
-    mutationFn: (input: { tareaId: string; usuarioId: string; motivo: string }) => eliminarTareaConMotivo(input),
-    onSuccess: async () => {
-      setDetalleTareaId(null);
-      await qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado] });
-      await qc.invalidateQueries({ queryKey: ['tablero'] });
-    },
-  });
-
-  const { atrasadas, delDia } = useMemo(() => {
-    const a: Tarea[] = [];
-    const d: Tarea[] = [];
-    for (const t of tareas) {
-      if (t.estado === 'atrasada') a.push(t);
-      else if (t.fecha_planificada === hoyYmd) d.push(t);
-    }
-    return { atrasadas: a, delDia: d };
-  }, [tareas, hoyYmd]);
-
-  const crearInc = useMutation({
-    mutationFn: crearIncidenciaHoy,
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: [Q_INC_HOY, asignado, hoyYmd] }),
-        qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado, hoyYmd] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS] }),
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-      ]);
-    },
-  });
-
-  const mutNotaRapida = useMutation({
-    mutationFn: insertarNotaBitacoraRapida,
-    onSuccess: async () => {
-      setNotaRapida('');
-      await qc.invalidateQueries({ queryKey: [Q_NOTAS_HOY, asignado] });
-      toast.success('Nota guardada');
-    },
-    onError: () => toast.error('No se pudo guardar la nota.'),
-  });
+  const {
+    usuario, esJefe,
+    atrasadas, delDia, incidenciasHist, eventos, notas,
+    objetivosActivos, usuariosAsignables, usuariosJefe, tareaDetalle, hoyYmd,
+    colLoading, isError, mutNotaPending,
+    asignado, setSeleccionId,
+    reprTarea,          setReprTarea,
+    modalInc,           setModalInc,
+    completarTarea,     setCompletarTarea,
+    bloquearTareaState, setBloquearTareaState,
+    detalleTareaId,     setDetalleTareaId,
+    notaRapida,         setNotaRapida,
+    puedeEditar,
+    iniciarTarea, confirmarCompletar, confirmarReprogramacion,
+    confirmarBloqueo, crearIncidencia, guardarNotaRapida,
+    guardarDetalle, eliminarDetalle,
+  } = useHoyPage();
 
   if (!usuario) return null;
-  const me = usuario;
-
-  const puedeEditarTarea = (t: Tarea) => me.rol === 'jefe' || t.asignado_a === me.id;
-
-  const tareaDetalle = detalleTareaId ? tareas.find((x) => x.id === detalleTareaId) ?? null : null;
-
-  async function iniciarTareaHoy(t: Tarea) {
-    try {
-      await moverCol.mutateAsync({ tareaId: t.id, nuevoEstado: 'en_progreso', usuarioActorId: me.id });
-      toast.success('Tarea en progreso');
-    } catch {
-      toast.error('No se pudo iniciar la tarea.');
-    }
-  }
-
-  async function confirmarCompletar(input: { tareaId: string; resumen: string }) {
-    try {
-      await completarTareaConResumen({
-        tareaId: input.tareaId,
-        usuarioId: me.id,
-        resumen: input.resumen,
-      });
-      setCompletarTarea(null);
-      toast.success('Tarea completada');
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado] }),
-        qc.invalidateQueries({ queryKey: [Q_INC_HOY, asignado, hoyYmd] }),
-        qc.invalidateQueries({ queryKey: [Q_KPIS] }),
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-      ]);
-    } catch {
-      toast.error('No se pudo completar la tarea.');
-    }
-  }
-
-  async function onConfirmarReprogramacion(input: {
-    tareaId: string;
-    nuevaFecha: string;
-    justificacion: string;
-  }) {
-    try {
-      await reprogramarTareaConLog({
-        ...input,
-        usuarioId: me.id,
-      });
-      toast.success('Tarea reprogramada');
-      await qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado] });
-    } catch {
-      toast.error('No se pudo reprogramar. Revisa permisos o datos.');
-    }
-  }
-
-  async function onConfirmarBloqueo(input: { tareaId: string; justificacion: string }) {
-    try {
-      await bloquearTarea({ ...input, usuarioId: me.id });
-      setBloquearTareaState(null);
-      toast.success('Tarea bloqueada');
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['tareas-hoy', asignado] }),
-        qc.invalidateQueries({ queryKey: ['tablero'] }),
-        qc.invalidateQueries({ queryKey: ['semana'] }),
-      ]);
-    } catch {
-      toast.error('No se pudo bloquear la tarea.');
-    }
-  }
-
-  async function onCrearIncidencia(input: {
-    titulo: string;
-    prioridad: Tarea['prioridad'];
-    descripcion: string;
-    objetivo_id?: string | null;
-    asignado_a: string;
-  }) {
-    if (!asignado) return;
-    try {
-      await crearInc.mutateAsync({
-        titulo: input.titulo,
-        prioridad: input.prioridad,
-        descripcion: input.descripcion,
-        asignado_a: input.asignado_a.trim() || asignado,
-        creado_por: me.id,
-        fecha_planificada: hoyYmd,
-      });
-      toast.success('Incidencia registrada');
-    } catch {
-      toast.error('No se pudo crear la incidencia.');
-    }
-  }
-
-  function guardarNotaRapida() {
-    if (!asignado || !notaRapida.trim()) return;
-    mutNotaRapida.mutate({ usuario_id: asignado, contenido: notaRapida.trim(), visibilidad: 'todos' });
-  }
-
-  const colLoading = isLoading || loadInc || loadEv || loadNotas;
 
   return (
     <div className={APP_PAGE_CLASS}>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="mc-page-header">
         <div>
-          <h1 className="font-semibold text-[var(--mc-color-text)]" style={{ fontSize: 'var(--mc-text-lg)' }}>
-            Hoy
-          </h1>
-          <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">{fechaLocalDdMmYyyy(new Date())}</h2>
+          <h1 className="mc-page-title">Hoy</h1>
+          <h2 className="mc-page-subtitle">{fechaLocalDdMmYyyy(new Date())}</h2>
         </div>
-        {esJefe && usuariosJefe && usuariosJefe.length > 0 ? (
-          <label className="flex flex-col gap-1 text-xs text-[var(--mc-color-text-secondary)]">
-            Miembro
-            <select className="mc-input !w-auto min-w-[200px]" value={asignado} onChange={(e) => setSeleccionId(e.target.value)}>
+        {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
+          <div className="mc-field !mb-0">
+            <label className="mc-field-label" htmlFor="hoy-miembro">Miembro</label>
+            <select
+              id="hoy-miembro"
+              className="mc-input !w-auto min-w-[200px]"
+              value={asignado}
+              onChange={(e) => setSeleccionId(e.target.value)}
+            >
               {usuariosJefe.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre} ({u.email})
-                </option>
+                <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>
               ))}
             </select>
-          </label>
-        ) : null}
-      </div>
+          </div>
+        )}
+      </header>
 
-      {isError ? <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar las tareas.</p> : null}
+      {isError && (
+        <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar las tareas.</p>
+      )}
 
-      {eventos.length > 0 ? (
+      {/* ── Eventos del día ────────────────────────────────────────────── */}
+      {eventos.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-4 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Eventos</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
+            Eventos
+          </span>
           {eventos.map((ev) => (
             <span
               key={ev.id}
@@ -278,9 +86,12 @@ export function Hoy() {
             </span>
           ))}
         </div>
-      ) : null}
+      )}
 
+      {/* ── Columnas ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Columna: Tareas planificadas */}
         <section className="mc-hoy-col">
           <div className="mc-hoy-col-head">
             <span>Tareas planificadas</span>
@@ -290,7 +101,7 @@ export function Hoy() {
               <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
             ) : (
               <>
-                {atrasadas.length > 0 ? (
+                {atrasadas.length > 0 && (
                   <div className="border-b border-[var(--mc-color-border)]">
                     <div className="bg-[var(--mc-color-bg)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
                       Atrasadas
@@ -301,28 +112,32 @@ export function Hoy() {
                           key={t.id}
                           variant="week"
                           tarea={t}
-                          readOnly={!puedeEditarTarea(t)}
+                          readOnly={!puedeEditar(t)}
                           estadoVisual={estadoEfectivoTablero(t, hoyYmd)}
                           onOpenDetalle={() => setDetalleTareaId(t.id)}
-                          onReprogramar={puedeEditarTarea(t) ? (x) => setReprTarea(x) : undefined}
-                          onBloquear={puedeEditarTarea(t) ? (x) => setBloquearTareaState(x) : undefined}
-                          onCompletar={puedeEditarTarea(t) ? (x) => setCompletarTarea(x) : undefined}
-                          onIniciar={puedeEditarTarea(t) ? (_x) => void iniciarTareaHoy(t) : undefined}
+                          onReprogramar={puedeEditar(t) ? (x) => setReprTarea(x)          : undefined}
+                          onBloquear={   puedeEditar(t) ? (x) => setBloquearTareaState(x) : undefined}
+                          onCompletar={  puedeEditar(t) ? (x) => setCompletarTarea(x)     : undefined}
+                          onIniciar={    puedeEditar(t) ? () => void iniciarTarea(t)      : undefined}
                         />
                       ))}
                     </div>
                   </div>
-                ) : null}
+                )}
                 <div className="min-h-0">
-                  {delDia.length > 0 ? (
+                  {delDia.length > 0 && (
                     <div className="bg-[var(--mc-color-bg)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
                       Hoy
                     </div>
-                  ) : null}
+                  )}
                   {delDia.length === 0 && atrasadas.length === 0 ? (
-                    <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Sin tareas planificadas.</p>
+                    <div className="mc-empty">
+                      <p className="mc-empty-title">Sin tareas planificadas</p>
+                    </div>
                   ) : delDia.length === 0 ? (
-                    <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Sin tareas para hoy.</p>
+                    <div className="mc-empty">
+                      <p className="mc-empty-title">Sin tareas para hoy</p>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-2 p-2">
                       {delDia.map((t) => (
@@ -330,13 +145,13 @@ export function Hoy() {
                           key={t.id}
                           variant="week"
                           tarea={t}
-                          readOnly={!puedeEditarTarea(t)}
+                          readOnly={!puedeEditar(t)}
                           estadoVisual={estadoEfectivoTablero(t, hoyYmd)}
                           onOpenDetalle={() => setDetalleTareaId(t.id)}
-                          onReprogramar={puedeEditarTarea(t) ? (x) => setReprTarea(x) : undefined}
-                          onBloquear={puedeEditarTarea(t) ? (x) => setBloquearTareaState(x) : undefined}
-                          onCompletar={puedeEditarTarea(t) ? (x) => setCompletarTarea(x) : undefined}
-                          onIniciar={puedeEditarTarea(t) ? (_x) => void iniciarTareaHoy(t) : undefined}
+                          onReprogramar={puedeEditar(t) ? (x) => setReprTarea(x)          : undefined}
+                          onBloquear={   puedeEditar(t) ? (x) => setBloquearTareaState(x) : undefined}
+                          onCompletar={  puedeEditar(t) ? (x) => setCompletarTarea(x)     : undefined}
+                          onIniciar={    puedeEditar(t) ? () => void iniciarTarea(t)      : undefined}
                         />
                       ))}
                     </div>
@@ -347,18 +162,25 @@ export function Hoy() {
           </div>
         </section>
 
+        {/* Columna: Incidencias */}
         <section className="mc-hoy-col">
           <div className="mc-hoy-col-head">
             <span>Incidencias del día</span>
-            <button type="button" className="mc-btn !px-3 !py-2 text-xs" onClick={() => setModalInc(true)} disabled={!asignado}>
+            <Button
+              size="sm"
+              onClick={() => setModalInc(true)}
+              disabled={!asignado}
+            >
               +
-            </button>
+            </Button>
           </div>
           <div className="mc-hoy-col-body">
-            {loadInc ? (
+            {colLoading ? (
               <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
             ) : incidenciasHist.length === 0 ? (
-              <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Sin incidencias del día.</p>
+              <div className="mc-empty">
+                <p className="mc-empty-title">Sin incidencias</p>
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {incidenciasHist.map((t) => (
@@ -369,14 +191,15 @@ export function Hoy() {
           </div>
         </section>
 
+        {/* Columna: Bitácora */}
         <section className="mc-hoy-col">
           <div className="mc-hoy-col-head">
             <span>Bitácora</span>
           </div>
           <div className="mc-hoy-col-body flex flex-col">
             <div className="min-h-0 flex-1">
-              <div className="border-b border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-3 py-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Bitácora</span>
+              <div className="mc-section-header">
+                <span>Bitácora</span>
               </div>
               <div className="flex items-center gap-2 border-b border-[var(--mc-color-border)] px-3 py-2">
                 <input
@@ -385,39 +208,37 @@ export function Hoy() {
                   value={notaRapida}
                   onChange={(e) => setNotaRapida(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      guardarNotaRapida();
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); guardarNotaRapida(); }
                   }}
                 />
-                <button
-                  type="button"
-                  className="mc-btn !px-3 !py-2 text-sm font-medium"
-                  disabled={!asignado || !notaRapida.trim() || mutNotaRapida.isPending}
+                <Button
+                  size="sm"
+                  disabled={!asignado || !notaRapida.trim() || mutNotaPending}
                   onClick={guardarNotaRapida}
                   aria-label="Agregar nota"
                 >
                   +
-                </button>
+                </Button>
               </div>
-              {loadNotas ? (
+              {colLoading ? (
                 <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
               ) : notas.length === 0 ? (
-                <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Sin notas recientes.</p>
+                <div className="mc-empty">
+                  <p className="mc-empty-title">Sin notas recientes</p>
+                </div>
               ) : (
                 <div className="flex flex-col gap-2 p-2">
-                {notas.map((n) => (
-                  <div key={n.id} className="mc-entity-card">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="mc-badge mc-badge-neutral text-[11px]">{visLabel[n.visibilidad]}</span>
-                      <span className="text-xs text-[var(--mc-color-text-secondary)]">
-                        {new Date(n.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
+                  {notas.map((n) => (
+                    <div key={n.id} className="mc-entity-card">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="mc-badge mc-badge-neutral text-[11px]">{visLabel[n.visibilidad]}</span>
+                        <span className="text-xs text-[var(--mc-color-text-secondary)]">
+                          {new Date(n.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[var(--mc-color-text)]">{n.contenido}</p>
                     </div>
-                    <p className="text-sm text-[var(--mc-color-text)]">{n.contenido}</p>
-                  </div>
-                ))}
+                  ))}
                 </div>
               )}
             </div>
@@ -425,11 +246,16 @@ export function Hoy() {
         </section>
       </div>
 
-      <ModalReprogramar tarea={reprTarea} onClose={() => setReprTarea(null)} onConfirm={onConfirmarReprogramacion} />
+      {/* ── Modales ────────────────────────────────────────────────────── */}
+      <ModalReprogramar
+        tarea={reprTarea}
+        onClose={() => setReprTarea(null)}
+        onConfirm={confirmarReprogramacion}
+      />
       <ModalBloquear
         tarea={bloquearTareaState}
         onClose={() => setBloquearTareaState(null)}
-        onConfirm={onConfirmarBloqueo}
+        onConfirm={confirmarBloqueo}
       />
       <ModalCompletarTarea
         open={completarTarea !== null}
@@ -441,28 +267,23 @@ export function Hoy() {
         open={modalInc}
         modo="incidencia"
         fechaReferencia={hoyYmd}
-        usuarioActualId={me.id}
+        usuarioActualId={usuario.id}
         usuariosAsignables={usuariosAsignables}
         objetivos={objetivosActivos}
         onClose={() => setModalInc(false)}
-        onSubmit={onCrearIncidencia}
+        onSubmit={crearIncidencia}
       />
-
       <ModalDetalleTareaSemana
         open={detalleTareaId !== null}
         tarea={tareaDetalle}
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
-        readOnly={Boolean(tareaDetalle && me.rol !== 'jefe' && tareaDetalle.asignado_a !== me.id)}
+        readOnly={Boolean(
+          tareaDetalle && usuario.rol !== 'jefe' && tareaDetalle.asignado_a !== usuario.id,
+        )}
         onClose={() => setDetalleTareaId(null)}
-        onGuardar={async (input) => {
-          await mutGuardarDetalle.mutateAsync(input);
-          toast.success('Tarea actualizada');
-        }}
-        onEliminar={async (input) => {
-          await mutEliminarDetalle.mutateAsync({ ...input, usuarioId: me.id });
-          toast.success('Tarea eliminada');
-        }}
+        onGuardar={guardarDetalle}
+        onEliminar={eliminarDetalle}
       />
     </div>
   );

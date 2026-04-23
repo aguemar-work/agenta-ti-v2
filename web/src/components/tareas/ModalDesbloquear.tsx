@@ -1,5 +1,6 @@
 import { useState } from 'react';
-
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { Tarea } from '@/types';
 
 type Props = {
@@ -31,32 +32,48 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
   }
 
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Desbloquear tarea</h2>
-        <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Nueva fecha planificada
-          <input type="date" className="mc-input mt-1" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Justificacion (min. 10 caracteres)
-          <textarea
-            className="mc-input mt-1 min-h-[80px]"
-            value={just}
-            onChange={(e) => setJust(e.target.value)}
-            placeholder="Indica el motivo del desbloqueo..."
-          />
-        </label>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
+    <Modal
+      open={tarea !== null}
+      onClose={onClose}
+      title="Desbloquear tarea"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
-          </button>
-          <button type="button" className="mc-btn" onClick={() => void submit()} disabled={!canSubmit}>
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
             {busy ? 'Guardando...' : 'Desbloquear'}
-          </button>
+          </Button>
+        </>
+      }
+    >
+      {tarea && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="desbloq-fecha">Nueva fecha planificada</label>
+            <input
+              id="desbloq-fecha"
+              type="date"
+              className="mc-input"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+            />
+          </div>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="desbloq-just">Justificación (min. 10 caracteres)</label>
+            <textarea
+              id="desbloq-just"
+              className="mc-input"
+              style={{ minHeight: 80, resize: 'vertical' }}
+              value={just}
+              onChange={(e) => setJust(e.target.value)}
+              placeholder="Indica el motivo del desbloqueo..."
+            />
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

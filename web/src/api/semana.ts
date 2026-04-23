@@ -1,18 +1,9 @@
 import { getInsforge } from '@/lib/insforge';
+import { parseEvento, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
-import { agregarDias } from '@/lib/semanas';
-import { semanaIsoDesdeFecha } from '@/lib/semanas';
+import { agregarDias, semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Evento, Tarea, TipoEvento } from '@/types';
 
-function parseTarea(row: Record<string, unknown>): Tarea {
-  return row as unknown as Tarea;
-}
-
-function parseEvento(row: Record<string, unknown>): Evento {
-  return row as unknown as Evento;
-}
-
-/** Tareas planificadas de la semana ISO indicada. */
 export async function getTareasSemana(usuarioId: string, semanaISO: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
@@ -48,17 +39,18 @@ function solapaSemana(ev: Evento, lunes: Date): boolean {
   return a < endWeek.getTime() && b > startWeek.getTime();
 }
 
-/** Eventos del usuario que solapan el rango [lunes, domingo] (local). */
 export async function getEventosSemana(usuarioId: string, lunes: Date): Promise<Evento[]> {
   const insforge = getInsforge();
-  const desde = agregarDias(lunes, -14);
-  const hasta = agregarDias(lunes, 21);
+  const startWeek = new Date(lunes);
+  startWeek.setHours(0, 0, 0, 0);
+  const endWeek = agregarDias(lunes, 7);
+  endWeek.setHours(0, 0, 0, 0);
   const { data, error } = await insforge.database
     .from('evento')
     .select('*')
     .eq('usuario_id', usuarioId)
-    .gte('fecha_inicio', desde.toISOString())
-    .lte('fecha_inicio', hasta.toISOString());
+    .lt('fecha_inicio', endWeek.toISOString())
+    .gt('fecha_fin', startWeek.toISOString());
   if (error) throw error;
   const list = (data ?? []).map((r) => parseEvento(r as Record<string, unknown>));
   return list.filter((e) => solapaSemana(e, lunes));
@@ -68,7 +60,6 @@ export type CrearTareaLibreInput = {
   titulo: string;
   prioridad: Tarea['prioridad'];
   descripcion?: string | null;
-  /** Si viene vacío o null, se usa `creado_por`. */
   asignado_a?: string | null;
   creado_por: string;
   objetivo_id?: string | null;
@@ -100,7 +91,6 @@ export type CrearTareaPlanificadaInput = {
   prioridad: Tarea['prioridad'];
   descripcion?: string | null;
   fecha_planificada: string;
-  /** Si viene vacío o null, se usa `creado_por`. */
   asignado_a?: string | null;
   creado_por: string;
   objetivo_id?: string | null;
@@ -128,20 +118,10 @@ export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): P
   return parseTarea(inserted as Record<string, unknown>);
 }
 
-export async function moverTareaADia(
-  tareaId: string,
-  fecha: string,
-  semana: string,
-  tipo: Tarea['tipo'],
-): Promise<void> {
+export async function moverTareaADia(tareaId: string, fecha: string, semana: string, tipo: Tarea['tipo']): Promise<void> {
   const insforge = getInsforge();
-  const patch: Partial<Tarea> = {
-    fecha_planificada: fecha,
-    semana_planificada: semana,
-  };
-  if (tipo === 'libre') {
-    patch.tipo = 'planificada';
-  }
+  const patch: Partial<Tarea> = { fecha_planificada: fecha, semana_planificada: semana };
+  if (tipo === 'libre') patch.tipo = 'planificada';
   const { error } = await insforge.database.from('tarea').update(patch).eq('id', tareaId);
   if (error) throw error;
 }
@@ -155,11 +135,7 @@ export async function moverTareaABacklog(tareaId: string): Promise<void> {
   const insforge = getInsforge();
   const { error } = await insforge.database
     .from('tarea')
-    .update({
-      tipo: 'libre',
-      fecha_planificada: null,
-      semana_planificada: null,
-    })
+    .update({ tipo: 'libre', fecha_planificada: null, semana_planificada: null })
     .eq('id', tareaId);
   if (error) throw error;
 }
@@ -181,8 +157,11 @@ export async function actualizarTarea(input: ActualizarTareaInput): Promise<void
     descripcion: input.descripcion ?? null,
     objetivo_id: input.objetivo_id ?? null,
   };
-  if (input.asignado_a !== undefined && input.asignado_a !== null && input.asignado_a.trim().length > 0) {
-    patch.asignado_a = input.asignado_a.trim();
+  if (input.asignado_a !== undefined) {
+    patch.asignado_a =
+      input.asignado_a === null || String(input.asignado_a).trim() === ''
+        ? null
+        : String(input.asignado_a).trim();
   }
   const { error } = await insforge.database.from('tarea').update(patch).eq('id', input.tareaId);
   if (error) throw error;
@@ -191,11 +170,8 @@ export async function actualizarTarea(input: ActualizarTareaInput): Promise<void
 export type CrearEventoUsuarioInput = {
   titulo: string;
   tipo: TipoEvento;
-  /** `YYYY-MM-DD` día local */
   fecha_dia: string;
-  /** `HH:mm` */
   hora_inicio: string;
-  /** `HH:mm` */
   hora_fin: string;
   usuario_id: string;
   es_recurrente: boolean;
@@ -210,13 +186,11 @@ function toIsoLocal(fechaDia: string, hora: string): string {
 
 export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promise<Evento> {
   const insforge = getInsforge();
-  const fecha_inicio = toIsoLocal(input.fecha_dia, input.hora_inicio);
-  const fecha_fin = toIsoLocal(input.fecha_dia, input.hora_fin);
   const row = {
     titulo: input.titulo.trim(),
     tipo: input.tipo,
-    fecha_inicio,
-    fecha_fin,
+    fecha_inicio: toIsoLocal(input.fecha_dia, input.hora_inicio),
+    fecha_fin: toIsoLocal(input.fecha_dia, input.hora_fin),
     usuario_id: input.usuario_id,
     es_recurrente: input.es_recurrente,
   };
@@ -225,31 +199,25 @@ export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promis
   return parseEvento(inserted as Record<string, unknown>);
 }
 
+// =============================================================================
+// Operaciones multi-paso — RPC atómica (transaccional en Postgres).
+// Requiere: db/migrations/005_rpc_operaciones_atomicas.sql aplicado.
+// =============================================================================
+
 export async function eliminarTareaConMotivo(input: {
   tareaId: string;
   usuarioId: string;
   motivo: string;
 }): Promise<void> {
-  const insforge = getInsforge();
-  const motivo = input.motivo.trim();
-  if (motivo.length < 10) {
+  if (input.motivo.trim().length < 10) {
     throw new Error('Debes registrar un motivo de al menos 10 caracteres.');
   }
-
-  const { error: eLog } = await insforge.database.from('log_accion').insert([
-    {
-      tarea_id: input.tareaId,
-      usuario_id: input.usuarioId,
-      tipo_accion: 'eliminada',
-      valor_anterior: null,
-      valor_nuevo: null,
-      justificacion: motivo,
-    },
-  ]);
-  if (eLog) throw eLog;
-
-  const { error: eDel } = await insforge.database.from('tarea').delete().eq('id', input.tareaId);
-  if (eDel) throw eDel;
+  const { error } = await getInsforge().database.rpc('sgtd_eliminar_tarea_con_motivo', {
+    p_tarea_id: input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_motivo: input.motivo.trim(),
+  });
+  if (error) throw error;
 }
 
 export async function bloquearTareaConLog(input: {
@@ -257,28 +225,15 @@ export async function bloquearTareaConLog(input: {
   usuarioId: string;
   justificacion: string;
 }): Promise<void> {
-  const insforge = getInsforge();
-  const just = input.justificacion.trim();
-  if (just.length < 10) {
+  if (input.justificacion.trim().length < 10) {
     throw new Error('La justificación debe tener al menos 10 caracteres.');
   }
-  const { error: e1 } = await insforge.database
-    .from('tarea')
-    .update({ estado: 'bloqueada' })
-    .eq('id', input.tareaId);
-  if (e1) throw e1;
-  const { error: e2 } = await insforge.database.from('log_accion').insert([
-    {
-      tarea_id: input.tareaId,
-      usuario_id: input.usuarioId,
-      tipo_accion: 'editada',
-      valor_anterior: null,
-      valor_nuevo: { estado: 'bloqueada' },
-      justificacion: just,
-      leido_por_jefe: false,
-    },
-  ]);
-  if (e2) throw e2;
+  const { error } = await getInsforge().database.rpc('sgtd_bloquear_tarea_con_log', {
+    p_tarea_id: input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_justificacion: input.justificacion.trim(),
+  });
+  if (error) throw error;
 }
 
 export async function reprogramarTareaConLog(input: {
@@ -288,31 +243,18 @@ export async function reprogramarTareaConLog(input: {
   justificacion: string;
   nuevoEstado?: Tarea['estado'];
 }): Promise<void> {
-  const insforge = getInsforge();
-  const semana = semanaIsoDesdeFecha(new Date(`${input.nuevaFecha}T12:00:00`));
-  const patch: Record<string, unknown> = {
-    fecha_planificada: input.nuevaFecha,
-    semana_planificada: semana,
-  };
-  if (input.nuevoEstado) patch.estado = input.nuevoEstado;
-
-  const { error: e1 } = await insforge.database.from('tarea').update(patch).eq('id', input.tareaId);
-  if (e1) {
-    console.error('PATCH error:', JSON.stringify(e1));
-    throw e1;
+  const justificacion = input.justificacion.trim();
+  if (justificacion.length < 10) {
+    throw new Error('La justificación debe tener al menos 10 caracteres.');
   }
-
-  const { error: e2 } = await insforge.database.from('log_accion').insert([
-    {
-      tarea_id: input.tareaId,
-      usuario_id: input.usuarioId,
-      tipo_accion: 'reprogramada',
-      valor_anterior: null,
-      valor_nuevo: { fecha_planificada: input.nuevaFecha, estado: input.nuevoEstado ?? null },
-      justificacion: input.justificacion,
-    },
-  ]);
-  if (e2) throw e2;
+  const { error } = await getInsforge().database.rpc('sgtd_reprogramar_tarea_con_log', {
+    p_tarea_id: input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_nueva_fecha: input.nuevaFecha,
+    p_justificacion: justificacion,
+    p_nuevo_estado: input.nuevoEstado ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function desbloquearTareaConLog(input: {
@@ -321,33 +263,14 @@ export async function desbloquearTareaConLog(input: {
   nuevaFecha: string;
   justificacion: string;
 }): Promise<void> {
-  const insforge = getInsforge();
-  const semana = semanaIsoDesdeFecha(new Date(`${input.nuevaFecha}T12:00:00`));
-  const just = input.justificacion.trim();
-  if (just.length < 10) {
+  if (input.justificacion.trim().length < 10) {
     throw new Error('La justificación debe tener al menos 10 caracteres.');
   }
-
-  const { error: e1 } = await insforge.database
-    .from('tarea')
-    .update({
-      estado: 'pendiente',
-      fecha_planificada: input.nuevaFecha,
-      semana_planificada: semana,
-    })
-    .eq('id', input.tareaId);
-  if (e1) throw e1;
-
-  const { error: e2 } = await insforge.database.from('log_accion').insert([
-    {
-      tarea_id: input.tareaId,
-      usuario_id: input.usuarioId,
-      tipo_accion: 'estado_cambiado',
-      valor_anterior: { estado: 'bloqueada' },
-      valor_nuevo: { estado: 'pendiente', fecha_planificada: input.nuevaFecha },
-      justificacion: just,
-      leido_por_jefe: false,
-    },
-  ]);
-  if (e2) throw e2;
+  const { error } = await getInsforge().database.rpc('sgtd_desbloquear_tarea_con_log', {
+    p_tarea_id: input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_nueva_fecha: input.nuevaFecha,
+    p_justificacion: input.justificacion.trim(),
+  });
+  if (error) throw error;
 }

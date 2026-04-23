@@ -4,13 +4,10 @@ import { useEffect } from 'react';
 import { bloquearTareaConLog, reprogramarTareaConLog as reprogramarTareaConLogApi } from '@/api/semana';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { getInsforge } from '@/lib/insforge';
+import { parseTarea } from '@/lib/schemas';
 import type { Tarea, Usuario } from '@/types';
 
 const Q_HOY = 'tareas-hoy';
-
-function parseTarea(row: Record<string, unknown>): Tarea {
-  return row as unknown as Tarea;
-}
 
 async function marcarAtrasadasParaUsuario(usuarioId: string): Promise<void> {
   const insforge = getInsforge();
@@ -35,8 +32,9 @@ export function useMarcarAtrasadasAlMontar(asignadoA: string | undefined) {
     void (async () => {
       try {
         await marcarAtrasadasParaUsuario(asignadoA);
-        if (!cancelled) await qc.invalidateQueries({ queryKey: [Q_HOY, asignadoA] });
-      } catch {
+        if (!cancelled) await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_HOY, asignadoA] });
+      } catch (err) {
+        console.error('[useMarcarAtrasadasAlMontar]', err);
         /* RLS u red: no mostrar errores técnicos de token; la lista HOY sigue intentándose */
       }
     })();

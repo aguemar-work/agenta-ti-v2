@@ -1,11 +1,8 @@
 import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
+import { parseTarea } from '@/lib/schemas';
 import { inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { ConfiguracionSemana, Tarea, Usuario } from '@/types';
-
-function parseTarea(row: Record<string, unknown>): Tarea {
-  return row as unknown as Tarea;
-}
 
 /** Tareas planificadas de miembros activos en la semana ISO. */
 export async function getCargaEquipoSemana(semanaISO: string): Promise<Tarea[]> {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/Button';
 
 import { ModalConvertirEvento } from '@/components/bitacora/ModalConvertirEvento';
 import { ModalConvertirTarea } from '@/components/bitacora/ModalConvertirTarea';
@@ -46,7 +47,8 @@ export function Bitacora() {
       });
       setContenido('');
       toast.success('Nota guardada');
-    } catch {
+    } catch (err) {
+      console.error('[guardarNota]', err);
       toast.error('No se pudo guardar la nota.');
     }
   }
@@ -67,7 +69,8 @@ export function Bitacora() {
       });
       setNotaParaTarea(null);
       toast.success('Tarea creada');
-    } catch {
+    } catch (err) {
+      console.error('[onConfirmarTarea]', err);
       toast.error('No se pudo crear la tarea.');
     }
   }
@@ -89,37 +92,41 @@ export function Bitacora() {
       });
       setNotaParaEvento(null);
       toast.success('Evento creado');
-    } catch {
+    } catch (err) {
+      console.error('[onConfirmarEvento]', err);
       toast.error('No se pudo crear el evento.');
     }
   }
 
   return (
     <div className={APP_PAGE_CLASS}>
-      <div className="mb-4">
-        <h1 className="font-semibold text-[var(--mc-color-text)]" style={{ fontSize: 'var(--mc-text-lg)' }}>
-          Bitacora
-        </h1>
-        <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">Registro de notas</h2>
-      </div>
+      <header className="mc-page-header">
+        <div>
+          <h1 className="mc-page-title">Bitácora</h1>
+          <h2 className="mc-page-subtitle">Registro de notas y bitácora diaria</h2>
+        </div>
+      </header>
 
-      <div className="mc-card mb-4 flex flex-col gap-3">
-        <textarea
-          className="mc-input min-h-[80px] resize-y text-sm"
-          placeholder="Escribe una nota rapida..."
-          value={contenido}
-          onChange={(e) => setContenido(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.metaKey) {
-              e.preventDefault();
-              void guardarNota();
-            }
-          }}
-        />
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-[var(--mc-color-text-secondary)]">
-            Visibilidad
+      <div className="mc-card mb-6 flex flex-col gap-4">
+        <div className="mc-field">
+          <textarea
+            className="mc-input min-h-[100px] resize-y text-sm"
+            placeholder="Escribe una nota rápida..."
+            value={contenido}
+            onChange={(e) => setContenido(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.metaKey) {
+                e.preventDefault();
+                void guardarNota();
+              }
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="mc-field !mb-0">
+            <label className="mc-field-label" htmlFor="bitacora-vis">Visibilidad</label>
             <select
+              id="bitacora-vis"
               className="mc-input !w-auto !py-1 text-xs"
               value={visibilidad}
               onChange={(e) => setVisibilidad(e.target.value as VisibilidadBitacora)}
@@ -128,22 +135,24 @@ export function Bitacora() {
               <option value="solo_jefe">Jefe</option>
               <option value="privado">Privado</option>
             </select>
-          </label>
-          <button
-            type="button"
-            className="mc-btn ml-auto !px-4 !py-2 text-sm"
+          </div>
+          <Button
+            className="ml-auto"
             disabled={!contenido.trim() || mut.isPending}
             onClick={() => void guardarNota()}
           >
             + Guardar nota
-          </button>
+          </Button>
         </div>
       </div>
 
       {isLoading ? (
         <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando...</p>
       ) : notas.length === 0 ? (
-        <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin notas aun.</p>
+        <div className="mc-empty">
+          <p className="mc-empty-title">Sin notas aún</p>
+          <p className="mc-empty-desc">Las notas que guardes aparecerán aquí.</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {notas.map((n) => (
@@ -167,13 +176,14 @@ export function Bitacora() {
 
                 {!n.convertida_en ? (
                   <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      className="mc-btn-ghost !p-1 text-[var(--mc-color-text-secondary)]"
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="text-[var(--mc-color-text-secondary)]"
                       onClick={() => setMenuAbierto(menuAbierto === n.id ? null : n.id)}
                     >
                       ...
-                    </button>
+                    </Button>
                     {menuAbierto === n.id ? (
                       <div className="absolute right-0 top-7 z-20 min-w-[160px] rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] py-1">
                         <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">

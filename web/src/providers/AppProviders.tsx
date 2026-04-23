@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
@@ -23,6 +24,7 @@ export function AppProviders({ children }: Props) {
         <AuthProvider>{children}</AuthProvider>
       </BrowserRouter>
       <Toaster richColors position="top-center" />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }

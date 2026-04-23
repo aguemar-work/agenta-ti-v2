@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
+import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
 
@@ -40,26 +41,6 @@ export function DraggableTareaSemana({
   const atrasadaBar = est === 'atrasada' ? 'border-l-2 border-[var(--mc-color-danger)]' : '';
   const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
 
-  const badgeClass: Record<string, string> = {
-    pendiente: 'mc-badge-neutral',
-    en_progreso: 'mc-badge-info',
-    atrasada: 'mc-badge-danger',
-    bloqueada: 'mc-badge-warning',
-    completada: 'mc-badge-success',
-    reprogramada: 'mc-badge-neutral',
-    cancelada: 'mc-badge-neutral',
-  };
-
-  const badgeLabel: Record<string, string> = {
-    pendiente: 'Pendiente',
-    en_progreso: 'En progreso',
-    atrasada: 'Atrasada',
-    bloqueada: 'Bloqueada',
-    completada: 'Completada',
-    reprogramada: 'Reprogramada',
-    cancelada: 'Cancelada',
-  };
-
   return (
     <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>
       <div
@@ -87,7 +68,7 @@ export function DraggableTareaSemana({
         ) : null}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug mb-1 line-clamp-2">{tarea.titulo}</p>
-          <span className={`mc-badge ${badgeClass[est] ?? 'mc-badge-neutral'} text-[10px]`}>{badgeLabel[est] ?? est}</span>
+          <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'} text-[10px]`}>{TAREA_LABEL[est] ?? est}</span>
         </div>
       </div>
     </div>

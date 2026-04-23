@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
+import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
 
@@ -17,24 +18,6 @@ type Props = {
   onCompletar?: () => void;
   onBloquear?: () => void;
   onDesbloquear?: () => void;
-};
-
-const badgeClass: Record<string, string> = {
-  pendiente: 'mc-badge-neutral',
-  en_progreso: 'mc-badge-info',
-  atrasada: 'mc-badge-danger',
-  bloqueada: 'mc-badge-warning',
-  completada: 'mc-badge-success',
-  reprogramada: 'mc-badge-neutral',
-};
-
-const badgeLabel: Record<string, string> = {
-  pendiente: 'Pendiente',
-  en_progreso: 'En progreso',
-  atrasada: 'Atrasada',
-  bloqueada: 'Bloqueada',
-  completada: 'Completada',
-  reprogramada: 'Reprogramada',
 };
 
 export function DraggableTareaTablero({
@@ -85,7 +68,7 @@ export function DraggableTareaTablero({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`mc-badge ${badgeClass[est] ?? 'mc-badge-neutral'} text-[10px]`}>{badgeLabel[est] ?? est}</span>
+          <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'} text-[10px]`}>{TAREA_LABEL[est] ?? est}</span>
           {asignadoNombre ? <span className="text-[10px] text-[var(--mc-color-text-secondary)]">{asignadoNombre}</span> : null}
         </div>
 

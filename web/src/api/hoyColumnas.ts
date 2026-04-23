@@ -1,19 +1,8 @@
 import { getInsforge } from '@/lib/insforge';
+import { parseEvento, parseNota, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Evento, NotaBitacora, Tarea, VisibilidadBitacora } from '@/types';
-
-function parseTarea(row: Record<string, unknown>): Tarea {
-  return row as unknown as Tarea;
-}
-
-function parseEvento(row: Record<string, unknown>): Evento {
-  return row as unknown as Evento;
-}
-
-function parseNota(row: Record<string, unknown>): NotaBitacora {
-  return row as unknown as NotaBitacora;
-}
 
 const estadosActivos: Tarea['estado'][] = ['pendiente', 'en_progreso', 'bloqueada', 'atrasada'];
 

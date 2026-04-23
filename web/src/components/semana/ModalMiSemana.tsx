@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
 
 type ModoOrigen = 'libre' | 'dia';
@@ -56,8 +58,6 @@ export function ModalMiSemana({
     if (open) setAsignadoId(asignadoPorDefectoId);
   }, [open, asignadoPorDefectoId]);
 
-  if (!open) return null;
-
   const fechaEvento = modoOrigen === 'dia' ? fechaDia : undefined;
 
   async function submitTarea() {
@@ -110,29 +110,54 @@ export function ModalMiSemana({
   }
 
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div className="mc-modal max-w-[560px]" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-semibold text-[var(--mc-color-text)]">
-          {modoOrigen === 'libre' ? 'Nuevo ítem en backlog' : `Nuevo ítem · ${fechaDia ?? ''}`}
-        </h2>
-        {modoOrigen === 'dia' && fechaDia ? (
-          <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Fecha límite
-            <input type="date" className="mc-input mt-1" readOnly value={fechaDia} aria-readonly />
-          </label>
-        ) : null}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={modoOrigen === 'libre' ? 'Nuevo ítem en backlog' : `Nuevo ítem · ${fechaDia ?? ''}`}
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancelar
+          </Button>
+          {tab === 'tarea' ? (
+            <Button disabled={busy || !titulo.trim()} onClick={() => void submitTarea()}>
+              {busy ? 'Guardando…' : 'Crear tarea'}
+            </Button>
+          ) : (
+            <Button
+              disabled={busy || !titulo.trim() || !fechaEvento}
+              onClick={() => void submitEvento()}
+            >
+              {busy ? 'Guardando…' : 'Crear evento'}
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {modoOrigen === 'dia' && fechaDia && (
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
+            <input id="new-fecha" type="date" className="mc-input" readOnly value={fechaDia} aria-readonly />
+          </div>
+        )}
 
-        <div className="mt-4 flex gap-1 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] p-1">
+        <div className="flex gap-1 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] p-1">
           <button
             type="button"
-            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-2 text-xs font-medium ${tab === 'tarea' ? 'bg-[var(--mc-color-surface)] shadow-sm' : 'mc-btn-ghost !py-2'}`}
+            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-1.5 text-xs font-medium transition-all ${
+              tab === 'tarea' ? 'bg-[var(--mc-color-surface)] shadow-sm text-[var(--mc-color-text)]' : 'text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]'
+            }`}
             onClick={() => setTab('tarea')}
           >
             Tarea
           </button>
           <button
             type="button"
-            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-2 text-xs font-medium ${tab === 'evento' ? 'bg-[var(--mc-color-surface)] shadow-sm' : 'mc-btn-ghost !py-2'}`}
+            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-1.5 text-xs font-medium transition-all ${
+              tab === 'evento' ? 'bg-[var(--mc-color-surface)] shadow-sm text-[var(--mc-color-text)]' : 'text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]'
+            }`}
             onClick={() => setTab('evento')}
             disabled={modoOrigen !== 'dia'}
             title={modoOrigen !== 'dia' ? 'Selecciona un día en la agenda para crear un evento' : undefined}
@@ -142,21 +167,22 @@ export function ModalMiSemana({
         </div>
 
         {tab === 'tarea' ? (
-          <div className="mt-4 space-y-3">
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Título
-              <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-            </label>
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Descripción
-              <textarea className="mc-input mt-1 min-h-[80px]" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-            </label>
-            {modoOrigen === 'dia' ? (
+          <div className="flex flex-col gap-4">
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="task-title">Título</label>
+              <input id="task-title" className="mc-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
+            </div>
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="task-desc">Descripción</label>
+              <textarea id="task-desc" className="mc-input" style={{ minHeight: 80, resize: 'vertical' }} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+            </div>
+            {modoOrigen === 'dia' && (
               <>
-                <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                  Prioridad
+                <div className="mc-field">
+                  <label className="mc-field-label" htmlFor="task-prioridad">Prioridad</label>
                   <select
-                    className="mc-input mt-1"
+                    id="task-prioridad"
+                    className="mc-input"
                     value={prioridad}
                     onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
                   >
@@ -164,85 +190,61 @@ export function ModalMiSemana({
                     <option value="media">Media</option>
                     <option value="alta">Alta</option>
                   </select>
-                </label>
-                <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                  Vincular a objetivo
-                  <select className="mc-input mt-1" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+                </div>
+                <div className="mc-field">
+                  <label className="mc-field-label" htmlFor="task-objetivo">Vincular a objetivo</label>
+                  <select id="task-objetivo" className="mc-input" value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
                     <option value="">Sin objetivo</option>
                     {objetivos.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.titulo}
-                      </option>
+                      <option key={o.id} value={o.id}>{o.titulo}</option>
                     ))}
                   </select>
-                </label>
-                {usuariosAsignables.length > 0 ? (
-                  <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                    Responsable
-                    <select className="mc-input mt-1" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
+                </div>
+                {usuariosAsignables.length > 0 && (
+                  <div className="mc-field">
+                    <label className="mc-field-label" htmlFor="task-asignado">Responsable</label>
+                    <select id="task-asignado" className="mc-input" value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
                       {usuariosAsignables.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.nombre}
-                        </option>
+                        <option key={u.id} value={u.id}>{u.nombre}</option>
                       ))}
                     </select>
-                  </label>
-                ) : null}
+                  </div>
+                )}
               </>
-            ) : null}
+            )}
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Título
-              <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-            </label>
-            <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Tipo
-              <select className="mc-input mt-1" value={tipoEv} onChange={(e) => setTipoEv(e.target.value as TipoEvento)}>
+          <div className="flex flex-col gap-4">
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="ev-title">Título</label>
+              <input id="ev-title" className="mc-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
+            </div>
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="ev-tipo">Tipo</label>
+              <select id="ev-tipo" className="mc-input" value={tipoEv} onChange={(e) => setTipoEv(e.target.value as TipoEvento)}>
                 <option value="reunion">Reunión</option>
                 <option value="entrega">Entrega</option>
                 <option value="personal">Personal</option>
                 <option value="otro">Otro</option>
               </select>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                Hora inicio
-                <input type="time" className="mc-input mt-1" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} />
-              </label>
-              <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                Hora fin
-                <input type="time" className="mc-input mt-1" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
-              </label>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--mc-color-text-secondary)]">
-              <input type="checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="mc-field">
+                <label className="mc-field-label" htmlFor="ev-start">Hora inicio</label>
+                <input id="ev-start" type="time" className="mc-input" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} />
+              </div>
+              <div className="mc-field">
+                <label className="mc-field-label" htmlFor="ev-end">Hora fin</label>
+                <input id="ev-end" type="time" className="mc-input" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
+              </div>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
+              <input type="checkbox" className="mc-checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
               Recurrente
             </label>
           </div>
         )}
-
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
-            Cancelar
-          </button>
-          {tab === 'tarea' ? (
-            <button type="button" className="mc-btn" disabled={busy || !titulo.trim()} onClick={() => void submitTarea()}>
-              {busy ? 'Guardando…' : 'Crear tarea'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="mc-btn"
-              disabled={busy || !titulo.trim() || !fechaEvento}
-              onClick={() => void submitEvento()}
-            >
-              {busy ? 'Guardando…' : 'Crear evento'}
-            </button>
-          )}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

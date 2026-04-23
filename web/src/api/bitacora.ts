@@ -1,10 +1,7 @@
 import { crearEventoUsuario, crearTareaPlanificada } from '@/api/semana';
 import { getInsforge } from '@/lib/insforge';
+import { parseNota } from '@/lib/schemas';
 import type { NotaBitacora, Tarea, TipoEvento, VisibilidadBitacora } from '@/types';
-
-function parseNota(row: Record<string, unknown>): NotaBitacora {
-  return row as unknown as NotaBitacora;
-}
 
 /** Todas las notas del usuario en orden cronologico inverso. */
 export async function getNotasBitacora(usuarioId: string): Promise<NotaBitacora[]> {

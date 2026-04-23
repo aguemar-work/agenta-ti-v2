@@ -67,7 +67,8 @@ export function Login() {
       const row = await asegurarUsuario(data.user);
       setAuth(data.user, row);
       navigate(from === '/login' ? '/hoy' : from, { replace: true });
-    } catch {
+    } catch (err) {
+      console.error('[onSubmit]', err);
       toast.error('No se pudo cargar tu perfil. Intenta de nuevo.');
       await insforge.auth.signOut();
     } finally {

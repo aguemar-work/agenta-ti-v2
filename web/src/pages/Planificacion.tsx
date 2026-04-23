@@ -1,220 +1,93 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
-
-import { getJustificacionesPendientesJefe, marcarLogLeidoPorJefe } from '@/api/audit';
-import {
-  fechaLunesDesdeSemanaIso,
-  getCargaEquipoSemana,
-  getMiembrosActivos,
-  getTareasUsuarioDia,
-} from '@/api/planificacion';
-import { desbloquearTareaConLog, reprogramarTareaConLog } from '@/api/semana';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
+import { usePlanificacionPage } from '@/hooks/usePlanificacionPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import { agregarDias, inicioSemanaIso, numeroSemanaDesdeLunes, semanaIsoDesdeFecha } from '@/lib/semanas';
-import { useAuthStore } from '@/store/authStore';
-import type { EstadoTarea, LogAccion, Tarea, TipoAccionLog } from '@/types';
+import { TAREA_LABEL_PLURAL, TAREA_PILL } from '@/lib/estadoConfig';
+import { agregarDias } from '@/lib/semanas';
+import type { EstadoTarea, LogAccion, TipoAccionLog } from '@/types';
 
-const Q_LOGS = 'audit-logs-pendientes';
+// ---------------------------------------------------------------------------
+// Configuración de presentación (sin lógica de negocio)
+// ---------------------------------------------------------------------------
+const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const ESTADOS: EstadoTarea[] = ['pendiente', 'en_progreso', 'atrasada', 'bloqueada', 'completada', 'reprogramada'];
 
-const estadoLabel: Record<EstadoTarea, string> = {
-  pendiente:    'pendientes',
-  en_progreso:  'en progreso',
-  atrasada:     'atrasadas',
-  bloqueada:    'bloqueadas',
-  completada:   'completadas',
-  reprogramada: 'reprogramadas',
-  cancelada:    'canceladas',
-};
+const LEYENDA_CARGA = [
+  { color: '#EAF3DE', label: '1–2 tareas' },
+  { color: '#FAEEDA', label: '3–4 tareas' },
+  { color: '#FCEBEB', label: '5+ tareas' },
+];
 
-const estadoPillClass: Record<string, string> = {
-  pendiente:    'bg-[#F1EFE8] text-[#5F5E5A]',
-  en_progreso:  'bg-[#E6F1FB] text-[#185FA5]',
-  atrasada:     'bg-[#FCEBEB] text-[#A32D2D]',
-  bloqueada:    'bg-[#FAEEDA] text-[#854F0B]',
-  completada:   'bg-[#EAF3DE] text-[#27500A]',
-  reprogramada: 'bg-[#EEEDFE] text-[#3C3489]',
-  cancelada:    'bg-[#F1F1F1] text-[#6B6B6B]',
-};
+function celdaClass(n: number): string {
+  if (n === 0) return 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]';
+  if (n <= 2)  return 'bg-[#EAF3DE] text-[#27500A]';
+  if (n <= 4)  return 'bg-[#FAEEDA] text-[#854F0B]';
+  return 'bg-[#FCEBEB] text-[#A32D2D]';
+}
 
 function labelTipoLog(t: TipoAccionLog): string {
   const m: Record<TipoAccionLog, string> = {
-    creada: 'Creada',
-    reprogramada: 'Reprogramada',
-    eliminada: 'Eliminada',
-    estado_cambiado: 'Cambio de estado',
+    creada:             'Creada',
+    reprogramada:       'Reprogramada',
+    eliminada:          'Eliminada',
+    estado_cambiado:    'Cambio de estado',
     prioridad_cambiada: 'Prioridad',
-    editada: 'Editada',
-    cancelada: 'Cancelación',
+    editada:            'Editada',
+    cancelada:          'Cancelación',
   };
   return m[t] ?? t;
 }
 
-function celdaClass(n: number): string {
-  if (n === 0) return 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]';
-  if (n <= 2) return 'bg-[#EAF3DE] text-[#27500A]';
-  if (n <= 4) return 'bg-[#FAEEDA] text-[#854F0B]';
-  return 'bg-[#FCEBEB] text-[#A32D2D]';
-}
+// ---------------------------------------------------------------------------
 
 export function Planificacion() {
-  const qc = useQueryClient();
-  const usuario = useAuthStore((s) => s.usuario);
-  const hoyYmd = fechaLocalYmd(new Date());
-
-  const [lunes, setLunes] = useState(() => inicioSemanaIso(new Date()));
-  const semanaISO = semanaIsoDesdeFecha(lunes);
-  const numSem = numeroSemanaDesdeLunes(lunes);
-  const sabado = useMemo(() => agregarDias(lunes, 5), [lunes]);
-
-  const diasLab = useMemo(
-    () => [0, 1, 2, 3, 4, 5].map((i) => agregarDias(lunes, i)),
-    [lunes],
-  );
-
-  const [modal, setModal] = useState<{ usuarioId: string; fecha: string; nombre: string } | null>(null);
-  const [desbloquearTarea, setDesbloquearTarea] = useState<Tarea | null>(null);
-  const [devolverTarea, setDevolverTarea] = useState<Tarea | null>(null);
-  const [motivoDevolver, setMotivoDevolver] = useState('');
-  const [busyDevolver, setBusyDevolver] = useState(false);
-
-  const { data: miembros = [] } = useQuery({
-    queryKey: ['planificacion', 'miembros'],
-    queryFn: () => getMiembrosActivos(),
-  });
-
-  const { data: carga = [] } = useQuery({
-    queryKey: ['planificacion', 'carga', semanaISO],
-    queryFn: () => getCargaEquipoSemana(semanaISO),
-  });
-
-  const { data: detalle = [] } = useQuery({
-    queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha],
-    enabled: Boolean(modal),
-    queryFn: () => getTareasUsuarioDia(modal!.usuarioId, modal!.fecha),
-  });
-
-  const { data: logsPend = [], isLoading: loadLogs, isError: errLogs } = useQuery({
-    queryKey: [Q_LOGS],
-    queryFn: () => getJustificacionesPendientesJefe(),
-  });
-
-  const mutLeerLog = useMutation({
-    mutationFn: (id: string) => marcarLogLeidoPorJefe(id),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: [Q_LOGS] });
-      toast.success('Marcada como leído');
-    },
-    onError: () => toast.error('No se pudo actualizar el registro.'),
-  });
-
-  // Conteo de tareas por usuario+día
-  function cuenta(uid: string, ymd: string): number {
-    return carga.filter((t) => t.asignado_a === uid && t.fecha_planificada === ymd).length;
-  }
-
-  // Conteo por estado para un día (todos los miembros)
-  function conteoEstadosDia(ymd: string): Partial<Record<EstadoTarea, number>> {
-    const del = carga.filter((t) => t.fecha_planificada === ymd);
-    const counts: Partial<Record<EstadoTarea, number>> = {};
-    for (const t of del) {
-      const est = estadoEfectivoTablero(t, hoyYmd);
-      counts[est] = (counts[est] ?? 0) + 1;
-    }
-    return counts;
-  }
-
-  // Conteo por estado para toda la semana
-  const conteoSemana = useMemo(() => {
-    const counts: Partial<Record<EstadoTarea, number>> = {};
-    for (const t of carga) {
-      const est = estadoEfectivoTablero(t, hoyYmd);
-      counts[est] = (counts[est] ?? 0) + 1;
-    }
-    return counts;
-  }, [carga, hoyYmd]);
-
-  async function confirmarDesbloqueo(input: { tareaId: string; nuevaFecha: string; justificacion: string }) {
-    if (!usuario) return;
-    try {
-      await desbloquearTareaConLog({ ...input, usuarioId: usuario.id });
-      setDesbloquearTarea(null);
-      toast.success('Tarea desbloqueada');
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['planificacion', 'carga', semanaISO] }),
-        qc.invalidateQueries({ queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] }),
-        qc.invalidateQueries({ queryKey: ['tablero'] }),
-        qc.invalidateQueries({ queryKey: ['semana'] }),
-      ]);
-    } catch {
-      toast.error('No se pudo desbloquear la tarea.');
-    }
-  }
-
-  async function confirmarDevolver() {
-    if (!devolverTarea || !usuario || motivoDevolver.trim().length < 10) return;
-    setBusyDevolver(true);
-    try {
-      await reprogramarTareaConLog({
-        tareaId: devolverTarea.id,
-        usuarioId: usuario.id,
-        nuevaFecha: devolverTarea.fecha_planificada ?? hoyYmd,
-        justificacion: motivoDevolver.trim(),
-        nuevoEstado: 'pendiente',
-      });
-      setDevolverTarea(null);
-      setMotivoDevolver('');
-      toast.success('Tarea devuelta a pendiente');
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['planificacion', 'carga', semanaISO] }),
-        qc.invalidateQueries({ queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] }),
-        qc.invalidateQueries({ queryKey: ['tablero'] }),
-        qc.invalidateQueries({ queryKey: ['semana'] }),
-      ]);
-    } catch {
-      toast.error('No se pudo devolver la tarea.');
-    } finally {
-      setBusyDevolver(false);
-    }
-  }
+  const {
+    usuario,
+    lunes, setLunes, sabado, diasLab, numSem, fechaLunes, hoyYmd,
+    miembros, detalle, logsPend, loadLogs, errLogs,
+    conteoSemana, mutLeerLog,
+    modal,           setModal,
+    desbloquearTarea,setDesbloquearTarea,
+    devolverTarea,
+    motivoDevolver,  setMotivoDevolver,
+    motivoDevolverOk,motivoDevolverLen,
+    busyDevolver,    MIN_MOTIVO,
+    cuenta, conteoEstadosDia,
+    confirmarDesbloqueo, confirmarDevolver,
+    abrirDevolver, cerrarDevolver,
+  } = usePlanificacionPage();
 
   if (!usuario) return null;
 
   return (
     <div className={APP_PAGE_CLASS}>
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="mc-page-header">
         <div>
-          <h1 className="font-semibold text-[var(--mc-color-text)]" style={{ fontSize: 'var(--mc-text-lg)' }}>
-            Planificación
-          </h1>
-          <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">
+          <h1 className="mc-page-title">Planificación</h1>
+          <h2 className="mc-page-subtitle">
             Semana {numSem} · {fechaLocalDdMmYyyy(lunes)} — {fechaLocalDdMmYyyy(sabado)}
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" className="mc-btn-secondary text-sm" onClick={() => setLunes((d) => agregarDias(d, -7))}>‹</button>
-          <span className="text-sm font-medium">Lunes {fechaLunesDesdeSemanaIso(semanaISO)}</span>
-          <button type="button" className="mc-btn-secondary text-sm" onClick={() => setLunes((d) => agregarDias(d, 7))}>›</button>
+          <Button variant="secondary" size="sm" onClick={() => setLunes((d) => agregarDias(d, -7))}>‹</Button>
+          <span className="text-sm font-medium">Lunes {fechaLunes}</span>
+          <Button variant="secondary" size="sm" onClick={() => setLunes((d) => agregarDias(d, 7))}>›</Button>
         </div>
-      </div>
+      </header>
 
-      {/* Tabla de carga */}
+      {/* ── Tabla de carga ─────────────────────────────────────────────── */}
       <section>
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-          Carga de trabajo por miembro
+        <div className="mc-section-header">
+          <span>Carga de trabajo por miembro</span>
         </div>
         <div className="mb-2 flex flex-wrap gap-3">
-          {[
-            { color: '#EAF3DE', label: '1–2 tareas' },
-            { color: '#FAEEDA', label: '3–4 tareas' },
-            { color: '#FCEBEB', label: '5+ tareas' },
-          ].map(({ color, label }) => (
+          {LEYENDA_CARGA.map(({ color, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-xs text-[var(--mc-color-text-secondary)]">
               <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: color }} />
               {label}
@@ -225,17 +98,13 @@ export function Planificacion() {
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--mc-color-border)]">
-                <th className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                  Miembro
-                </th>
+                <th className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Miembro</th>
                 {diasLab.map((d, i) => (
                   <th key={fechaLocalYmd(d)} className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                    {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][i]} {d.getDate()}
+                    {DIAS_CORTO[i]} {d.getDate()}
                   </th>
                 ))}
-                <th className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                  Total
-                </th>
+                <th className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -246,13 +115,14 @@ export function Planificacion() {
                     <td className="p-2 font-medium text-[var(--mc-color-text)]">{u.nombre}</td>
                     {diasLab.map((d) => {
                       const ymd = fechaLocalYmd(d);
-                      const n = cuenta(u.id, ymd);
+                      const n   = cuenta(u.id, ymd);
                       return (
                         <td key={ymd} className="p-2">
                           <button
                             type="button"
                             className={`w-full rounded-md py-1 text-center text-xs font-medium ${celdaClass(n)}`}
                             onClick={() => setModal({ usuarioId: u.id, fecha: ymd, nombre: u.nombre })}
+                            aria-label={`${u.nombre} — ${ymd}: ${n} tareas`}
                           >
                             {n}
                           </button>
@@ -264,13 +134,11 @@ export function Planificacion() {
                 );
               })}
 
-              {/* Fila de resumen por estado */}
+              {/* Fila resumen por estado */}
               <tr className="border-t border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)]">
-                <td className="p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
-                  Resumen del día
-                </td>
+                <td className="p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">Resumen del día</td>
                 {diasLab.map((d) => {
-                  const ymd = fechaLocalYmd(d);
+                  const ymd    = fechaLocalYmd(d);
                   const counts = conteoEstadosDia(ymd);
                   const hayAlgo = Object.values(counts).some((v) => v && v > 0);
                   return (
@@ -280,11 +148,8 @@ export function Planificacion() {
                       ) : (
                         <div className="flex flex-col gap-0.5">
                           {ESTADOS.filter((e) => counts[e]).map((e) => (
-                            <span
-                              key={e}
-                              className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${estadoPillClass[e] ?? ''}`}
-                            >
-                              {counts[e]} {estadoLabel[e]}
+                            <span key={e} className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${TAREA_PILL[e] ?? ''}`}>
+                              {counts[e]} {TAREA_LABEL_PLURAL[e]}
                             </span>
                           ))}
                         </div>
@@ -292,15 +157,11 @@ export function Planificacion() {
                     </td>
                   );
                 })}
-                {/* Total semana */}
                 <td className="p-2">
                   <div className="flex flex-col gap-0.5">
                     {ESTADOS.filter((e) => conteoSemana[e]).map((e) => (
-                      <span
-                        key={e}
-                        className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${estadoPillClass[e] ?? ''}`}
-                      >
-                        {conteoSemana[e]} {estadoLabel[e]}
+                      <span key={e} className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${TAREA_PILL[e] ?? ''}`}>
+                        {conteoSemana[e]} {TAREA_LABEL_PLURAL[e]}
                       </span>
                     ))}
                   </div>
@@ -311,16 +172,18 @@ export function Planificacion() {
         </div>
       </section>
 
-      {/* Justificaciones pendientes */}
+      {/* ── Justificaciones pendientes ──────────────────────────────────── */}
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-          Justificaciones pendientes de lectura
+        <div className="mc-section-header">
+          <span>Justificaciones pendientes de lectura</span>
         </div>
-        {errLogs ? <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los registros.</p> : null}
+        {errLogs && <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los registros.</p>}
         {loadLogs ? (
           <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
         ) : logsPend.length === 0 ? (
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin pendientes de lectura.</p>
+          <div className="mc-empty">
+            <p className="mc-empty-title">Sin pendientes de lectura</p>
+          </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
             {logsPend.map((log: LogAccion) => (
@@ -333,115 +196,116 @@ export function Planificacion() {
                 </span>
                 <span className="mc-badge mc-badge-neutral text-[10px]">{labelTipoLog(log.tipo_accion)}</span>
                 <span className="text-sm text-[var(--mc-color-text)]">{log.justificacion ?? '—'}</span>
-                <button
-                  type="button"
-                  className="mc-btn-secondary !px-2 !py-1 text-xs"
+                <Button
+                  variant="secondary"
+                  size="xs"
                   disabled={mutLeerLog.isPending}
                   onClick={() => mutLeerLog.mutate(log.id)}
                 >
                   Marcar leído
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* Modal detalle celda */}
-      {modal ? (
-        <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={() => setModal(null)}>
-          <div
-            className="mc-modal max-h-[80vh] overflow-y-auto"
-            role="dialog"
-            aria-modal
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold text-[var(--mc-color-text)]">
-              {modal.nombre}
-            </h2>
-            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">
-              {modal.fecha} · {detalle.length} tareas
+      {/* ── Modal: detalle de celda ─────────────────────────────────────── */}
+      <Modal
+        open={modal !== null}
+        onClose={() => setModal(null)}
+        title={modal ? `${modal.nombre} — ${modal.fecha}` : ''}
+        size="md"
+        footer={
+          <Button variant="ghost" onClick={() => setModal(null)}>Cerrar</Button>
+        }
+      >
+        {modal && (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-[var(--mc-color-text-secondary)]">
+              {detalle.length} {detalle.length === 1 ? 'tarea' : 'tareas'}
             </p>
-            <div className="mt-3 flex flex-col gap-2">
-              {detalle.length === 0 ? (
-                <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin tareas planificadas.</p>
-              ) : (
-                detalle.map((t: Tarea) => {
-                  const est = estadoEfectivoTablero(t, hoyYmd);
-                  return (
-                    <div key={t.id} className="rounded-lg bg-[var(--mc-color-bg-secondary)] p-3">
-                      <p className="mb-2 text-sm font-medium text-[var(--mc-color-text)]">{t.titulo}</p>
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${estadoPillClass[est] ?? 'bg-[#F1F1F1] text-[#6B6B6B]'}`}>
-                          {estadoLabel[est] ?? est}
-                        </span>
-                        <span className="text-xs text-[var(--mc-color-text-secondary)]">{t.prioridad} prioridad</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {est === 'bloqueada' ? (
-                          <button
-                            type="button"
-                            className="mc-btn-secondary !px-3 !py-1.5 text-xs !text-[var(--mc-color-accent)]"
-                            onClick={() => setDesbloquearTarea(t)}
-                          >
-                            Desbloquear
-                          </button>
-                        ) : null}
-                        {est === 'completada' ? (
-                          <button
-                            type="button"
-                            className="mc-btn-secondary !px-3 !py-1.5 text-xs !text-[var(--mc-color-warning)]"
-                            onClick={() => { setDevolverTarea(t); setMotivoDevolver(''); }}
-                          >
-                            Devolver a pendiente
-                          </button>
-                        ) : null}
-                      </div>
+            {detalle.length === 0 ? (
+              <div className="mc-empty">
+                <p className="mc-empty-title">Sin tareas planificadas</p>
+              </div>
+            ) : (
+              detalle.map((t) => {
+                const est = estadoEfectivoTablero(t, hoyYmd);
+                return (
+                  <div key={t.id} className="mc-entity-card flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-[var(--mc-color-text)]">{t.titulo}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`mc-badge ${TAREA_PILL[est] ?? 'mc-badge-neutral'} text-[10px]`}>
+                        {TAREA_LABEL_PLURAL[est] ?? est}
+                      </span>
+                      <span className="text-[11px] text-[var(--mc-color-text-secondary)]">{t.prioridad} prioridad</span>
                     </div>
-                  );
-                })
-              )}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button type="button" className="mc-btn-ghost" onClick={() => setModal(null)}>Cerrar</button>
-            </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {est === 'bloqueada' && (
+                        <Button variant="secondary" size="xs" onClick={() => setDesbloquearTarea(t)}>
+                          Desbloquear
+                        </Button>
+                      )}
+                      {est === 'completada' && (
+                        <Button variant="secondary" size="xs" className="!text-[var(--mc-color-warning)]" onClick={() => abrirDevolver(t)}>
+                          Devolver a pendiente
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
-        </div>
-      ) : null}
+        )}
+      </Modal>
 
-      {/* Modal devolver a pendiente */}
-      {devolverTarea ? (
-        <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={() => setDevolverTarea(null)}>
-          <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Devolver a pendiente</h2>
-            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{devolverTarea.titulo}</p>
-            <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              Justificación (mín. 10 caracteres)
+      {/* ── Modal: devolver a pendiente ─────────────────────────────────── */}
+      <Modal
+        open={devolverTarea !== null}
+        onClose={cerrarDevolver}
+        title="Devolver a pendiente"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={cerrarDevolver} disabled={busyDevolver}>Cancelar</Button>
+            <Button onClick={() => void confirmarDevolver()} disabled={busyDevolver || !motivoDevolverOk}>
+              {busyDevolver ? 'Guardando…' : 'Confirmar'}
+            </Button>
+          </>
+        }
+      >
+        {devolverTarea && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-[var(--mc-color-text-secondary)]">
+              {devolverTarea.titulo}
+            </p>
+            <div className="mc-field">
+              <label className="mc-field-label" htmlFor="dev-motivo">
+                <span className="flex justify-between">
+                  Justificación
+                  <span aria-live="polite" className={`mc-char-count ${!motivoDevolverOk ? 'mc-char-count-error' : ''}`}>
+                    {motivoDevolverLen}/{MIN_MOTIVO}
+                  </span>
+                </span>
+              </label>
               <textarea
-                className="mc-input mt-1 min-h-[80px]"
+                id="dev-motivo"
+                className="mc-input"
+                style={{ minHeight: 80, resize: 'vertical' }}
                 value={motivoDevolver}
                 onChange={(e) => setMotivoDevolver(e.target.value)}
                 placeholder="Indica el motivo para devolver esta tarea…"
+                autoFocus
+                aria-invalid={motivoDevolver.length > 0 && !motivoDevolverOk}
               />
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="mc-btn-ghost" onClick={() => setDevolverTarea(null)} disabled={busyDevolver}>
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="mc-btn"
-                disabled={busyDevolver || motivoDevolver.trim().length < 10}
-                onClick={() => void confirmarDevolver()}
-              >
-                {busyDevolver ? 'Guardando…' : 'Confirmar'}
-              </button>
             </div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </Modal>
 
-      {/* Modal desbloquear */}
+      {/* ── Modal: desbloquear ──────────────────────────────────────────── */}
       <ModalDesbloquear
         tarea={desbloquearTarea}
         onClose={() => setDesbloquearTarea(null)}

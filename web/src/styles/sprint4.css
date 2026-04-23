@@ -1,0 +1,147 @@
+/*
+ * Parche Sprint 4 — importado desde main.tsx después de index.css
+ * para que estas reglas no queden por debajo de Tailwind.
+ *
+ * Cubre:
+ *   - Animaciones de Modal (mc-fade-in, mc-slide-up)
+ *   - Skeleton loader reutilizable
+ *   - mc-badge-info (hallazgo 1.6)
+ *   - sr-only (accesibilidad screen readers)
+ *   - aria-current en enlaces activos (hallazgo 6.4)
+ *   - Scroll padding mobile para bottom nav
+ */
+
+:root {
+    --mc-bottom-nav-h: 60px;
+}
+
+/* ── Animaciones de Modal ───────────────────────────────────────── */
+@keyframes mc-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes mc-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Skeleton loader ────────────────────────────────────────────── */
+/*
+  Uso:
+    <div class="mc-skeleton" style="height: 16px; width: 120px;" />
+    <div class="mc-skeleton mc-skeleton--text" />   ← ancho 100%, h 14px
+    <div class="mc-skeleton mc-skeleton--avatar" /> ← círculo 36px
+*/
+@keyframes mc-shimmer {
+    0% {
+        background-position: -400px 0;
+    }
+
+    100% {
+        background-position: 400px 0;
+    }
+}
+
+.mc-skeleton {
+    border-radius: var(--mc-radius-md);
+    background: linear-gradient(90deg,
+            var(--mc-color-border) 25%,
+            color-mix(in srgb, var(--mc-color-border) 50%, transparent) 50%,
+            var(--mc-color-border) 75%);
+    background-size: 800px 100%;
+    animation: mc-shimmer 1.4s ease-in-out infinite;
+}
+
+.mc-skeleton--text {
+    height: 14px;
+    width: 100%;
+    border-radius: 4px;
+}
+
+.mc-skeleton--avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mc-skeleton--title {
+    height: 18px;
+    width: 60%;
+    border-radius: 4px;
+}
+
+/* ── mc-badge-info (hallazgo 1.6) ───────────────────────────────── */
+.mc-badge-info {
+    background: color-mix(in srgb, var(--mc-color-accent) 12%, transparent);
+    color: var(--mc-color-accent);
+}
+
+/* ── Screen reader only (accesibilidad) ─────────────────────────── */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ── aria-current en sidebar (hallazgo 6.4) ─────────────────────── */
+/*
+  NavLink con aria-current="page" recibe este estilo automáticamente
+  como refuerzo visual accesible (complementa mc-sidebar-link--active).
+*/
+.mc-sidebar-link[aria-current="page"] {
+    background: color-mix(in srgb, var(--mc-color-accent) 10%, transparent);
+    color: var(--mc-color-accent);
+}
+
+/* Bottom nav — mismo criterio que sidebar (NavLink pone aria-current="page") */
+.mc-bottom-nav-link[aria-current="page"] {
+    color: var(--mc-color-accent);
+    font-weight: 600;
+}
+
+/* ── Focus visible global ───────────────────────────────────────── */
+/*
+  Asegura que el outline de foco sea visible en todos los elementos
+  interactivos (WCAG 2.4.7). Aplica solo a :focus-visible para no
+  molestar a usuarios de ratón.
+*/
+:focus-visible {
+    outline: 2px solid var(--mc-color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── Scroll padding para bottom nav mobile ──────────────────────── */
+@media (max-width: 767px) {
+    html {
+        scroll-padding-bottom: calc(var(--mc-bottom-nav-h, 60px) + 8px);
+    }
+}
+
+/* ── prefers-reduced-motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .mc-skeleton {
+        animation: none;
+        background: var(--mc-color-border);
+    }
+}

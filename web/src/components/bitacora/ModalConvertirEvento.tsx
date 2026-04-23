@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
 import type { NotaBitacora, TipoEvento } from '@/types';
 
@@ -35,8 +37,6 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
     }
   }, [nota]);
 
-  if (!nota) return null;
-
   const canSubmit = titulo.trim().length > 0 && fecha.length > 0 && !busy;
 
   async function submit() {
@@ -58,49 +58,55 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
   }
 
   return (
-    <div className="mc-overlay flex items-center justify-center p-4" role="presentation" onClick={onClose}>
-      <div className="mc-modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-semibold text-[var(--mc-color-text)]">Convertir en evento</h2>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Titulo
-          <input className="mc-input mt-1" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-        </label>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Fecha
-          <input type="date" className="mc-input mt-1" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </label>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Hora inicio
-            <input type="time" className="mc-input mt-1" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} />
-          </label>
-          <label className="block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-            Hora fin
-            <input type="time" className="mc-input mt-1" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
-          </label>
+    <Modal
+      open={nota !== null}
+      onClose={onClose}
+      title="Convertir en evento"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSubmit}>
+            {busy ? 'Creando...' : 'Crear evento'}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-ev-title">Título</label>
+          <input id="conv-ev-title" className="mc-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
         </div>
-        <label className="mt-3 block text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          Tipo
-          <select className="mc-input mt-1" value={tipo} onChange={(e) => setTipo(e.target.value as TipoEvento)}>
-            <option value="reunion">Reunion</option>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-ev-fecha">Fecha</label>
+          <input id="conv-ev-fecha" type="date" className="mc-input" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="conv-ev-start">Hora inicio</label>
+            <input id="conv-ev-start" type="time" className="mc-input" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} />
+          </div>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="conv-ev-end">Hora fin</label>
+            <input id="conv-ev-end" type="time" className="mc-input" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
+          </div>
+        </div>
+        <div className="mc-field">
+          <label className="mc-field-label" htmlFor="conv-ev-tipo">Tipo</label>
+          <select id="conv-ev-tipo" className="mc-input" value={tipo} onChange={(e) => setTipo(e.target.value as TipoEvento)}>
+            <option value="reunion">Reunión</option>
             <option value="entrega">Entrega</option>
             <option value="personal">Personal</option>
             <option value="otro">Otro</option>
           </select>
-        </label>
-        <label className="mt-3 flex items-center gap-2 text-xs text-[var(--mc-color-text-secondary)]">
-          <input type="checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
+          <input type="checkbox" className="mc-checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
           Recurrente
         </label>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="mc-btn-ghost" onClick={onClose} disabled={busy}>
-            Cancelar
-          </button>
-          <button type="button" className="mc-btn" onClick={() => void submit()} disabled={!canSubmit}>
-            {busy ? 'Creando...' : 'Crear evento'}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

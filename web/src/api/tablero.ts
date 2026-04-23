@@ -1,12 +1,9 @@
 import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
+import { parseTarea } from '@/lib/schemas';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { EstadoTarea, Tarea } from '@/types';
-
-function parseTarea(row: Record<string, unknown>): Tarea {
-  return row as unknown as Tarea;
-}
 
 export type FiltrosTablero = {
   usuarioId: string | 'todos';
