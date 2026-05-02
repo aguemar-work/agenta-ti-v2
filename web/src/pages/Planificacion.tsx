@@ -36,12 +36,16 @@ function celdaClass(n: number): string {
 function labelTipoLog(t: TipoAccionLog): string {
   const m: Record<TipoAccionLog, string> = {
     creada:             'Creada',
+    iniciada:           'Iniciada',
     reprogramada:       'Reprogramada',
     eliminada:          'Eliminada',
     estado_cambiado:    'Cambio de estado',
     prioridad_cambiada: 'Prioridad',
     editada:            'Editada',
     cancelada:          'Cancelación',
+    bloqueada:          'Bloqueada',
+    desbloqueada:       'Desbloqueada',
+    completada:         'Completada',
   };
   return m[t] ?? t;
 }
@@ -51,7 +55,7 @@ function labelTipoLog(t: TipoAccionLog): string {
 export function Planificacion() {
   const {
     usuario,
-    lunes, setLunes, sabado, diasLab, numSem, fechaLunes, hoyYmd,
+    lunes, setLunes, sabado, diasLab, numSem, hoyYmd,
     miembros, detalle, logsPend, loadLogs, errLogs,
     conteoSemana, mutLeerLog,
     incidencias, loadInc,

@@ -14,7 +14,6 @@ import {
   getJustificacionesPendientesJefe,
   marcarLogLeidoPorJefe,
   type FiltrosHistorialLog,
-  type LogActividadItem,
 } from '@/api/audit';
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import {
@@ -28,7 +27,6 @@ import {
   crearTareaPlanificada,
   desbloquearTareaConLog,
   reprogramarTareaConLog,
-  type CrearTareaPlanificadaInput,
 } from '@/api/semana';
 import { getObjetivosActivos } from '@/api/objetivos';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -233,7 +231,6 @@ export function usePlanificacionPage() {
     objetivo_id?: string | null;
   }) {
     if (!modalCrear || !usuario) return;
-    const semana = semanaIsoDesdeFecha(new Date(`${modalCrear.fecha}T12:00:00`));
     await crearTareaPlanificada({
       titulo:           input.titulo,
       prioridad:        input.prioridad,

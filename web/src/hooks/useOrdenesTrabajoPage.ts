@@ -18,7 +18,6 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { publicarEventoUsuario } from '@/lib/realtimePublish';
 import { getInsforge } from '@/lib/insforge';
-import { parseTarea } from '@/lib/schemas';
 import type { Id, Tarea } from '@/types';
 
 export const Q_OT = 'ordenes-trabajo';
@@ -155,15 +154,19 @@ export function useOrdenesTrabajoPage() {
   });
 
   const mutIniciar = useMutation({
-    mutationFn: (otId: Id) => iniciarEjecucionOT(otId),
+    mutationFn: (otId: Id) => iniciarEjecucionOT(otId, usuario!.id),
     onSuccess: async () => { await invalidarOTs(); toast.success('OT en ejecución'); },
     onError: (err) => { console.error('[mutIniciarOT]', err); toast.error('No se pudo iniciar la OT.'); },
   });
 
   const mutCompletar = useMutation({
     mutationFn: () => completarOT({
-      otId: modalCompletar!.id, receptorNombre, receptorDni, receptorCargo,
-      observaciones: obsCierre || undefined,
+      otId: modalCompletar!.id,
+      usuarioId: usuario!.id,
+      receptorNombre,
+      receptorDni,
+      receptorCargo,
+      observacionesCierre: obsCierre || undefined,
     }),
     onSuccess: async () => {
       await invalidarOTs();
@@ -175,7 +178,7 @@ export function useOrdenesTrabajoPage() {
   });
 
   const mutCancelar = useMutation({
-    mutationFn: (otId: Id) => cancelarOrdenTrabajo(otId),
+    mutationFn: (otId: Id) => cancelarOrdenTrabajo(otId, usuario!.id),
     onSuccess: async () => { await invalidarOTs(); toast.success('OT cancelada'); },
     onError: (err) => { console.error('[mutCancelarOT]', err); toast.error('No se pudo cancelar la OT.'); },
   });

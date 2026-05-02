@@ -9,7 +9,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { useState } from 'react';
 
 import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
 import { EventoCard } from '@/components/semana/EventoCard';
@@ -96,11 +95,11 @@ export function MiSemana() {
     lunes, setLunes, sabado, diasSemana,
     uid, setSeleccionId, usuariosJefe,
     tareasPlan, eventos, isError, hoyYmd, conteos,
-    modo, setModo, esModoHoy, esBannerViernes,
+    setModo, esModoHoy, esBannerViernes,
     incidenciasHoy, notasHoy, eventosHoy,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
-    crearIncidencia, guardarNotaRapida,
+    crearIncidenciaHoy, guardarNotaRapida,
     objetivosActivos, usuariosAsignables,
     tareaDetalle, tareaCompletar, activeTareaDrag,
     activeDragId, setActiveDragId, overId,
@@ -235,6 +234,7 @@ export function MiSemana() {
             setNotaRapida={setNotaRapida}
             guardarNotaRapida={guardarNotaRapida}
             puedeGestionar={puedeGestionar}
+            esJefe={esJefe}
             setDetalleTareaId={setDetalleTareaId}
             setReprDetalleTarea={setReprDetalleTarea}
             setBloquearTareaState={setBloquearTareaState}
@@ -374,7 +374,15 @@ export function MiSemana() {
         usuariosAsignables={usuariosAsignables}
         objetivos={objetivosActivos}
         onClose={() => setModalInc(false)}
-        onSubmit={crearIncidencia}
+        onSubmit={async (input) => {
+          await crearIncidenciaHoy({
+            titulo:       input.titulo,
+            prioridad:    input.prioridad,
+            descripcion:  input.descripcion || null,
+            asignado_a:   input.asignado_a,
+            ya_resuelta:  true,
+          });
+        }}
       />
       <ModalCompletarTarea
         open={completarTareaId !== null}

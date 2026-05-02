@@ -3,9 +3,8 @@
  * Capa de acceso a datos para la Bitácora.
  */
 
-import { crearEventoUsuario } from '@/api/semana';
 import { getInsforge } from '@/lib/insforge';
-import { parseNota, parseTarea } from '@/lib/schemas';
+import { parseNota } from '@/lib/schemas';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { NotaBitacora, Tarea, TipoEvento, VisibilidadBitacora } from '@/types';
 

@@ -21,7 +21,7 @@ type Props = {
 };
 
 export function DraggableTareaTablero({
-  tarea, hoyYmd, canDrag, esJefe, asignadoNombre,
+  tarea, hoyYmd: _hoyYmd, canDrag, esJefe, asignadoNombre,
   onOpenDetalle, onIniciar, onCompletar, onBloquear, onDesbloquear,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({

@@ -19,7 +19,6 @@ import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
 import { ModalJustificacion } from '@/components/tareas/ModalJustificacion';
 import { CheckSquare, Square } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 import { useTableroPage } from '@/hooks/useTableroPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { FilterBar } from '@/components/ui/FilterBar';

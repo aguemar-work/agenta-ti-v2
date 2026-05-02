@@ -99,6 +99,15 @@ export interface Evento {
   updated_at: string;
 }
 
+/** Fila de `configuracion_semana` (nota global de la semana para planificación). */
+export interface ConfiguracionSemana {
+  id: Id;
+  fecha_inicio_semana: string;
+  notas_semana: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface NotaBitacora {
   id: Id;
   contenido: string;

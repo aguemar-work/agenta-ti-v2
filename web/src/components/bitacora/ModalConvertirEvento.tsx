@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
-import { crearRecurrenciaEvento } from '@/api/recurrencia';
-
 import type { NotaBitacora, TipoEvento } from '@/types';
 
 type Props = {

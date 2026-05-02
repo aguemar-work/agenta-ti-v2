@@ -252,11 +252,6 @@ export function TaskItem({
     </div>
   ) : null;
 
-  // ── Estilos del contenedor ────────────────────────────────────────────────
-  const containerStyle: React.CSSProperties = styles.bgStyle
-    ? {}
-    : {};
-
   // ── Variante KANBAN ───────────────────────────────────────────────────────
   if (variant === 'kanban') {
     return (

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
-import { calcularPorcentajeObjetivo, nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
+import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
 import type { EstadoObjetivo, Tarea } from '@/types';
 import { PageHeader } from '@/components/layout/PageHeader';
 
@@ -13,12 +13,10 @@ import { PageHeader } from '@/components/layout/PageHeader';
 function BarraProgreso({
   pct,
   fechaLimite,
-  tareas,
   size = 'sm',
 }: {
   pct:         number;
   fechaLimite: string | null;
-  tareas?:     { estado: string; prioridad: 'alta' | 'media' | 'baja' }[];
   size?:       'sm' | 'md';
 }) {
   const nivel    = nivelRiesgoObjetivo(pct, fechaLimite);

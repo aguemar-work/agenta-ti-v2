@@ -22,6 +22,7 @@ function tarea(overrides: Partial<Tarea>): Tarea {
     objetivo_id:        null,
     creado_por:         'uuid-usuario',
     es_imprevisto:      false,
+    nota_origen_id:     null,
     created_at:         '2026-01-01T00:00:00Z',
     updated_at:         '2026-01-01T00:00:00Z',
     ...overrides,
@@ -86,15 +87,6 @@ describe('estadoEfectivoTablero', () => {
   describe('no_planificada', () => {
     it('no degrada aunque la fecha esté vencida', () => {
       const t = tarea({ tipo: 'no_planificada', fecha_planificada: AYER, estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
-    });
-  });
-
-  // ── Tipo libre nunca se degrada ───────────────────────────────────────────
-
-  describe('libre', () => {
-    it('no degrada aunque la fecha esté vencida', () => {
-      const t = tarea({ tipo: 'libre', fecha_planificada: AYER, estado: 'pendiente' });
       expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
     });
   });
