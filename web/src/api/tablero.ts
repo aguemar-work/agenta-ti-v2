@@ -1,4 +1,5 @@
 import { getInsforge } from '@/lib/insforge';
+import { COMPLETADAS_DIAS_LIMITE } from '@/lib/constants';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { parseTarea } from '@/lib/schemas';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
@@ -32,7 +33,7 @@ export async function getTareasTablero(filtros: FiltrosTablero): Promise<Tarea[]
     list = list.filter((t) => t.estado !== 'completada');
   } else {
     const limite = new Date();
-    limite.setDate(limite.getDate() - 7);
+    limite.setDate(limite.getDate() - COMPLETADAS_DIAS_LIMITE);
     const limiteIso = limite.toISOString();
     list = list.filter((t) => {
       if (t.estado !== 'completada') return true;
@@ -72,52 +73,30 @@ export function agruparTareasTablero(tareas: Tarea[], hoyYmd: string): Record<Co
 export async function snapTareaFechaAlPorHacer(tareaId: string, hoyYmd: string): Promise<void> {
   const insforge = getInsforge();
   const semana = semanaIsoDesdeFecha(new Date(`${hoyYmd}T12:00:00`));
-  const { error } = await insforge.database
-    .from('tarea')
-    .update({
-      fecha_planificada: hoyYmd,
-      semana_planificada: semana,
-      estado: 'pendiente',
-    })
-    .eq('id', tareaId);
+  const { error } = await insforge.database.rpc('sgtd_snap_tarea_hoy', {
+    p_tarea_id: tareaId,
+    p_hoy:      hoyYmd,
+    p_semana:   semana,
+  });
   if (error) throw error;
 }
 
+/**
+ * Mueve una tarea a un nuevo estado en el kanban.
+ * Toda la validación (permisos, justificación, transiciones) ocurre en el
+ * servidor a través del RPC `sgtd_mover_tarea_columna`.
+ */
 export async function moverTareaColumna(
   tareaId: string,
   nuevoEstado: EstadoTarea,
   usuarioActorId: string,
   justificacion?: string,
 ): Promise<void> {
-  const insforge = getInsforge();
-  const requiere = nuevoEstado === 'bloqueada' || nuevoEstado === 'cancelada';
-  if (requiere && (!justificacion || justificacion.trim().length < 10)) {
-    throw new Error('Justificación obligatoria (mínimo 10 caracteres).');
-  }
-
-  const { data: prevRow, error: e0 } = await insforge.database.from('tarea').select('estado').eq('id', tareaId).single();
-  if (e0) throw e0;
-  const prev = (prevRow as { estado: EstadoTarea }).estado;
-
-  const patch: Partial<Tarea> = { estado: nuevoEstado };
-  if (nuevoEstado === 'completada') {
-    patch.fecha_completada = new Date().toISOString();
-  }
-  const { error: e1 } = await insforge.database.from('tarea').update(patch).eq('id', tareaId);
-  if (e1) throw e1;
-
-  if (nuevoEstado === 'bloqueada' || nuevoEstado === 'cancelada') {
-    const tipoLog = nuevoEstado === 'bloqueada' ? 'estado_cambiado' : 'cancelada';
-    const { error: e2 } = await insforge.database.from('log_accion').insert([
-      {
-        tarea_id: tareaId,
-        usuario_id: usuarioActorId,
-        tipo_accion: tipoLog,
-        valor_anterior: { estado: prev },
-        valor_nuevo: { estado: nuevoEstado },
-        justificacion: justificacion!.trim(),
-      },
-    ]);
-    if (e2) throw e2;
-  }
+  const { error } = await getInsforge().database.rpc('sgtd_mover_tarea_columna', {
+    p_tarea_id:      tareaId,
+    p_nuevo_estado:  nuevoEstado,
+    p_usuario_id:    usuarioActorId,
+    p_justificacion: justificacion ?? null,
+  });
+  if (error) throw error;
 }

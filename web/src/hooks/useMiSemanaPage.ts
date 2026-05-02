@@ -5,12 +5,19 @@
  */
 
 import { type DragEndEvent, type DragOverEvent } from '@dnd-kit/core';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { getObjetivosActivos } from '@/api/objetivos';
-import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
+import { insertarNotaBitacoraRapida, crearIncidenciaHoy } from '@/api/hoyColumnas';
+import {
+  useIncidenciasDelDia,
+  useNotasBitacoraHoy,
+  useEventosHoy,
+  Q_INC_HOY,
+} from '@/hooks/useHoyColumnas';
+import { useJefesNotificacion, useUsuariosActivos } from '@/hooks/useUsuarios';
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { bloquearTarea, reprogramarTareaConLog, useMarcarAtrasadasAlMontar, useUsuariosParaSelector } from '@/hooks/useTareas';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -18,18 +25,47 @@ import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { agregarDias, inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
 import { useAuthStore } from '@/store/authStore';
+import { publicarEventoEquipo } from '@/lib/realtimePublish';
+import { useVistaStore } from '@/store/vistaStore';
 import type { Tarea, TipoEvento } from '@/types';
 
 export function useMiSemanaPage() {
   const usuario = useAuthStore((s) => s.usuario);
   const esJefe  = usuario?.rol === 'jefe';
+  const qc      = useQueryClient();
+
+  // ── Modo: Hoy vs Semana ──────────────────────────────────────────────────
+  // Regla: se usa la preferencia guardada del usuario si existe.
+  // Si no hay preferencia (primera visita del día o sesión nueva), se aplica
+  // el modo automático: lun–jue = Hoy, vie–dom = Semana.
+  // La preferencia sobrevive navegaciones dentro de la misma sesión y
+  // se persiste en localStorage para la próxima visita.
+  const LS_KEY = 'mc-modo-semana';
+  function modoInicial(): 'hoy' | 'semana' {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved === 'hoy' || saved === 'semana') return saved;
+    } catch { /* localStorage no disponible */ }
+    const dow = new Date().getDay(); // 0=dom, 1=lun, ..., 5=vie, 6=sab
+    return dow >= 1 && dow <= 4 ? 'hoy' : 'semana';
+  }
+  const [modo, setModoState] = useState<'hoy' | 'semana'>(modoInicial);
+  function setModo(m: 'hoy' | 'semana') {
+    try { localStorage.setItem(LS_KEY, m); } catch { /* ignorar */ }
+    setModoState(m);
+  }
+  const esModoHoy = modo === 'hoy';
+  const esBannerViernes = new Date().getDay() === 5;
 
   // ── Navegación de semana ──────────────────────────────────────────────────
   const [lunes,        setLunes]        = useState(() => inicioSemanaIso(new Date()));
-  const [seleccionId,  setSeleccionId]  = useState<string | undefined>();
+  const seleccionIdStore   = useVistaStore((s) => s.seleccionId);
+  const setSeleccionIdStore = useVistaStore((s) => s.setSeleccionId);
 
   // ── Estado de modales ─────────────────────────────────────────────────────
-  const [modal,             setModal]             = useState<{ modo: 'libre' | 'dia'; fecha?: string } | null>(null);
+  const [modal,             setModal]             = useState<{ fecha: string } | null>(null);
+  const [modalInc,          setModalInc]          = useState(false);
+  const [notaRapida,        setNotaRapida]        = useState('');
   const [detalleTareaId,    setDetalleTareaId]    = useState<string | null>(null);
   const [completarTareaId,  setCompletarTareaId]  = useState<string | null>(null);
   const [bloquearTareaState,setBloquearTareaState]= useState<Tarea | null>(null);
@@ -40,27 +76,31 @@ export function useMiSemanaPage() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [overId,       setOverId]       = useState<string | null>(null);
 
-  useEffect(() => {
-    if (usuario?.id && seleccionId === undefined) setSeleccionId(usuario.id);
-  }, [usuario?.id, seleccionId]);
-
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: usuariosJefe } = useUsuariosParaSelector(Boolean(esJefe));
   const { data: objetivosActivos   = [] } = useQuery({
     queryKey: ['objetivos-activos-mi-semana'],
     queryFn:  () => getObjetivosActivos(),
   });
-  const { data: usuariosAsignables = [] } = useQuery({
-    queryKey: ['usuarios-asignacion-mi-semana'],
-    queryFn:  () => getUsuariosActivosParaAsignacion(),
+  const { data: usuariosAsignables = [] } = useUsuariosActivos();
+  const { data: jefesNotificacion = [] } = useJefesNotificacion({
+    enabled: Boolean(usuario && !esJefe),
   });
 
-  const uid       = seleccionId ?? usuario?.id;
+  const seleccionId = seleccionIdStore ?? usuario?.id;
+  const setSeleccionId = (id: string) => { setSeleccionIdStore(id); };
+  const uid = seleccionId;
   const semanaISO = semanaIsoDesdeFecha(lunes);
 
   useMarcarAtrasadasAlMontar(uid);
   const { tareasPlan, eventos, isError } = useMiSemanaData(uid, semanaISO, lunes);
   const mut = useMiSemanaMutations(uid, semanaISO);
+
+  // ── Queries modo Hoy (lazy: solo cuando esModoHoy) ───────────────────────
+  const hoyYmd = fechaLocalYmd(new Date());
+  const { data: incidenciasHoy = [] } = useIncidenciasDelDia(esModoHoy ? uid : undefined, hoyYmd);
+  const { data: notasHoy       = [] } = useNotasBitacoraHoy(esModoHoy ? uid : undefined);
+  const { data: eventosHoy     = [] } = useEventosHoy(esModoHoy ? uid : undefined, hoyYmd);
 
   // ── Datos derivados ───────────────────────────────────────────────────────
   const diasSemana = useMemo(() => {
@@ -77,7 +117,6 @@ export function useMiSemanaPage() {
     return m;
   }, [tareasPlan]);
 
-  const hoyYmd        = fechaLocalYmd(new Date());
   const tareaDetalle  = detalleTareaId   ? (tareaPorId.get(detalleTareaId)  ?? null) : null;
   const tareaCompletar= completarTareaId ? (tareaPorId.get(completarTareaId) ?? null) : null;
 
@@ -123,7 +162,7 @@ export function useMiSemanaPage() {
           setReprDragTarea({ tarea: t, fecha, semana: sem });
           return;
         }
-        await mut.moverDia({ tareaId: tid, fecha, semana: sem, tipo: t.tipo });
+        await mut.moverDia({ tareaId: tid, fecha, semana: sem });
       }
     } catch (err) {
       console.error('[onDragEnd]', err);
@@ -140,7 +179,7 @@ export function useMiSemanaPage() {
       await reprogramarTareaConLog({ tareaId: input.tareaId, usuarioId: usuario.id, nuevaFecha: input.nuevaFecha, justificacion: input.justificacion, nuevoEstado });
       setReprDragTarea(null);
       toast.success('Tarea reprogramada');
-      await mut.moverDia({ tareaId: input.tareaId, fecha: input.nuevaFecha, semana, tipo: t.tipo });
+      await mut.moverDia({ tareaId: input.tareaId, fecha: input.nuevaFecha, semana });
     } catch (err) {
       console.error('[confirmarReprDrag]', err);
       toast.error('No se pudo reprogramar la tarea.');
@@ -154,6 +193,10 @@ export function useMiSemanaPage() {
       await reprogramarTareaConLog({ ...input, usuarioId: usuario.id, nuevoEstado });
       setReprDetalleTarea(null);
       toast.success('Tarea reprogramada');
+      // Invalidar semana para reflejar nueva fecha
+      await qc.invalidateQueries({ queryKey: ['semana'], exact: false });
+      await qc.invalidateQueries({ queryKey: ['tareas-hoy'] });
+      await qc.invalidateQueries({ queryKey: ['planificacion'] });
     } catch (err) {
       console.error('[confirmarReprDetalle]', err);
       toast.error('No se pudo reprogramar la tarea.');
@@ -166,6 +209,10 @@ export function useMiSemanaPage() {
       await bloquearTarea({ ...input, usuarioId: usuario.id });
       setBloquearTareaState(null);
       toast.success('Tarea bloqueada');
+      // Invalidar para reflejar cambio de estado
+      await qc.invalidateQueries({ queryKey: ['semana'], exact: false });
+      await qc.invalidateQueries({ queryKey: ['tablero'], exact: false });
+      await qc.invalidateQueries({ queryKey: ['tareas-hoy'] });
     } catch (err) {
       console.error('[confirmarBloqueo]', err);
       toast.error('No se pudo bloquear la tarea.');
@@ -175,9 +222,23 @@ export function useMiSemanaPage() {
   async function confirmarCompletar(input: { tareaId: string; resumen: string }) {
     if (!usuario) return;
     try {
-      await mut.completarTareaConResumen({ tareaId: input.tareaId, usuarioId: usuario.id, resumen: input.resumen });
+      await mut.completarTareaConResumen({
+        tareaId: input.tareaId,
+        usuarioId: usuario.id,
+        usuarioNombre: usuario.nombre,
+        tareaTitulo: tareaCompletar?.titulo,
+        jefeIds: esJefe ? undefined : jefesNotificacion.map((jefe) => jefe.id),
+        resumen: input.resumen,
+      });
       setCompletarTareaId(null);
       toast.success('Tarea finalizada');
+      // Invalidar todo para reflejar cambio
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['semana'], exact: false }),
+        qc.invalidateQueries({ queryKey: ['tablero'], exact: false }),
+        qc.invalidateQueries({ queryKey: ['tareas-hoy'] }),
+        qc.invalidateQueries({ queryKey: ['planificacion'] }),
+      ]);
     } catch (err) {
       console.error('[confirmarCompletar]', err);
       toast.error('No se pudo completar la tarea.');
@@ -193,10 +254,7 @@ export function useMiSemanaPage() {
   }) {
     if (!modal || !usuario || !uid) return;
     const asignado = input.asignado_a?.trim() || usuario.id;
-    if (modal.modo === 'libre') {
-      await mut.crearLibre({ titulo: input.titulo, prioridad: input.prioridad, descripcion: input.descripcion, asignado_a: asignado, creado_por: usuario.id, objetivo_id: input.objetivo_id ?? null });
-      toast.success('Tarea libre creada');
-    } else if (modal.fecha) {
+    if (modal.fecha) {
       await mut.crearPlan({ titulo: input.titulo, prioridad: input.prioridad, descripcion: input.descripcion, fecha_planificada: modal.fecha, asignado_a: asignado, creado_por: usuario.id, objetivo_id: input.objetivo_id ?? null });
       toast.success('Tarea planificada');
     }
@@ -222,8 +280,9 @@ export function useMiSemanaPage() {
     objetivo_id?: string | null;
     asignado_a?: string | null;
   }) {
+    if (!usuario) return;
     try {
-      await mut.editarTarea(input);
+      await mut.editarTarea({ ...input, usuarioActorId: usuario.id });
       toast.success('Tarea actualizada');
     } catch (err) {
       console.error('[guardarDetalle]', err);
@@ -245,16 +304,68 @@ export function useMiSemanaPage() {
 
   async function iniciarDesdeDetalle(t: Tarea) {
     if (!usuario) return;
-    await mut.iniciarTarea({ tareaId: t.id, usuarioId: usuario.id });
-    toast.success('Tarea en progreso');
-    setDetalleTareaId(null);
+    try {
+      await mut.iniciarTarea({ tareaId: t.id, usuarioId: usuario.id });
+      toast.success('Tarea en progreso');
+      setDetalleTareaId(null);
+    } catch (err) {
+      console.error('[iniciarDesdeDetalle]', err);
+      toast.error('No se pudo iniciar la tarea.');
+    }
   }
 
-  async function planificarDesdeDetalle(t: Tarea, fecha: string) {
-    const sem = semanaIsoDesdeFecha(new Date(`${fecha}T12:00:00`));
-    await mut.moverDia({ tareaId: t.id, fecha, semana: sem, tipo: t.tipo });
-    toast.success('Tarea planificada');
-    setDetalleTareaId(null);
+  // ── Handlers modo Hoy ────────────────────────────────────────────────────
+  async function crearIncidencia(input: {
+    titulo: string;
+    prioridad: Tarea['prioridad'];
+    descripcion?: string | null;
+    asignado_a?: string | null;
+  }) {
+    if (!usuario || !uid) return;
+    const incidencia = await crearIncidenciaHoy({
+      titulo:           input.titulo,
+      prioridad:        input.prioridad,
+      descripcion:      input.descripcion ?? null,
+      asignado_a:       input.asignado_a ?? uid,
+      creado_por:       usuario.id,
+      fecha_planificada: hoyYmd,
+    });
+    if (incidencia.asignado_a === uid && incidencia.fecha_planificada === hoyYmd) {
+      qc.setQueryData<Tarea[]>([Q_INC_HOY, uid, hoyYmd], (prev = []) => [incidencia, ...prev]);
+    }
+    if (!esJefe) {
+      void Promise.all(jefesNotificacion.map((jefe) =>
+        publicarEventoEquipo({
+          tipo: 'incidencia_registrada',
+          jefeId: jefe.id,
+          titulo: incidencia.titulo,
+          usuarioNombre: usuario.nombre,
+        }),
+      ));
+    }
+    // Invalidar queries de incidencias para que aparezcan sin F5
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: [Q_INC_HOY], exact: false }),
+      qc.invalidateQueries({ queryKey: ['tablero'], exact: false }),
+      qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+    ]);
+    toast.success('Incidencia registrada');
+    setModalInc(false);
+  }
+
+  async function guardarNotaRapida() {
+    if (!notaRapida.trim() || !uid) return;
+    try {
+      await insertarNotaBitacoraRapida({
+        usuario_id: uid,
+        contenido:  notaRapida.trim(),
+      });
+      setNotaRapida('');
+      toast.success('Nota guardada');
+    } catch (err) {
+      console.error('[guardarNotaRapida]', err);
+      toast.error('No se pudo guardar la nota.');
+    }
   }
 
   return {
@@ -268,6 +379,13 @@ export function useMiSemanaPage() {
 
     // Datos
     tareasPlan, eventos, isError, hoyYmd, conteos,
+    // Modo
+    modo, setModo, esModoHoy, esBannerViernes,
+    // Datos modo Hoy
+    incidenciasHoy, notasHoy, eventosHoy,
+    modalInc, setModalInc,
+    notaRapida, setNotaRapida,
+    crearIncidencia, guardarNotaRapida,
     objetivosActivos, usuariosAsignables,
     tareaDetalle, tareaCompletar, activeTareaDrag,
 
@@ -298,6 +416,5 @@ export function useMiSemanaPage() {
     guardarDetalle,
     eliminarDesdeDetalle,
     iniciarDesdeDetalle,
-    planificarDesdeDetalle,
   };
 }

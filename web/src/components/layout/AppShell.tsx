@@ -1,36 +1,46 @@
 import {
   BarChart2,
   Calendar,
-  CalendarRange,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   FileText,
   LayoutGrid,
   LogOut,
+  MoreHorizontal,
   NotebookPen,
   Target,
 } from 'lucide-react';
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { AppBrandIcon, AppLogo } from '@/components/brand/AppLogo';
+import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
+import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
 
 const NAV_ITEMS = [
-  { to: '/hoy', label: 'Hoy', icon: Calendar, roles: ['jefe', 'miembro'] },
-  { to: '/semana', label: 'Mi semana', icon: CalendarRange, roles: ['jefe', 'miembro'] },
-  { to: '/planificacion', label: 'Planificacion', icon: ClipboardList, roles: ['jefe'] },
+  { to: '/semana', label: 'Mi semana', icon: Calendar, roles: ['jefe', 'miembro'] },
+
+  { to: '/planificacion', label: 'Planificación', icon: ClipboardList, roles: ['jefe'] },
   { to: '/tablero', label: 'Tablero', icon: LayoutGrid, roles: ['jefe', 'miembro'] },
   { to: '/objetivos', label: 'Objetivos', icon: Target, roles: ['jefe', 'miembro'] },
-  { to: '/bitacora', label: 'Bitacora', icon: NotebookPen, roles: ['jefe', 'miembro'] },
-  { to: '/metricas', label: 'Metricas', icon: BarChart2, roles: ['jefe', 'miembro'] },
+  { to: '/bitacora', label: 'Bitácora', icon: NotebookPen, roles: ['jefe', 'miembro'] },
+  { to: '/metricas', label: 'Métricas', icon: BarChart2, roles: ['jefe', 'miembro'] },
   { to: '/ordenes-trabajo', label: 'OT', icon: FileText, roles: ['jefe', 'miembro'] },
 ] as const;
 
-const BOTTOM_NAV_ITEMS = ['/hoy', '/semana', '/tablero', '/objetivos', '/bitacora'] as const;
+// Bottom nav por rol:
+//   Jefe    — los módulos que más usa: Semana, Planificación, Métricas, Bitácora
+//   Miembro — los módulos operativos del día a día: Semana, Tablero, Objetivos, Bitácora
+const BOTTOM_NAV_ITEMS_JEFE    = ['/semana', '/planificacion', '/metricas', '/bitacora'] as const;
+const BOTTOM_NAV_ITEMS_MIEMBRO = ['/semana', '/tablero', '/objetivos', '/bitacora'] as const;
+
+function getBottomNavItems(rol: string | undefined): readonly string[] {
+  return rol === 'jefe' ? BOTTOM_NAV_ITEMS_JEFE : BOTTOM_NAV_ITEMS_MIEMBRO;
+}
 
 function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -54,23 +64,64 @@ function getInitials(nombre?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/** Punto de estado de conexión realtime. Verde = activo, gris = sin conexión. */
+function RealtimeIndicator({ conectado }: { conectado: boolean }) {
+  return (
+    <span
+      title={conectado ? 'Notificaciones en tiempo real activas' : 'Sin conexión en tiempo real — las notificaciones pueden tardar'}
+      aria-label={conectado ? 'Notificaciones activas' : 'Sin notificaciones en tiempo real'}
+      style={{
+        display: 'inline-block',
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        flexShrink: 0,
+        background: conectado ? 'var(--mc-color-success, #4ade80)' : 'var(--mc-color-text-tertiary, #9ca3af)',
+        transition: 'background 0.4s ease',
+      }}
+    />
+  );
+}
+
 export function AppShell() {
   const navigate = useNavigate();
   const usuario = useAuthStore((s) => s.usuario);
   const clear = useAuthStore((s) => s.clear);
   const { collapsed, toggle } = useSidebarCollapsed();
+  const { conectado } = useRealtimeNotificaciones();
+  const [masDrawerOpen, setMasDrawerOpen] = useState(false);
+  const [confirmandoLogout, setConfirmandoLogout] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const location = useLocation();
 
   const visibleNav = NAV_ITEMS.filter((item) =>
     !usuario?.rol || (item.roles as readonly string[]).includes(usuario.rol),
   );
+  const bottomNavItems = getBottomNavItems(usuario?.rol);
   const bottomNav = visibleNav.filter((item) =>
-    (BOTTOM_NAV_ITEMS as readonly string[]).includes(item.to),
+    bottomNavItems.includes(item.to),
   );
 
+  // Modules not in bottom nav — shown in "Más" drawer
+  const masNav = visibleNav.filter((item) =>
+    !bottomNavItems.includes(item.to),
+  );
+
+  // Current page title for mobile topbar
+  const paginaActual = NAV_ITEMS.find((item) =>
+    location.pathname.startsWith(item.to),
+  )?.label ?? '';
+
   async function handleLogout() {
-    await getInsforge().auth.signOut();
-    clear();
-    navigate('/login', { replace: true });
+    setLogoutPending(true);
+    try {
+      await getInsforge().auth.signOut();
+      clear();
+      navigate('/login', { replace: true });
+    } finally {
+      setLogoutPending(false);
+      setConfirmandoLogout(false);
+    }
   }
 
   const initials = getInitials(usuario?.nombre);
@@ -219,7 +270,8 @@ export function AppShell() {
                   <p className="mc-sidebar-profile-name">{usuario?.nombre}</p>
                   <p className="mc-sidebar-profile-role">{usuario?.rol === 'jefe' ? 'Jefe' : 'Miembro'}</p>
                 </div>
-                <button type="button" className="mc-sidebar-logout" onClick={() => void handleLogout()} aria-label="Cerrar sesion">
+                <RealtimeIndicator conectado={conectado} />
+                <button type="button" className="mc-sidebar-logout" onClick={() => setConfirmandoLogout(true)} aria-label="Cerrar sesion">
                   <LogOut size={16} aria-hidden />
                 </button>
               </div>
@@ -242,9 +294,12 @@ export function AppShell() {
           <div className="mc-app-column">
             <div className="mc-mobile-topbar">
               <AppBrandIcon size={28} />
+              {paginaActual && (
+                <span className="mc-topbar-page-name">{paginaActual}</span>
+              )}
               <div style={{ flex: 1 }} />
-              <span style={{ fontSize: '13px', color: 'var(--mc-color-text-secondary)' }}>{usuario?.nombre}</span>
-              <button type="button" className="mc-sidebar-logout" onClick={() => void handleLogout()} aria-label="Cerrar sesion">
+              <RealtimeIndicator conectado={conectado} />
+              <button type="button" className="mc-sidebar-logout" onClick={() => setConfirmandoLogout(true)} aria-label="Cerrar sesion">
                 <LogOut size={18} aria-hidden />
               </button>
             </div>
@@ -255,6 +310,41 @@ export function AppShell() {
         </SectionErrorBoundary>
 
         <SectionErrorBoundary label="Bottom Nav">
+          {/* ── Drawer "Más" ────────────────────────────────────────── */}
+          {masDrawerOpen && (
+            <div
+              className="mc-mas-overlay"
+              onClick={() => setMasDrawerOpen(false)}
+              aria-hidden
+            />
+          )}
+          <div
+            className={`mc-mas-drawer ${masDrawerOpen ? 'mc-mas-drawer--open' : 'mc-mas-drawer--closed'}`}
+            role="dialog"
+            aria-label="Más módulos"
+            aria-modal="true"
+          >
+            {masNav.map(({ to, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end
+                onClick={() => setMasDrawerOpen(false)}
+                className={({ isActive }) =>
+                  `mc-sidebar-link mc-mas-drawer-item${isActive ? ' mc-sidebar-link--active' : ''}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon size={20} aria-hidden style={{ flexShrink: 0 }} />
+                    <span>{label}</span>
+                    {isActive && <span className="sr-only">(página actual)</span>}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+
           <nav className="mc-bottom-nav" aria-label="Navegacion inferior">
             <div className="mc-bottom-nav-inner">
               {bottomNav.map(({ to, label, icon: Icon }) => (
@@ -268,11 +358,35 @@ export function AppShell() {
                   )}
                 </NavLink>
               ))}
+              {masNav.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMasDrawerOpen((v) => !v)}
+                  className={`mc-bottom-nav-link${masDrawerOpen ? ' mc-bottom-nav-link--active' : ''}`}
+                  aria-expanded={masDrawerOpen}
+                  aria-label="Más módulos"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', flex: '1 1 0' }}
+                >
+                  <MoreHorizontal size={20} aria-hidden />
+                  <span>Más</span>
+                </button>
+              )}
             </div>
           </nav>
         </SectionErrorBoundary>
 
       </div>
+
+      <ModalConfirmar
+        open={confirmandoLogout}
+        titulo="Cerrar sesión"
+        mensaje="¿Seguro que quieres cerrar sesión?"
+        labelConfirmar="Cerrar sesión"
+        variantConfirmar="danger"
+        cargando={logoutPending}
+        onConfirmar={() => void handleLogout()}
+        onCancelar={() => setConfirmandoLogout(false)}
+      />
     </>
   );
 }

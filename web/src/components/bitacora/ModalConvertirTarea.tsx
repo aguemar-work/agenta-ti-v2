@@ -27,7 +27,12 @@ export function ModalConvertirTarea({ nota, onClose, onConfirm }: Props) {
       setTitulo(nota.contenido.slice(0, 120));
       setDescripcion(nota.contenido);
       setPrioridad('media');
-      setFecha('');
+      // Pre-populate with today as a starting point — user can change via Reprogramar later
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm   = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd   = String(hoy.getDate()).padStart(2, '0');
+      setFecha(`${yyyy}-${mm}-${dd}`);
     }
   }, [nota]);
 
@@ -67,21 +72,24 @@ export function ModalConvertirTarea({ nota, onClose, onConfirm }: Props) {
           <label className="mc-field-label" htmlFor="conv-title">Título</label>
           <input id="conv-title" className="mc-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
         </div>
-        <div className="mc-field">
-          <label className="mc-field-label" htmlFor="conv-fecha">Fecha planificada</label>
-          <input id="conv-fecha" type="date" className="mc-input" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </div>
-        <div className="mc-field">
-          <label className="mc-field-label" htmlFor="conv-prioridad">Prioridad</label>
-          <select id="conv-prioridad" className="mc-input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}>
-            <option value="baja">Baja</option>
-            <option value="media">Media</option>
-            <option value="alta">Alta</option>
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="conv-fecha">Fecha planificada</label>
+            <input id="conv-fecha" type="date" className="mc-input" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            <p className="mt-1 text-[10px] text-[var(--mc-color-text-secondary)]">Puedes reprogramarla después.</p>
+          </div>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="conv-prioridad">Prioridad</label>
+            <select id="conv-prioridad" className="mc-input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}>
+              <option value="baja">Baja</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+            </select>
+          </div>
         </div>
         <div className="mc-field">
           <label className="mc-field-label" htmlFor="conv-desc">Descripción</label>
-          <textarea id="conv-desc" className="mc-input" style={{ minHeight: 80, resize: 'vertical' }} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          <textarea id="conv-desc" className="mc-input" style={{ minHeight: 72, resize: 'vertical' }} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
         </div>
       </div>
     </Modal>

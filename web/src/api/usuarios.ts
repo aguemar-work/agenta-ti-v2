@@ -12,3 +12,16 @@ export async function getUsuariosActivosParaAsignacion(): Promise<Pick<Usuario, 
   if (error) throw error;
   return (data ?? []) as Pick<Usuario, 'id' | 'nombre' | 'email'>[];
 }
+
+/** Jefes activos que pueden recibir notificaciones del equipo. */
+export async function getJefesActivosParaNotificacion(): Promise<Pick<Usuario, 'id' | 'nombre'>[]> {
+  const insforge = getInsforge();
+  const { data, error } = await insforge.database
+    .from('usuario')
+    .select('id,nombre')
+    .eq('activo', true)
+    .eq('rol', 'jefe')
+    .order('nombre');
+  if (error) throw error;
+  return (data ?? []) as Pick<Usuario, 'id' | 'nombre'>[];
+}

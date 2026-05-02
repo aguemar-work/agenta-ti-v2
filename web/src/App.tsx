@@ -11,7 +11,6 @@ const Login = lazy(() => import('@/pages/Login').then((m) => ({ default: m.Login
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
 const VerifyResetCode = lazy(() => import('@/pages/VerifyResetCode').then((m) => ({ default: m.VerifyResetCode })));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
-const Hoy = lazy(() => import('@/pages/Hoy').then((m) => ({ default: m.Hoy })));
 const MiSemana = lazy(() => import('@/pages/MiSemana').then((m) => ({ default: m.MiSemana })));
 const Planificacion = lazy(() => import('@/pages/Planificacion').then((m) => ({ default: m.Planificacion })));
 const Tablero = lazy(() => import('@/pages/Tablero').then((m) => ({ default: m.Tablero })));
@@ -59,8 +58,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/hoy" replace />} />
-        <Route path="hoy" element={<RouteWrapper label="Hoy"><Hoy /></RouteWrapper>} />
+        <Route index element={<Navigate to="/semana" replace />} />
+        <Route path="hoy" element={<Navigate to="/semana" replace />} />
         <Route path="semana" element={<RouteWrapper label="Mi semana"><MiSemana /></RouteWrapper>} />
         <Route
           path="planificacion"
@@ -77,7 +76,7 @@ export default function App() {
         <Route path="ordenes-trabajo" element={<RouteWrapper label="Órdenes de trabajo"><OrdenesTrabajo /></RouteWrapper>} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/hoy" replace />} />
+      <Route path="*" element={<Navigate to="/semana" replace />} />
     </Routes>
   );
 }

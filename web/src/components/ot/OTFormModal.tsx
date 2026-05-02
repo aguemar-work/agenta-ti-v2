@@ -6,6 +6,7 @@
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
+import type { Tarea } from '@/types';
 
 type Props = {
     open: boolean;
@@ -13,13 +14,14 @@ type Props = {
     form: Omit<CrearOTInput, 'enviar'>;
     setForm: (f: Omit<CrearOTInput, 'enviar'>) => void;
     tiposTrabajo: TipoTrabajoOT[];
+    tareasVinculables: Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
     onClose: () => void;
     onGuardar: (enviar: boolean) => void;
     busy: boolean;
     hasUnsavedChanges?: boolean;
 };
 
-export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, onClose, onGuardar, busy, hasUnsavedChanges = false }: Props) {
+export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, tareasVinculables, onClose, onGuardar, busy, hasUnsavedChanges = false }: Props) {
     const canSave = form.descripcion.trim().length > 0 && form.area_destino.trim().length > 0 && form.fecha_estimada.length > 0;
     const titulo = editando ? `Editar ${editando.numero}` : 'Nueva orden de trabajo';
 
@@ -55,6 +57,29 @@ export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, onClo
                         <option value="">Selecciona…</option>
                         {tiposTrabajo.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                     </select>
+                </label>
+
+                {/* Tarea vinculada */}
+                <label className="mc-field">
+                    <span className="mc-field-label">
+                        Tarea vinculada
+                        <span style={{ fontWeight: 400, color: 'var(--mc-color-text-secondary)', marginLeft: 4 }}>(opcional)</span>
+                    </span>
+                    <select
+                        className="mc-input"
+                        value={form.tarea_id ?? ''}
+                        onChange={(e) => upd('tarea_id', e.target.value || null)}
+                    >
+                        <option value="">Sin tarea vinculada</option>
+                        {tareasVinculables.map((t) => (
+                            <option key={t.id} value={t.id}>{t.titulo}</option>
+                        ))}
+                    </select>
+                    {form.tarea_id && (
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
+                            Al completar la OT, esta tarea se completará automáticamente.
+                        </p>
+                    )}
                 </label>
 
                 {/* Descripción */}

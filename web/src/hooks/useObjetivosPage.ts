@@ -6,12 +6,14 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { crearObjetivo, eliminarObjetivo, getTareasPorObjetivo } from '@/api/objetivos';
-import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
-import { crearTareaLibre } from '@/api/semana';
+import { useUsuariosActivos } from '@/hooks/useUsuarios';
+import { crearTareaPlanificada } from '@/api/semana';
+import { fechaLocalYmd } from '@/lib/fecha';
 import { Q_KPIS, Q_OBJ_PROG, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { useAuthStore } from '@/store/authStore';
@@ -32,7 +34,6 @@ type ObjetivoTareaNuevaDraft = {
 };
 
 export const Q_TAREAS_OBJ = 'objetivo-tareas';
-const MIN_MOTIVO = 10;
 
 export function useObjetivosPage() {
   const qc = useQueryClient();
@@ -40,11 +41,7 @@ export function useObjetivosPage() {
   const esJefe = usuario?.rol === 'jefe';
 
   const { data: objetivos = [], isLoading: loadO, isError } = useObjetivosProgreso();
-  const { data: usuariosActivos = [] } = useQuery({
-    queryKey: ['usuarios-asignacion-objetivos'],
-    queryFn: () => getUsuariosActivosParaAsignacion(),
-    enabled: esJefe, // solo jefe necesita la lista
-  });
+  const { data: usuariosActivos = [] } = useUsuariosActivos({ enabled: esJefe });
 
   const [seleccionId, setSeleccionId] = useState<string | null>(null);
   const objetivoSel = objetivos.find((o) => o.id === seleccionId) ?? null;
@@ -105,7 +102,7 @@ export function useObjetivosPage() {
   const [eliminarObjId, setEliminarObjId] = useState<string | null>(null);
   const [motivoEliminar, setMotivoEliminar] = useState('');
   const objetivoEliminar = objetivos.find((o) => o.id === eliminarObjId) ?? null;
-  const motivoOk = motivoEliminar.trim().length >= MIN_MOTIVO;
+  const motivoOk = motivoEliminar.trim().length >= MIN_JUSTIFICACION_CHARS;
 
   const mutCrearObj = useMutation({
     mutationFn: crearObjetivo,
@@ -139,7 +136,7 @@ export function useObjetivosPage() {
   });
 
   const mutAddTarea = useMutation({
-    mutationFn: crearTareaLibre,
+    mutationFn: crearTareaPlanificada,
     onSuccess: async (_, vars) => {
       await Promise.all([
         qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TAREAS_OBJ, vars.objetivo_id] }),
@@ -182,6 +179,7 @@ export function useObjetivosPage() {
       titulo: tareaObjetivoForm.titulo.trim(),
       prioridad: tareaObjetivoForm.prioridad,
       descripcion: null,
+      fecha_planificada: fechaLocalYmd(new Date()), // hoy por defecto; se puede reprogramar
       asignado_a: tareaObjetivoForm.asignadoId.trim() || null,
       creado_por: usuario.id,
       objetivo_id: seleccionId,
@@ -233,7 +231,7 @@ export function useObjetivosPage() {
     addingTarea: mutAddTarea.isPending,
     eliminarObjId, setEliminarObjId,
     motivoEliminar, setMotivoEliminar,
-    motivoOk, MIN_MOTIVO,
+    motivoOk, MIN_JUSTIFICACION_CHARS,
     eliminandoObj: mutEliminarObj.isPending,
     puedeEliminar,
     submitNuevoObjetivo,

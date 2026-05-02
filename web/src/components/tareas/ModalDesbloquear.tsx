@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { Tarea } from '@/types';
@@ -16,7 +17,7 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
 
   if (!tarea) return null;
 
-  const canSubmit = fecha.length > 0 && just.trim().length >= 10 && !busy;
+  const canSubmit = fecha.length > 0 && just.trim().length >= MIN_JUSTIFICACION_CHARS && !busy;
 
   async function submit() {
     if (!canSubmit || !tarea) return;

@@ -102,3 +102,32 @@ export async function upsertNotaSemana(semanaISO: string, nota: string): Promise
     if (error) throw error;
   }
 }
+
+/** Incidencias (tareas imprevistas) registradas por miembros en el rango de la semana. */
+export async function getIncidenciasEquipoSemana(lunes: Date, sabado: Date): Promise<Tarea[]> {
+  const insforge = getInsforge();
+  const { data: usuarios, error: e1 } = await insforge.database
+    .from('usuario')
+    .select('id')
+    .eq('activo', true)
+    .eq('rol', 'miembro');
+  if (e1) throw e1;
+  const ids = (usuarios ?? []).map((u: { id: string }) => u.id);
+  if (ids.length === 0) return [];
+
+  const desde = new Date(lunes);
+  desde.setHours(0, 0, 0, 0);
+  const hasta = new Date(sabado);
+  hasta.setHours(23, 59, 59, 999);
+
+  const { data, error } = await insforge.database
+    .from('tarea')
+    .select('*')
+    .eq('es_imprevisto', true)
+    .in('asignado_a', ids)
+    .gte('created_at', desde.toISOString())
+    .lte('created_at', hasta.toISOString())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
+}

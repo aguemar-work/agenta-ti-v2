@@ -4,6 +4,7 @@
  */
 
 import { ClipboardCheck, Plus, Settings2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,8 @@ import { OTFormModal } from '@/components/ot/OTFormModal';
 import { OTImpresion } from '@/components/ot/OTImpresion';
 import { useOrdenesTrabajoPage } from '@/hooks/useOrdenesTrabajoPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { FilterBar } from '@/components/ui/FilterBar';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL, MODALIDAD_OT_LABEL } from '@/lib/otConfig';
 import type { EstadoOT } from '@/api/ordenTrabajo';
 
@@ -44,7 +47,7 @@ export function OrdenesTrabajo() {
     canCompletar,
     nuevoTipoNombre, setNuevoTipoNombre, canCrearTipo,
     abrirNuevaOT, abrirEditarOT,
-    form, setForm, tiposTrabajo,
+    form, setForm, tiposTrabajo, tareasVinculables,
     mutCrear, mutActualizar, mutAprobar, mutRechazar,
     mutIniciar, mutCompletar, mutCancelar,
     mutCrearTipo, mutToggleTipo,
@@ -56,46 +59,33 @@ export function OrdenesTrabajo() {
     <div className={APP_PAGE_CLASS}>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="mc-page-header">
-        <div>
-          <h1 className="mc-page-title">Órdenes de trabajo</h1>
-          <p className="mc-page-subtitle">
-            {esJefe
-              ? `${pendientesCount} pendiente${pendientesCount !== 1 ? 's' : ''} de aprobación`
-              : 'Mis órdenes de trabajo'
-            }
-          </p>
-        </div>
-        <Button onClick={abrirNuevaOT} size="sm">
-          <Plus size={14} style={{ marginRight: 6 }} aria-hidden />
-          Nueva OT
-        </Button>
-      </div>
+      <PageHeader
+        title="Órdenes de trabajo"
+        subtitle={esJefe
+          ? `${pendientesCount} pendiente${pendientesCount !== 1 ? 's' : ''} de aprobación`
+          : 'Mis órdenes de trabajo'
+        }
+        actions={
+          <Button onClick={abrirNuevaOT} size="sm">
+            <Plus size={14} style={{ marginRight: 6 }} aria-hidden />
+            Nueva OT
+          </Button>
+        }
+      />
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar las órdenes de trabajo.</p>}
 
-      {/* ── Filtros ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {FILTROS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFiltroEstado(value)}
-            className={filtroEstado === value ? 'mc-btn-secondary mc-btn-xs' : 'mc-btn-ghost mc-btn-xs'}
-            style={filtroEstado === value ? { borderColor: 'var(--mc-color-accent)', color: 'var(--mc-color-accent)' } : {}}
-          >
-            {label}
-            {value === 'pendiente' && pendientesCount > 0 && (
-              <span style={{
-                marginLeft: 6, background: 'var(--mc-color-danger)', color: '#fff',
-                borderRadius: '9999px', fontSize: '10px', fontWeight: 600, padding: '1px 6px',
-              }}>
-                {pendientesCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <FilterBar>
+        <FilterBar.Pills
+          value={filtroEstado}
+          onChange={(v) => setFiltroEstado(v as typeof filtroEstado)}
+          options={FILTROS.map(({ value, label }) => ({
+            value,
+            label,
+            badge: value === 'pendiente' ? pendientesCount : undefined,
+          }))}
+        />
+      </FilterBar>
 
       {/* ── Lista de OTs ────────────────────────────────────────────────── */}
       <div className="mc-card !p-0 overflow-hidden">
@@ -350,6 +340,7 @@ export function OrdenesTrabajo() {
             </div>
             {[
               { label: 'Tipo de trabajo',    value: viendoOT.tipo_trabajo?.nombre ?? '—' },
+              { label: 'Tarea vinculada',   value: viendoOT.tarea?.titulo ?? '—' },
               { label: 'Descripción',        value: viendoOT.descripcion },
               { label: 'Área destino',       value: viendoOT.area_destino },
               { label: 'Ubicación',          value: viendoOT.ubicacion ?? '—' },
@@ -436,7 +427,7 @@ export function OrdenesTrabajo() {
             <Button variant="ghost" onClick={() => { setModalRechazar(null); setMotivoRechazo(''); }}>Cancelar</Button>
             <Button
               variant="danger"
-              disabled={motivoRechazo.trim().length < 10 || mutRechazar.isPending}
+              disabled={motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS || mutRechazar.isPending}
               onClick={() => modalRechazar && mutRechazar.mutate({ otId: modalRechazar.id, motivo: motivoRechazo })}
             >
               {mutRechazar.isPending ? 'Guardando…' : 'Rechazar'}
@@ -446,13 +437,13 @@ export function OrdenesTrabajo() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
-            {modalRechazar?.numero} — Indica el motivo (mínimo 10 caracteres).
+            {modalRechazar?.numero} — Indica el motivo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
           </p>
           <label className="mc-field">
             <span style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span className="mc-field-label">Motivo</span>
-              <span className={`mc-char-count${motivoRechazo.trim().length < 10 && motivoRechazo.length > 0 ? ' mc-char-count-error' : ''}`}>
-                {motivoRechazo.trim().length}/10
+              <span className={`mc-char-count${motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS && motivoRechazo.length > 0 ? ' mc-char-count-error' : ''}`}>
+                {motivoRechazo.trim().length}/{MIN_JUSTIFICACION_CHARS}
               </span>
             </span>
             <textarea className="mc-input" style={{ minHeight: 80 }} value={motivoRechazo}
@@ -470,7 +461,8 @@ export function OrdenesTrabajo() {
           setForm={setForm}
           tiposTrabajo={tiposTrabajo}
           onClose={() => setModalForm(false)}
-          onGuardar={(enviar) => editandoOT ? mutActualizar.mutate(enviar) : mutCrear.mutate(enviar)}
+          tareasVinculables={tareasVinculables}
+        onGuardar={(enviar) => editandoOT ? mutActualizar.mutate(enviar) : mutCrear.mutate(enviar)}
           busy={mutCrear.isPending || mutActualizar.isPending}
         />
       )}

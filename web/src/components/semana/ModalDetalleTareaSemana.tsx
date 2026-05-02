@@ -8,12 +8,15 @@
  *   eliminar  — motivo obligatorio
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { MoreHorizontal, X } from 'lucide-react';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
+import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
 type EditarTareaDraft = {
@@ -22,6 +25,13 @@ type EditarTareaDraft = {
   descripcion: string;
   objetivoId: string;
   asignadoId: string;
+};
+
+type TareaLogHistorial = {
+  tipo_accion: string;
+  justificacion: string | null;
+  created_at: string;
+  usuario_nombre?: string;
 };
 
 const EDITAR_IDLE: EditarTareaDraft = {
@@ -34,13 +44,11 @@ const EDITAR_IDLE: EditarTareaDraft = {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-const PRIORIDAD_ICON: Record<string, string> = {
-  alta: '🔴',
-  media: '🟡',
-  baja: '⚪',
+const PRIORIDAD_ICON: Record<string, { emoji: string; label: string }> = {
+  alta:  { emoji: '🔴', label: 'Prioridad alta'  },
+  media: { emoji: '🟡', label: 'Prioridad media' },
+  baja:  { emoji: '⚪', label: 'Prioridad baja'  },
 };
-
-const MIN_MOTIVO = 10;
 
 type Vista = 'detalle' | 'editar' | 'eliminar';
 
@@ -76,7 +84,6 @@ type Props = {
   onCompletar?: (t: Tarea) => void;
   onReprogramar?: (t: Tarea) => void;
   onBloquear?: (t: Tarea) => void;
-  onPlanificar?: (t: Tarea, fecha: string) => Promise<void>;
 };
 
 // ---------------------------------------------------------------------------
@@ -95,11 +102,13 @@ export function ModalDetalleTareaSemana({
   onCompletar,
   onReprogramar,
   onBloquear,
-  onPlanificar,
 }: Props) {
   const [vista, setVista] = useState<Vista>('detalle');
   const [motivoEliminar, setMotivoEliminar] = useState('');
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [logsHistorial, setLogsHistorial] = useState<TareaLogHistorial[]>([]);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const initialEditar = useMemo<EditarTareaDraft>(() => {
     if (!tarea) return EDITAR_IDLE;
@@ -122,14 +131,41 @@ export function ModalDetalleTareaSemana({
     enabled: Boolean(open && tarea && vista === 'editar'),
   });
 
+  const tareaId = tarea?.id;
+
   useEffect(() => {
-    if (!tarea) return;
-    setVista('detalle');
-    setMotivoEliminar('');
-  }, [tarea?.id]);
+    if (!tareaId) return;
+
+    queueMicrotask(() => {
+      setVista('detalle');
+      setMotivoEliminar('');
+      setMenuOpen(false);
+      setLogsHistorial([]);
+    });
+
+    // Fetch logs de esta tarea para el historial
+    import('@/lib/insforge').then(({ getInsforge }) => {
+      getInsforge().database
+        .from('log_accion')
+        .select('tipo_accion,justificacion,created_at,usuario:usuario_id(nombre)')
+        .eq('tarea_id', tareaId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+        .then(({ data }) => {
+          if (data) {
+            setLogsHistorial(data.map((r: Record<string, unknown>) => ({
+              tipo_accion:    r.tipo_accion as string,
+              justificacion:  r.justificacion as string | null,
+              created_at:     r.created_at as string,
+              usuario_nombre: (r.usuario as { nombre?: string } | null)?.nombre,
+            })));
+          }
+        });
+    });
+  }, [tareaId]);
 
   const motivoLen = motivoEliminar.trim().length;
-  const motivoOk = motivoLen >= MIN_MOTIVO;
+  const motivoOk = motivoLen >= MIN_JUSTIFICACION_CHARS;
   const elimDescribedBy =
     [ELIM_HINT_ID, motivoLen > 0 && !motivoOk ? ELIM_ERR_ID : null].filter(Boolean).join(' ') || undefined;
 
@@ -189,9 +225,22 @@ export function ModalDetalleTareaSemana({
       );
     }
     return (
-      <Button variant="ghost" onClick={handleModalClose} disabled={busy}>
-        Cerrar
-      </Button>
+      <button
+        type="button"
+        onClick={handleModalClose}
+        disabled={busy}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 28, height: 28, borderRadius: 6,
+          border: '1px solid var(--mc-color-border)',
+          background: 'none', cursor: 'pointer',
+          color: 'var(--mc-color-text-secondary)',
+          marginLeft: 'auto',
+        }}
+        aria-label="Cerrar"
+      >
+        <X size={14} aria-hidden />
+      </button>
     );
   }
 
@@ -211,11 +260,14 @@ export function ModalDetalleTareaSemana({
                 {TAREA_LABEL[tarea.estado] ?? tarea.estado}
               </span>
               <span className="text-xs text-[var(--mc-color-text-secondary)]">
-                {PRIORIDAD_ICON[tarea.prioridad]} {tarea.prioridad}
+                <span role="img" aria-label={PRIORIDAD_ICON[tarea.prioridad]?.label ?? tarea.prioridad}>
+                  {PRIORIDAD_ICON[tarea.prioridad]?.emoji}
+                </span>
+                {' '}{tarea.prioridad}
               </span>
               {tarea.fecha_planificada && (
                 <span className="text-xs text-[var(--mc-color-text-secondary)]">
-                  · {tarea.fecha_planificada}
+                  · {fechaLocalDdMmYyyy(new Date(`${tarea.fecha_planificada}T12:00:00`))}
                 </span>
               )}
             </div>
@@ -238,55 +290,107 @@ export function ModalDetalleTareaSemana({
               Responsable: {usuariosAsignables.find((u) => u.id === tarea.asignado_a)?.nombre ?? tarea.asignado_a}
             </p>
 
+            {logsHistorial.length > 0 && (
+              <div className="border-t border-[var(--mc-color-border)] pt-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
+                  Historial reciente
+                </div>
+                <div className="flex flex-col gap-2">
+                  {logsHistorial.map((log) => (
+                    <div key={`${log.created_at}-${log.tipo_accion}`} className="rounded-lg bg-[var(--mc-color-bg-secondary)] px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mc-color-text-secondary)]">
+                        <span className="font-medium text-[var(--mc-color-text)]">{log.tipo_accion}</span>
+                        {log.usuario_nombre && <span>{log.usuario_nombre}</span>}
+                        <span>{new Date(log.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </div>
+                      {log.justificacion && (
+                        <p className="mt-1 text-xs text-[var(--mc-color-text)]">{log.justificacion}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {!readOnly && (
               <div className="mt-2 border-t border-[var(--mc-color-border)] pt-4">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                  Acciones
-                </p>
+                <div className="flex items-center gap-2">
 
-                {tarea.tipo === 'libre' ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {onPlanificar && <PlanificarInline tarea={tarea} onPlanificar={onPlanificar} />}
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setVista('eliminar')}
-                    >
+                  {/* Botón principal: Iniciar o Completar según estado */}
+                  {['pendiente', 'atrasada', 'reprogramada'].includes(tarea.estado) && onIniciar && (
+                    <Button size="sm" onClick={() => void onIniciar(tarea)}>
+                      Iniciar
+                    </Button>
+                  )}
+                  {tarea.estado === 'en_progreso' && onCompletar && (
+                    <Button size="sm" onClick={() => onCompletar(tarea)}>
+                      Completar
+                    </Button>
+                  )}
+
+                  {/* Eliminar — acción destructiva visible pero diferenciada */}
+                  {!['completada', 'cancelada'].includes(tarea.estado) && (
+                    <Button variant="danger" size="sm" onClick={() => setVista('eliminar')}>
                       Eliminar
                     </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {['pendiente', 'atrasada', 'reprogramada'].includes(tarea.estado) && onIniciar && (
-                      <Button size="sm" onClick={() => void onIniciar(tarea)}>Iniciar</Button>
-                    )}
-                    {tarea.estado === 'en_progreso' && onCompletar && (
-                      <Button size="sm" onClick={() => onCompletar(tarea)}>Completar</Button>
-                    )}
-                    {['pendiente', 'atrasada', 'reprogramada'].includes(tarea.estado) && onReprogramar && (
-                      <Button variant="ghost" size="sm" onClick={() => onReprogramar(tarea)}>
-                        Reprogramar
+                  )}
+
+                  {/* ··· Menú de acciones secundarias */}
+                  {!['completada', 'cancelada'].includes(tarea.estado) && (
+                    <div className="relative ml-auto" ref={menuRef}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Más acciones"
+                        aria-expanded={menuOpen}
+                        aria-haspopup="menu"
+                        onClick={() => setMenuOpen((v) => !v)}
+                      >
+                        <MoreHorizontal size={15} aria-hidden />
                       </Button>
-                    )}
-                    {['pendiente', 'atrasada', 'en_progreso', 'reprogramada'].includes(tarea.estado) && onBloquear && (
-                      <Button variant="ghost" size="sm" onClick={() => onBloquear(tarea)}>
-                        Bloquear
-                      </Button>
-                    )}
-                    {!['completada', 'cancelada'].includes(tarea.estado) && (
-                      <Button variant="ghost" size="sm" onClick={() => setVista('editar')}>
-                        Editar
-                      </Button>
-                    )}
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setVista('eliminar')}
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                )}
+                      {menuOpen && (
+                        <div
+                          className="mc-dropdown-menu"
+                          role="menu"
+                          onBlur={(e) => {
+                            if (!menuRef.current?.contains(e.relatedTarget as Node)) {
+                              setMenuOpen(false);
+                            }
+                          }}
+                        >
+                          {['pendiente', 'atrasada', 'reprogramada', 'en_progreso'].includes(tarea.estado) && onReprogramar && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="mc-dropdown-item"
+                              onClick={() => { setMenuOpen(false); onReprogramar(tarea); }}
+                            >
+                              Reprogramar
+                            </button>
+                          )}
+                          {['pendiente', 'atrasada', 'en_progreso', 'reprogramada'].includes(tarea.estado) && onBloquear && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="mc-dropdown-item"
+                              onClick={() => { setMenuOpen(false); onBloquear(tarea); }}
+                            >
+                              Bloquear
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="mc-dropdown-item"
+                            onClick={() => { setMenuOpen(false); setVista('editar'); }}
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -359,7 +463,7 @@ export function ModalDetalleTareaSemana({
         return (
           <div className="flex flex-col gap-4">
             <p id={ELIM_HINT_ID} className="text-sm text-[var(--mc-color-text-secondary)]">
-              Esta acción no se puede deshacer. Indica el motivo (mínimo {MIN_MOTIVO} caracteres).
+              Esta acción no se puede deshacer. Indica el motivo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
             </p>
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="elim-motivo">
@@ -369,7 +473,7 @@ export function ModalDetalleTareaSemana({
                     aria-live="polite"
                     className={`mc-char-count ${motivoOk ? 'mc-char-count-ok' : ''}`}
                   >
-                    {motivoLen}/{MIN_MOTIVO}
+                    {motivoLen}/{MIN_JUSTIFICACION_CHARS}
                   </span>
                 </span>
               </label>
@@ -387,7 +491,7 @@ export function ModalDetalleTareaSemana({
             </div>
             {motivoLen > 0 && !motivoOk && (
               <p id={ELIM_ERR_ID} role="alert" className="text-xs text-[var(--mc-color-danger)]">
-                Mínimo {MIN_MOTIVO} caracteres (llevas {motivoLen}/{MIN_MOTIVO}).
+                Mínimo {MIN_JUSTIFICACION_CHARS} caracteres (llevas {motivoLen}/{MIN_JUSTIFICACION_CHARS}).
               </p>
             )}
           </div>
@@ -415,45 +519,5 @@ export function ModalDetalleTareaSemana({
     >
       {renderCuerpo()}
     </Modal>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PlanificarInline — selector de fecha para tareas libres (subcomponente)
-// ---------------------------------------------------------------------------
-function PlanificarInline({
-  tarea,
-  onPlanificar,
-}: {
-  tarea: Tarea;
-  onPlanificar: (t: Tarea, fecha: string) => Promise<void>;
-}) {
-  const [fecha, setFecha] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="date"
-        className="mc-input !w-auto !py-1 !text-xs"
-        value={fecha}
-        onChange={(e) => setFecha(e.target.value)}
-        aria-label="Fecha para planificar"
-      />
-      <Button
-        size="sm"
-        disabled={!fecha || busy}
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await onPlanificar(tarea, fecha);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? '…' : 'Planificar'}
-      </Button>
-    </div>
   );
 }

@@ -42,16 +42,26 @@ export { agruparTareasTablero } from '@/api/tablero';
 
 export function useMoverColumnaMutation() {
   const qc = useQueryClient();
+
+  async function invalidarTodo() {
+    // IMPORTANTE: exact: false para que coincida con queryKey: [Q_TAB, filtros]
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: [Q_TAB], exact: false }),
+      qc.invalidateQueries({ queryKey: ['tareas-hoy'], exact: false }),
+      qc.invalidateQueries({ queryKey: ['semana'], exact: false }),
+      qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+      qc.invalidateQueries({ queryKey: [Q_OBJ_PROG], exact: false }),
+      qc.invalidateQueries({ queryKey: [Q_KPIS], exact: false }),
+    ]);
+  }
+
   return useMutation({
     mutationFn: (p: { tareaId: string; nuevoEstado: EstadoTarea; usuarioActorId: string; justificacion?: string }) =>
       moverTareaColumna(p.tareaId, p.nuevoEstado, p.usuarioActorId, p.justificacion),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TAB] });
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] });
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] });
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'] });
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG] });
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS] });
+    onSuccess: invalidarTodo,
+    // Forzar refetch aunque falle — para mostrar el estado real desde BD
+    onError: async (_err, _vars) => {
+      await invalidarTodo();
     },
   });
 }

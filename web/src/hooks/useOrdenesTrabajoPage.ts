@@ -16,7 +16,10 @@ import {
   type CrearOTInput, type EstadoOT, type OrdenTrabajo,
 } from '@/api/ordenTrabajo';
 import { useAuthStore } from '@/store/authStore';
-import type { Id } from '@/types';
+import { publicarEventoUsuario } from '@/lib/realtimePublish';
+import { getInsforge } from '@/lib/insforge';
+import { parseTarea } from '@/lib/schemas';
+import type { Id, Tarea } from '@/types';
 
 export const Q_OT = 'ordenes-trabajo';
 export const Q_TIPOS_OT = 'tipos-trabajo-ot';
@@ -48,6 +51,22 @@ export function useOrdenesTrabajoPage() {
     queryFn: () => getTiposTrabajoOT(),
     // FIX: mantiene datos anteriores mientras refetch — evita que el panel desaparezca
     placeholderData: keepPreviousData,
+  });
+
+  /** Tareas planificadas del miembro para vincular a la OT */
+  const { data: tareasVinculables = [] } = useQuery({
+    queryKey: ['ot-tareas-vinculables', usuario?.id],
+    enabled: Boolean(usuario?.id),
+    queryFn: async (): Promise<Pick<Tarea, 'id' | 'titulo' | 'estado'>[]> => {
+      const { data, error } = await getInsforge().database
+        .from('tarea')
+        .select('id,titulo,estado')
+        .eq('asignado_a', usuario!.id)
+        .in('estado', ['pendiente', 'en_progreso', 'atrasada'])
+        .order('fecha_planificada', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
+    },
   });
 
   // ── Estado UI — OTs ───────────────────────────────────────────────────────
@@ -97,16 +116,40 @@ export function useOrdenesTrabajoPage() {
 
   const mutAprobar = useMutation({
     mutationFn: (otId: Id) => aprobarOT(otId, usuario!.id),
-    onSuccess: async () => { await invalidarOTs(); toast.success('OT aprobada'); },
+    onSuccess: async (_data, otId) => {
+      await invalidarOTs();
+      toast.success('OT aprobada');
+      // Notificar al creador de la OT
+      const ot = ordenes.find((o) => o.id === otId);
+      if (ot) {
+        void publicarEventoUsuario({
+          tipo:      'ot_aprobada',
+          usuarioId: ot.creado_por,
+          otId:      ot.id,
+          numero:    ot.numero,
+        });
+      }
+    },
     onError: (err) => { console.error('[mutAprobarOT]', err); toast.error('No se pudo aprobar la OT.'); },
   });
 
   const mutRechazar = useMutation({
     mutationFn: ({ otId, motivo }: { otId: Id; motivo: string }) => rechazarOT(otId, usuario!.id, motivo),
-    onSuccess: async () => {
+    onSuccess: async (_data, { otId, motivo }) => {
       await invalidarOTs();
       setModalRechazar(null); setMotivoRechazo('');
       toast.success('OT rechazada');
+      // Notificar al creador de la OT
+      const ot = ordenes.find((o) => o.id === otId);
+      if (ot) {
+        void publicarEventoUsuario({
+          tipo:      'ot_rechazada',
+          usuarioId: ot.creado_por,
+          otId:      ot.id,
+          numero:    ot.numero,
+          motivo,
+        });
+      }
     },
     onError: (err) => { console.error('[mutRechazarOT]', err); toast.error('No se pudo rechazar la OT.'); },
   });
@@ -200,6 +243,7 @@ export function useOrdenesTrabajoPage() {
     ordenes: ordenesFiltradas, isLoading, isError,
     pendientesCount,
     tiposTrabajo, tiposActivos, tiposInactivos,
+    tareasVinculables,
     filtroEstado, setFiltroEstado,
     form, setForm,
     modalForm, setModalForm, editandoOT,

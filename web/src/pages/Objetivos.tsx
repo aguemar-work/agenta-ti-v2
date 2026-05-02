@@ -2,6 +2,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import type { EstadoObjetivo, Tarea } from '@/types';
 
@@ -28,7 +29,7 @@ export function Objetivos() {
     addingTarea,
     eliminarObjId, setEliminarObjId,
     motivoEliminar, setMotivoEliminar,
-    motivoOk, MIN_MOTIVO,
+    motivoOk, MIN_JUSTIFICACION_CHARS,
     eliminandoObj,
     puedeEliminar,
     submitNuevoObjetivo,
@@ -47,15 +48,13 @@ export function Objetivos() {
     <div className={APP_PAGE_CLASS}>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="mc-page-header">
-        <div>
-          <h1 className="mc-page-title">Objetivos</h1>
-          <h2 className="mc-page-subtitle">Gestión estratégica</h2>
-        </div>
-        <Button onClick={abrirModalNuevo}>
-          + Nuevo objetivo
-        </Button>
-      </header>
+      <PageHeader
+        title="Objetivos"
+        subtitle="Gestión estratégica"
+        actions={
+          <Button onClick={abrirModalNuevo} size="sm">+ Nuevo objetivo</Button>
+        }
+      />
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los objetivos.</p>}
 
@@ -330,7 +329,7 @@ export function Objetivos() {
               <span className="flex justify-between">
                 Motivo de eliminación
                 <span aria-live="polite" className={`mc-char-count ${!motivoOk ? 'mc-char-count-error' : ''}`}>
-                  {motivoEliminar.trim().length}/{MIN_MOTIVO}
+                  {motivoEliminar.trim().length}/{MIN_JUSTIFICACION_CHARS}
                 </span>
               </span>
             </label>

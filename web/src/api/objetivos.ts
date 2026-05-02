@@ -1,4 +1,5 @@
 import { getInsforge } from '@/lib/insforge';
+import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { parseTarea } from '@/lib/schemas';
 import type { EstadoObjetivo, Objetivo, Tarea } from '@/types';
 
@@ -67,7 +68,7 @@ export async function eliminarObjetivo(input: {
 }): Promise<void> {
   const insforge = getInsforge();
   const motivo = input.motivo.trim();
-  if (motivo.length < 10) throw new Error('Motivo mínimo 10 caracteres.');
+  if (motivo.length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
 
   const { error: eLog } = await insforge.database.from('log_accion').insert([{
     tarea_id: null,

@@ -1,13 +1,19 @@
-import path from 'node:path'
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import path from 'node:path';
+import { defineConfig } from 'vitest/config';
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**', 'src/api/tablero.ts'],
+      reporter: ['text', 'lcov'],
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
   },
-})
+});

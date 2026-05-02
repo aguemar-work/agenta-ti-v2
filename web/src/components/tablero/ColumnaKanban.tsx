@@ -21,7 +21,14 @@ const emptyText: Record<ColumnaTableroId, string> = {
   pendiente: 'Sin tareas pendientes',
   en_progreso: 'Nada en progreso',
   bloqueada: 'Sin tareas bloqueadas',
-  completada: 'Sin tareas completadas',
+  completada: 'Activa «Mostrar completadas» en los filtros para ver las tareas de los últimos 7 días.',
+};
+
+const emptySubtext: Record<ColumnaTableroId, string | null> = {
+  pendiente: null,
+  en_progreso: null,
+  bloqueada: null,
+  completada: 'Las tareas completadas se ocultan por defecto para mantener el tablero limpio.',
 };
 
 type Props = {
@@ -53,9 +60,12 @@ export function ColumnaKanban({ columna, count, children, showPlaceholder }: Pro
       >
         {showPlaceholder ? <div className="mc-drag-placeholder" aria-hidden /> : null}
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+          <div className="flex flex-col items-center justify-center gap-2 py-8 px-4 text-center">
             <span className="text-2xl opacity-30">{emptyIcon[columna]}</span>
-            <p className="text-xs text-[var(--mc-color-text-secondary)]">{emptyText[columna]}</p>
+            <p className="text-xs font-medium text-[var(--mc-color-text-secondary)] leading-relaxed">{emptyText[columna]}</p>
+            {emptySubtext[columna] && (
+              <p className="text-[10px] text-[var(--mc-color-text-secondary)] opacity-70 leading-relaxed">{emptySubtext[columna]}</p>
+            )}
           </div>
         ) : (
           children

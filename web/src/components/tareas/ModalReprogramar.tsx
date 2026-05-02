@@ -4,12 +4,12 @@
  */
 
 import { useEffect, useState } from 'react';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { Tarea } from '@/types';
 
-const MIN_JUST = 10;
 
 type Props = {
   tarea: Tarea | null;
@@ -36,7 +36,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
   }, [tarea?.id]);
 
   const justLen = just.trim().length;
-  const justOk = justLen >= MIN_JUST;
+  const justOk = justLen >= MIN_JUSTIFICACION_CHARS;
   const fechaOk = Boolean(fechaFija ?? fecha);
   const canSubmit = fechaOk && justOk && !busy;
 
@@ -80,7 +80,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
             {tarea.titulo}
           </p>
           <p id={HINT_ID} className="text-sm text-[var(--mc-color-text-secondary)]">
-            La justificación es obligatoria (mínimo {MIN_JUST} caracteres).
+            La justificación es obligatoria (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
           </p>
 
           <div className="mc-field">
@@ -108,7 +108,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
                   aria-live="polite"
                   className={`mc-char-count ${justOk ? 'mc-char-count-ok' : ''}`}
                 >
-                  {justLen}/{MIN_JUST}
+                  {justLen}/{MIN_JUSTIFICACION_CHARS}
                 </span>
               </span>
             </label>
@@ -126,7 +126,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
           </div>
           {justLen > 0 && !justOk && (
             <p id={ERR_ID} role="alert" className="text-xs text-[var(--mc-color-danger)]">
-              Mínimo {MIN_JUST} caracteres (llevas {justLen}/{MIN_JUST}).
+              Mínimo {MIN_JUSTIFICACION_CHARS} caracteres (llevas {justLen}/{MIN_JUSTIFICACION_CHARS}).
             </p>
           )}
         </div>

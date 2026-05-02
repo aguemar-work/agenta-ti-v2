@@ -4,25 +4,21 @@ import { moverTareaColumna } from '@/api/tablero';
 import {
   actualizarTarea,
   crearEventoUsuario,
-  crearTareaLibre,
   crearTareaPlanificada,
   eliminarTareaConMotivo,
   getEventosSemana,
-  getTareasLibres,
   getTareasSemana,
-  moverTareaABacklog,
   moverTareaADia,
   moverTareaEntreDias,
 } from '@/api/semana';
 import { Q_KPIS, Q_OBJ_PROG } from '@/hooks/useObjetivosMetricas';
 import { completarTareaConResumen } from '@/hooks/useTareas';
-import type { CrearEventoUsuarioInput, CrearTareaLibreInput, CrearTareaPlanificadaInput } from '@/api/semana';
+import type { CrearEventoUsuarioInput, CrearTareaPlanificadaInput } from '@/api/semana';
 import type { Tarea } from '@/types';
 
 const Q = {
   plan: (uid: string, sem: string) => ['semana', 'plan', uid, sem] as const,
-  lib: (uid: string) => ['semana', 'libres', uid] as const,
-  ev: (uid: string, sem: string) => ['semana', 'eventos', uid, sem] as const,
+ev: (uid: string, sem: string) => ['semana', 'eventos', uid, sem] as const,
 };
 
 export function useMiSemanaData(usuarioId: string | undefined, semanaISO: string, lunes: Date) {
@@ -30,11 +26,6 @@ export function useMiSemanaData(usuarioId: string | undefined, semanaISO: string
     queryKey: usuarioId ? Q.plan(usuarioId, semanaISO) : ['semana', 'plan', 'noop'],
     enabled: Boolean(usuarioId),
     queryFn: () => getTareasSemana(usuarioId!, semanaISO),
-  });
-  const qLib = useQuery({
-    queryKey: usuarioId ? Q.lib(usuarioId) : ['semana', 'libres', 'noop'],
-    enabled: Boolean(usuarioId),
-    queryFn: () => getTareasLibres(usuarioId!),
   });
   const qEv = useQuery({
     queryKey: usuarioId ? Q.ev(usuarioId, semanaISO) : ['semana', 'eventos', 'noop'],
@@ -44,10 +35,9 @@ export function useMiSemanaData(usuarioId: string | undefined, semanaISO: string
 
   return {
     tareasPlan: qPlan.data ?? [],
-    libres: qLib.data ?? [],
-    eventos: qEv.data ?? [],
-    isLoading: qPlan.isLoading || qLib.isLoading || qEv.isLoading,
-    isError: qPlan.isError || qLib.isError || qEv.isError,
+eventos: qEv.data ?? [],
+    isLoading: qPlan.isLoading || qEv.isLoading,
+    isError: qPlan.isError || qEv.isError,
   };
 }
 
@@ -58,20 +48,14 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
     if (!usuarioId) return;
     await Promise.all([
       qc.invalidateQueries({ refetchType: 'active', queryKey: Q.plan(usuarioId, semanaISO) }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.lib(usuarioId) }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.ev(usuarioId, semanaISO) }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy', usuarioId] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS] }),
+qc.invalidateQueries({ refetchType: 'active', queryKey: Q.ev(usuarioId, semanaISO) }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy', usuarioId], exact: false }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'], exact: false }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG], exact: false }),
+      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS], exact: false }),
     ]);
   };
-
-  const mCrearLibre = useMutation({
-    mutationFn: (input: CrearTareaLibreInput) => crearTareaLibre(input),
-    onSuccess: invalidate,
-  });
 
   const mCrearPlan = useMutation({
     mutationFn: (input: CrearTareaPlanificadaInput) => crearTareaPlanificada(input),
@@ -79,8 +63,8 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
   });
 
   const mMoverDia = useMutation({
-    mutationFn: (p: { tareaId: string; fecha: string; semana: string; tipo: Tarea['tipo'] }) =>
-      moverTareaADia(p.tareaId, p.fecha, p.semana, p.tipo),
+    mutationFn: (p: { tareaId: string; fecha: string; semana: string }) =>
+      moverTareaADia(p.tareaId, p.fecha, p.semana),
     onSuccess: invalidate,
   });
 
@@ -89,14 +73,10 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
     onSuccess: invalidate,
   });
 
-  const mBacklog = useMutation({
-    mutationFn: (tareaId: string) => moverTareaABacklog(tareaId),
-    onSuccess: invalidate,
-  });
-
   const mEditar = useMutation({
     mutationFn: (input: {
       tareaId: string;
+      usuarioActorId: string;
       titulo: string;
       prioridad: Tarea['prioridad'];
       descripcion?: string;
@@ -112,7 +92,14 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
   });
 
   const mCompletar = useMutation({
-    mutationFn: (input: { tareaId: string; usuarioId: string; resumen: string }) =>
+    mutationFn: (input: {
+      tareaId: string;
+      usuarioId: string;
+      resumen: string;
+      usuarioNombre?: string;
+      tareaTitulo?: string;
+      jefeIds?: string[];
+    }) =>
       completarTareaConResumen(input),
     onSuccess: invalidate,
   });
@@ -128,22 +115,18 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
   });
 
   return {
-    crearLibre: mCrearLibre.mutateAsync,
     crearPlan: mCrearPlan.mutateAsync,
     moverDia: mMoverDia.mutateAsync,
     moverEntre: mMoverEntre.mutateAsync,
-    moverBacklog: mBacklog.mutateAsync,
     editarTarea: mEditar.mutateAsync,
     eliminarTarea: mEliminar.mutateAsync,
     completarTareaConResumen: mCompletar.mutateAsync,
     iniciarTarea: mIniciar.mutateAsync,
     crearEvento: mCrearEvento.mutateAsync,
     isPending:
-      mCrearLibre.isPending ||
       mCrearPlan.isPending ||
       mMoverDia.isPending ||
       mMoverEntre.isPending ||
-      mBacklog.isPending ||
       mEditar.isPending ||
       mEliminar.isPending ||
       mCompletar.isPending ||

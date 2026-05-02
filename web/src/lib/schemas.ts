@@ -3,8 +3,9 @@
  * Schemas Zod para los tipos del dominio y parsers tipados.
  *
  * Si el schema de BD cambia (campo eliminado, tipo incorrecto), en desarrollo
- * se registra el detalle del parse; el fallback evita romper la UI hasta alinear
- * tipos con la BD.
+ * se lanza un SchemaParseError con el detalle exacto del campo que falló.
+ * En producción, el error activa el SectionErrorBoundary más cercano — la
+ * sección falla de forma aislada sin tumbar el resto de la app.
  *
  * Uso en api/hooks:
  *   import { parseTarea, parseEvento, parseNota, parseUsuario } from '@/lib/schemas';
@@ -95,21 +96,44 @@ export const UsuarioSchema = z.object({
 export type UsuarioSchema = z.infer<typeof UsuarioSchema>;
 
 // ---------------------------------------------------------------------------
-// Parsers tipados (lib/parsers.ts reexporta estos símbolos por compatibilidad)
+// Error tipado para fallos de validacion
+// ---------------------------------------------------------------------------
+
+/**
+ * Lanzado cuando InsForge devuelve datos que no coinciden con el schema Zod.
+ *
+ * Al propagarse desde una funcion de API (query/mutacion), activa el
+ * SectionErrorBoundary mas cercano. La seccion falla de forma aislada
+ * sin tumbar el resto de la app.
+ *
+ * En DEV: incluye el campo exacto que fallo y el motivo.
+ * En produccion: solo el nombre de la entidad (no expone estructura interna).
+ */
+export class SchemaParseError extends Error {
+  readonly label: string;
+  readonly issues: z.ZodIssue[];
+
+  constructor(label: string, issues: z.ZodIssue[]) {
+    const detail = import.meta.env.DEV
+      ? ': ' + issues.map((i) => (i.path.join('.') || '(raiz)') + ' -- ' + i.message).join('; ')
+      : '';
+    super('[schemas] Dato invalido recibido de la BD para ' + label + detail);
+    this.name = 'SchemaParseError';
+    this.label = label;
+    this.issues = issues;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Parsers tipados
 // ---------------------------------------------------------------------------
 
 function safeParse<T>(schema: z.ZodType<T>, row: unknown, label: string): T {
   const result = schema.safeParse(row);
   if (!result.success) {
-    // En desarrollo muestra el detalle completo; en producción solo el label.
-    if (import.meta.env.DEV) {
-      console.warn(`[schemas] Parse error en ${label}:`, result.error.flatten());
-    }
-    // Fallback: devuelve el row casteado para no romper la UI mientras se
-    // corrigen discrepancias de schema. Elimina este fallback en Sprint 4+.
-    return row as T;
+    throw new SchemaParseError(label, result.error.issues);
   }
-  return result.data as T;
+  return result.data;
 }
 
 export function parseTarea(row: Record<string, unknown>): Tarea {

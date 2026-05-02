@@ -4,10 +4,13 @@ import {
   type CollisionDetection,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { ColumnaKanban } from '@/components/tablero/ColumnaKanban';
 import { DraggableTareaTablero } from '@/components/tablero/DraggableTareaTablero';
@@ -15,8 +18,12 @@ import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSe
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
 import { ModalJustificacion } from '@/components/tareas/ModalJustificacion';
+import { CheckSquare, Square } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { useTableroPage } from '@/hooks/useTableroPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { FilterBar } from '@/components/ui/FilterBar';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { ColumnaTableroId } from '@/api/tablero';
@@ -61,6 +68,7 @@ export function Tablero() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
   if (!usuario) return null;
@@ -69,55 +77,45 @@ export function Tablero() {
     <div className={APP_PAGE_CLASS}>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="mc-page-header">
-        <div>
-          <h1 className="mc-page-title">Tablero</h1>
-          <h2 className="mc-page-subtitle">Vista kanban</h2>
-        </div>
-      </header>
-
-      {/* ── Filtros ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="mc-field">
-          <label className="mc-field-label" htmlFor="tablero-usuario">Usuario</label>
-          <select
-            id="tablero-usuario"
-            className="mc-input !w-auto min-w-[180px]"
-            value={esJefe ? usuarioFiltro : usuario.id}
-            onChange={(e) => setUsuarioFiltro(e.target.value as 'todos' | string)}
-            disabled={!esJefe}
-          >
-            {esJefe && <option value="todos">Todos</option>}
-            {Object.entries(nombres).map(([id, nombre]) => (
-              <option key={id} value={id}>{nombre}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mc-field">
-          <label className="mc-field-label" htmlFor="tablero-objetivo">Objetivo</label>
-          <select
-            id="tablero-objetivo"
-            className="mc-input !w-auto min-w-[180px]"
-            value={objetivoFiltro}
-            onChange={(e) => setObjetivoFiltro(e.target.value as 'todos' | string)}
-          >
-            <option value="todos">Todos</option>
-            {objetivos.map((o) => (
-              <option key={o.id} value={o.id}>{o.titulo}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mc-field flex items-center !mb-0 h-[40px]">
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--mc-color-text-secondary)]">
-            <input
-              type="checkbox"
-              checked={mostrarCompletadas}
-              onChange={(e) => setMostrarCompletadas(e.target.checked)}
+      <PageHeader
+        title="Tablero"
+        actions={
+          <FilterBar>
+            {esJefe && (
+              <FilterBar.Select
+                id="tablero-usuario"
+                label="Miembro"
+                value={usuarioFiltro}
+                onChange={(v) => setUsuarioFiltro(v as 'todos' | string)}
+                options={[
+                  { value: 'todos', label: 'Todos' },
+                  ...Object.entries(nombres).map(([id, nombre]) => ({ value: id, label: nombre })),
+                ]}
+              />
+            )}
+            <FilterBar.Select
+              id="tablero-objetivo"
+              label="Objetivo"
+              value={objetivoFiltro}
+              onChange={(v) => setObjetivoFiltro(v as 'todos' | string)}
+              options={[
+                { value: 'todos', label: 'Todos' },
+                ...objetivos.map((o) => ({ value: o.id, label: o.titulo })),
+              ]}
             />
-            Mostrar completadas (7 días)
-          </label>
-        </div>
-      </div>
+            <FilterBar.Action
+              onClick={() => setMostrarCompletadas((v) => !v)}
+              active={mostrarCompletadas}
+              variant="toggle"
+              title={mostrarCompletadas ? 'Mostrando completadas de los últimos 7 días' : 'Mostrar tareas completadas (últimos 7 días)'}
+            >
+              {mostrarCompletadas
+                ? <><CheckSquare size={13} aria-hidden /> Completadas <span style={{ opacity: 0.65, fontSize: '11px' }}>(últ. 7 días)</span></>
+                : <><Square size={13} aria-hidden /> Completadas</>}
+            </FilterBar.Action>
+          </FilterBar>
+        }
+      />
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">Error al cargar tareas.</p>}
 
@@ -204,8 +202,8 @@ export function Tablero() {
         titulo={modalJust?.nuevo === 'bloqueada' ? 'Bloquear tarea' : 'Mover tarea completada'}
         descripcion={
           modalJust?.nuevo === 'bloqueada'
-            ? 'Indica el motivo (mínimo 10 caracteres).'
-            : 'Indica la justificación del cambio de estado (mínimo 10 caracteres).'
+            ? `Indica el motivo (mínimo ${MIN_JUSTIFICACION_CHARS} caracteres).`
+            : `Indica la justificación del cambio de estado (mínimo ${MIN_JUSTIFICACION_CHARS} caracteres).`
         }
         onClose={() => setModalJust(null)}
         onConfirm={confirmarJustificacion}

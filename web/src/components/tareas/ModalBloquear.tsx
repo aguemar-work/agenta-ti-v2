@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -16,14 +17,13 @@ type Props = {
   onConfirm: (input: { tareaId: string; justificacion: string }) => Promise<void>;
 };
 
-const MIN_JUST = 10;
 
 export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
   const [just, setJust] = useState('');
   const [busy, setBusy] = useState(false);
 
   const len = just.trim().length;
-  const justOk = len >= MIN_JUST;
+  const justOk = len >= MIN_JUSTIFICACION_CHARS;
   const canSubmit = justOk && !busy;
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
             {tarea.titulo}
           </p>
           <p id={hintId} className="text-sm text-[var(--mc-color-text-secondary)]">
-            Indica el motivo del bloqueo (mínimo {MIN_JUST} caracteres). El jefe podrá revisarlo y desbloquearla.
+            Indica el motivo del bloqueo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres). El jefe podrá revisarlo y desbloquearla.
           </p>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="bloq-just">
@@ -77,7 +77,7 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
                   aria-live="polite"
                   className={`mc-char-count ${justOk ? 'mc-char-count-ok' : ''}`}
                 >
-                  {len}/{MIN_JUST}
+                  {len}/{MIN_JUSTIFICACION_CHARS}
                 </span>
               </span>
             </label>
@@ -95,7 +95,7 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
           </div>
           {len > 0 && !justOk && (
             <p role="status" className="text-xs text-[var(--mc-color-danger)]">
-              Mínimo {MIN_JUST} caracteres (llevas {len}/{MIN_JUST})
+              Mínimo {MIN_JUSTIFICACION_CHARS} caracteres (llevas {len}/{MIN_JUSTIFICACION_CHARS})
             </p>
           )}
         </div>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
-type Modo = 'libre' | 'dia' | 'incidencia';
+type Modo = 'dia' | 'incidencia';
 
 type Props = {
   modo: Modo;
@@ -31,7 +31,6 @@ type Props = {
 };
 
 const TITULO_MODAL: Record<Modo, (fechaDia?: string) => string> = {
-  libre: () => 'Nueva tarea libre',
   incidencia: () => 'Nueva incidencia',
   dia: (f = '') => `Nueva tarea · ${f}`,
 };

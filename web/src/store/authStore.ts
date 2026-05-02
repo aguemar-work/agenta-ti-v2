@@ -2,6 +2,7 @@ import type { UserSchema } from '@insforge/sdk';
 import { create } from 'zustand';
 
 import type { RolUsuario, Usuario } from '@/types';
+import { useVistaStore } from '@/store/vistaStore';
 
 export type AuthState = {
   authUser: UserSchema | null;
@@ -18,7 +19,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   setAuth: (authUser, usuario) => set({ authUser, usuario, isLoading: false }),
   setLoading: (isLoading) => set({ isLoading }),
-  clear: () => set({ authUser: null, usuario: null, isLoading: false }),
+  clear: () => {
+    set({ authUser: null, usuario: null, isLoading: false });
+    useVistaStore.getState().reset();
+  },
 }));
 
 export function selectRol(s: AuthState): RolUsuario | null {

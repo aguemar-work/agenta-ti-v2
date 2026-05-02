@@ -8,10 +8,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import type { ColumnaTableroId, FiltrosTablero } from '@/api/tablero';
 import { desbloquearTareaConLog, eliminarTareaConMotivo, actualizarTarea } from '@/api/semana';
-import { snapTareaFechaAlPorHacer } from '@/api/tablero';
-import { getUsuariosActivosParaAsignacion } from '@/api/usuarios';
+import { snapTareaFechaAlPorHacer, type ColumnaTableroId, type FiltrosTablero } from '@/api/tablero';
+import { useJefesNotificacion, useUsuariosActivos } from '@/hooks/useUsuarios';
 import {
   agruparTareasTablero,
   useMoverColumnaMutation,
@@ -54,9 +53,9 @@ export function useTableroPage() {
   const { data: tareas = [], isLoading, isError } = useTareasTableroQuery(filtros, Boolean(usuario?.id));
   const { data: objetivos = [] } = useObjetivosTablero();
   const { data: nombres = {} } = useUsuariosNombreTablero();
-  const { data: usuariosAsignables = [] } = useQuery({
-    queryKey: ['usuarios-asignacion-tablero'],
-    queryFn: () => getUsuariosActivosParaAsignacion(),
+  const { data: usuariosAsignables = [] } = useUsuariosActivos();
+  const { data: jefesNotificacion = [] } = useJefesNotificacion({
+    enabled: Boolean(usuario && !esJefe),
   });
 
   const mover = useMoverColumnaMutation();
@@ -65,6 +64,7 @@ export function useTableroPage() {
   const mutGuardarDetalle = useMutation({
     mutationFn: (input: {
       tareaId: string;
+      usuarioActorId: string;
       titulo: string;
       prioridad: Tarea['prioridad'];
       descripcion: string;
@@ -73,8 +73,8 @@ export function useTableroPage() {
     }) => actualizarTarea(input),
     onSuccess: async () => {
       await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
         qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
       ]);
     },
@@ -84,7 +84,7 @@ export function useTableroPage() {
     mutationFn: (input: { tareaId: string; usuarioId: string; motivo: string }) =>
       eliminarTareaConMotivo(input),
     onSuccess: async () => {
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] });
+      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false });
       setDetalleTareaId(null);
     },
   });
@@ -131,7 +131,10 @@ export function useTableroPage() {
     const actual = estadoEfectivoTablero(t, hoy);
     if (!puedeGestionar(t) || nuevo === actual) return;
 
-    if (nuevo === 'completada') { setCompletarTarea(t); return; }
+    if (nuevo === 'completada') {
+      setCompletarTarea(t);
+      return;
+    }
 
     if (actual === 'completada' && esJefe) {
       setModalJust({ tareaId: tid, nuevo: nuevo as EstadoTarea });
@@ -142,8 +145,8 @@ export function useTableroPage() {
       try {
         await snapTareaFechaAlPorHacer(tid, hoy);
         await Promise.all([
-          qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-          qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
+          qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
+          qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
           qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
         ]);
         toast.success('Tarea reubicada en el día actual');
@@ -154,7 +157,10 @@ export function useTableroPage() {
       return;
     }
 
-    if (nuevo === 'bloqueada') { setModalJust({ tareaId: tid, nuevo: 'bloqueada' }); return; }
+    if (nuevo === 'bloqueada') {
+      setModalJust({ tareaId: tid, nuevo: 'bloqueada' });
+      return;
+    }
 
     try {
       await mover.mutateAsync({ tareaId: tid, nuevoEstado: nuevo as EstadoTarea, usuarioActorId: usuario.id });
@@ -165,14 +171,14 @@ export function useTableroPage() {
   }
 
   // ── Handlers de acciones ─────────────────────────────────────────────────
-  async function confirmarJustificacion(just: string) {
+  async function confirmarJustificacion(justificacion: string) {
     if (!modalJust || !usuario) return;
     try {
       await mover.mutateAsync({
         tareaId: modalJust.tareaId,
         nuevoEstado: modalJust.nuevo,
         usuarioActorId: usuario.id,
-        justificacion: just,
+        justificacion,
       });
       setModalJust(null);
     } catch (err) {
@@ -188,8 +194,8 @@ export function useTableroPage() {
       setDesbloquearTarea(null);
       toast.success('Tarea desbloqueada');
       await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
         qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
       ]);
     } catch (err) {
@@ -201,12 +207,19 @@ export function useTableroPage() {
   async function confirmarCompletar(input: { tareaId: string; resumen: string }) {
     if (!usuario) return;
     try {
-      await completarTareaConResumen({ tareaId: input.tareaId, usuarioId: usuario.id, resumen: input.resumen });
+      await completarTareaConResumen({
+        tareaId: input.tareaId,
+        usuarioId: usuario.id,
+        usuarioNombre: usuario.nombre,
+        tareaTitulo: completarTarea?.titulo,
+        jefeIds: esJefe ? undefined : jefesNotificacion.map((jefe) => jefe.id),
+        resumen: input.resumen,
+      });
       setCompletarTarea(null);
       toast.success('Tarea completada');
       await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
+        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
         qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
       ]);
     } catch (err) {
@@ -227,10 +240,15 @@ export function useTableroPage() {
   }
 
   async function guardarDetalle(input: {
-    tareaId: string; titulo: string; prioridad: Tarea['prioridad'];
-    descripcion: string; objetivo_id?: string | null; asignado_a?: string | null;
+    tareaId: string;
+    titulo: string;
+    prioridad: Tarea['prioridad'];
+    descripcion: string;
+    objetivo_id?: string | null;
+    asignado_a?: string | null;
   }) {
-    await mutGuardarDetalle.mutateAsync(input);
+    if (!usuario) return;
+    await mutGuardarDetalle.mutateAsync({ ...input, usuarioActorId: usuario.id });
     toast.success('Tarea actualizada');
   }
 
@@ -242,28 +260,45 @@ export function useTableroPage() {
 
   return {
     // Auth
-    usuario, esJefe, hoy,
+    usuario,
+    esJefe,
+    hoy,
 
     // Filtros
-    usuarioFiltro, setUsuarioFiltro,
-    objetivoFiltro, setObjetivoFiltro,
-    mostrarCompletadas, setMostrarCompletadas,
+    usuarioFiltro,
+    setUsuarioFiltro,
+    objetivoFiltro,
+    setObjetivoFiltro,
+    mostrarCompletadas,
+    setMostrarCompletadas,
 
     // Datos
-    tareas, columnas, isLoading, isError,
-    objetivos, nombres, usuariosAsignables,
-    tareaDragOverlay, tareaDetalle,
+    tareas,
+    columnas,
+    isLoading,
+    isError,
+    objetivos,
+    nombres,
+    usuariosAsignables,
+    tareaDragOverlay,
+    tareaDetalle,
 
     // DnD
-    activeDragId, setActiveDragId,
+    activeDragId,
+    setActiveDragId,
     overColId,
-    onDragOver, onDragEnd,
+    onDragOver,
+    onDragEnd,
 
     // Modales
-    modalJust, setModalJust,
-    detalleTareaId, setDetalleTareaId,
-    completarTarea, setCompletarTarea,
-    desbloquearTarea, setDesbloquearTarea,
+    modalJust,
+    setModalJust,
+    detalleTareaId,
+    setDetalleTareaId,
+    completarTarea,
+    setCompletarTarea,
+    desbloquearTarea,
+    setDesbloquearTarea,
 
     // Permisos
     puedeGestionar,

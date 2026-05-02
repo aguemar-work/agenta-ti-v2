@@ -38,8 +38,9 @@ export function DraggableTareaSemana({
       };
 
   const est = estadoEfectivoTablero(tarea, hoyYmd);
-  const atrasadaBar = est === 'atrasada' ? 'border-l-2 border-[var(--mc-color-danger)]' : '';
+  const atrasadaBar  = est === 'atrasada'  ? 'border-l-2 border-[var(--mc-color-danger)]'  : '';
   const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
+
 
   return (
     <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>

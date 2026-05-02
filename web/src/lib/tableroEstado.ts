@@ -1,14 +1,21 @@
 import type { EstadoTarea, Tarea } from '@/types';
 
-/** Alinea columna Kanban con la regla de atrasadas (misma lógica que HOY). */
-export function estadoEfectivoTablero(t: Tarea, hoyYmd: string): EstadoTarea {
+/**
+ * Estado visual para columnas Kanban.
+ *
+ * La fecha vencida solo degrada tareas aún accionables como pendientes. Si una
+ * tarea ya fue iniciada o bloqueada, el tablero debe respetar ese estado para
+ * que se mueva a su columna operativa.
+ */
+export function estadoEfectivoTablero(tarea: Tarea, hoyYmd: string): EstadoTarea {
   if (
-    t.tipo === 'planificada' &&
-    t.fecha_planificada &&
-    t.fecha_planificada < hoyYmd &&
-    (t.estado === 'pendiente' || t.estado === 'en_progreso' || t.estado === 'bloqueada')
+    tarea.tipo === 'planificada' &&
+    tarea.fecha_planificada &&
+    tarea.fecha_planificada < hoyYmd &&
+    tarea.estado === 'pendiente'
   ) {
     return 'atrasada';
   }
-  return t.estado;
+
+  return tarea.estado;
 }

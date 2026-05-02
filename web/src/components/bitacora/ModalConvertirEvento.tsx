@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
+import { crearRecurrenciaEvento } from '@/api/recurrencia';
 
 import type { NotaBitacora, TipoEvento } from '@/types';
 
 type Props = {
   nota: NotaBitacora | null;
   onClose: () => void;
+  /** Evento único */
   onConfirm: (input: {
     titulo: string;
     tipo: TipoEvento;
@@ -15,15 +18,27 @@ type Props = {
     hora_fin: string;
     es_recurrente: boolean;
   }) => Promise<void>;
+  /** Evento recurrente — recibe la config de recurrencia */
+  onConfirmRecurrente: (input: {
+    titulo: string;
+    tipo: TipoEvento;
+    hora_inicio: string;
+    hora_fin: string;
+    fecha_inicio: string;
+    dias_semana: number[];
+    fecha_fin?: string;
+    meses: number;
+  }) => Promise<void>;
 };
 
-export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
+export function ModalConvertirEvento({ nota, onClose, onConfirm, onConfirmRecurrente }: Props) {
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState<TipoEvento>('reunion');
   const [fecha, setFecha] = useState('');
   const [horaIni, setHoraIni] = useState('09:00');
   const [horaFin, setHoraFin] = useState('10:00');
   const [recurrente, setRecurrente] = useState(false);
+  const [recConfig, setRecConfig] = useState<RecurrenciaConfig>({ dias_semana: [], fecha_fin: '', meses: 1 });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -34,6 +49,7 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
       setHoraIni('09:00');
       setHoraFin('10:00');
       setRecurrente(false);
+      setRecConfig({ dias_semana: [], fecha_fin: '', meses: 1 });
     }
   }, [nota]);
 
@@ -41,16 +57,32 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
 
   async function submit() {
     if (!canSubmit) return;
+    if (recurrente && recConfig.dias_semana.length === 0) return;
     setBusy(true);
     try {
-      await onConfirm({
-        titulo: titulo.trim(),
-        tipo,
-        fecha_dia: fecha,
-        hora_inicio: horaIni,
-        hora_fin: horaFin,
-        es_recurrente: recurrente,
-      });
+      if (recurrente) {
+        // Crear recurrencia en lugar de evento único
+        // usuario_id no está disponible en este modal — se resuelve en el hook del padre
+        await onConfirmRecurrente({
+          titulo:       titulo.trim(),
+          tipo,
+          hora_inicio:  horaIni,
+          hora_fin:     horaFin,
+          fecha_inicio: fecha,
+          dias_semana:  recConfig.dias_semana,
+          fecha_fin:    recConfig.fecha_fin || undefined,
+          meses:        recConfig.meses,
+        });
+      } else {
+        await onConfirm({
+          titulo:        titulo.trim(),
+          tipo,
+          fecha_dia:     fecha,
+          hora_inicio:   horaIni,
+          hora_fin:      horaFin,
+          es_recurrente: false,
+        });
+      }
       onClose();
     } finally {
       setBusy(false);
@@ -103,9 +135,20 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm }: Props) {
           </select>
         </div>
         <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
-          <input type="checkbox" className="mc-checkbox" checked={recurrente} onChange={(e) => setRecurrente(e.target.checked)} />
-          Recurrente
+          <input
+            type="checkbox"
+            className="mc-checkbox"
+            checked={recurrente}
+            onChange={(e) => {
+              setRecurrente(e.target.checked);
+              if (!e.target.checked) setRecConfig({ dias_semana: [], fecha_fin: '', meses: 1 });
+            }}
+          />
+          Recurrente (se repite cada semana)
         </label>
+        {recurrente && (
+          <RecurrenciaForm value={recConfig} onChange={setRecConfig} />
+        )}
       </div>
     </Modal>
   );

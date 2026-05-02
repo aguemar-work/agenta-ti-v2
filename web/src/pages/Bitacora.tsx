@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { ModalConvertirEvento } from '@/components/bitacora/ModalConvertirEvento';
 import { ModalConvertirTarea } from '@/components/bitacora/ModalConvertirTarea';
 import { useBitacoraMutations, useNotasBitacora } from '@/hooks/useBitacora';
+import { crearRecurrenciaEvento } from '@/api/recurrencia';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuthStore } from '@/store/authStore';
 import type { NotaBitacora, TipoEvento, VisibilidadBitacora } from '@/types';
 
@@ -104,14 +106,40 @@ export function Bitacora() {
     }
   }
 
+  async function onConfirmarEventoRecurrente(input: {
+    titulo: string;
+    tipo: import('@/types').TipoEvento;
+    hora_inicio: string;
+    hora_fin: string;
+    fecha_inicio: string;
+    dias_semana: number[];
+    fecha_fin?: string;
+    meses: number;
+  }) {
+    if (!notaParaEvento) return;
+    try {
+      await crearRecurrenciaEvento({
+        titulo:       input.titulo,
+        tipo:         input.tipo,
+        hora_inicio:  input.hora_inicio,
+        hora_fin:     input.hora_fin,
+        usuario_id:   me.id,
+        dias_semana:  input.dias_semana as import('@/api/recurrencia').DiaSemana[],
+        fecha_inicio: input.fecha_inicio,
+        fecha_fin:    input.fecha_fin,
+        meses:        input.meses,
+      });
+      setNotaParaEvento(null);
+      toast.success('Eventos recurrentes creados');
+    } catch (err) {
+      console.error('[onConfirmarEventoRecurrente]', err);
+      toast.error('No se pudieron crear los eventos.');
+    }
+  }
+
   return (
     <div className={APP_PAGE_CLASS}>
-      <header className="mc-page-header">
-        <div>
-          <h1 className="mc-page-title">Bitácora</h1>
-          <h2 className="mc-page-subtitle">Registro de notas y bitácora diaria</h2>
-        </div>
-      </header>
+      <PageHeader title="Bitácora" subtitle="Registro diario de notas e ideas" />
 
       <div className="mc-card mb-6 flex flex-col gap-4">
         <div className="mc-field">
@@ -235,7 +263,7 @@ export function Bitacora() {
       )}
 
       <ModalConvertirTarea nota={notaParaTarea} onClose={() => setNotaParaTarea(null)} onConfirm={onConfirmarTarea} />
-      <ModalConvertirEvento nota={notaParaEvento} onClose={() => setNotaParaEvento(null)} onConfirm={onConfirmarEvento} />
+      <ModalConvertirEvento nota={notaParaEvento} onClose={() => setNotaParaEvento(null)} onConfirm={onConfirmarEvento} onConfirmRecurrente={onConfirmarEventoRecurrente} />
     </div>
   );
 }

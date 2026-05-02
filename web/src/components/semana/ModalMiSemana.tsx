@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 
 import { Modal } from '@/components/ui/Modal';
+import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
+import { crearRecurrenciaEvento } from '@/api/recurrencia';
 import { Button } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
 
-type ModoOrigen = 'libre' | 'dia';
+type ModoOrigen = 'dia';
 
 type MiSemanaDraft = {
   tab: 'tarea' | 'evento';
@@ -75,6 +77,11 @@ export function ModalMiSemana({
   const { form, setForm, hasChanges, clearDraft } = useDraftForm('misemana-nueva-tarea', initial, { enabled: open });
 
   const [busy, setBusy] = useState(false);
+  const [recConfig, setRecConfig] = useState<RecurrenciaConfig>({
+    dias_semana: [],
+    fecha_fin: '',
+    meses: 1,
+  });
 
   const fechaEvento = modoOrigen === 'dia' ? fechaDia : undefined;
 
@@ -103,14 +110,38 @@ export function ModalMiSemana({
 
   async function submitEvento() {
     if (!form.titulo.trim() || !fechaEvento) return;
+    // Recurrente: usar RPC de recurrencia en lugar de crear evento único
+    if (form.recurrente) {
+      if (recConfig.dias_semana.length === 0) return;
+      setBusy(true);
+      try {
+        await crearRecurrenciaEvento({
+          titulo:       form.titulo.trim(),
+          tipo:         form.tipoEv,
+          hora_inicio:  form.horaIni,
+          hora_fin:     form.horaFin,
+          usuario_id:   asignadoPorDefectoId,
+          dias_semana:  recConfig.dias_semana,
+          fecha_inicio: fechaEvento,
+          fecha_fin:    recConfig.fecha_fin || undefined,
+          meses:        recConfig.meses,
+        });
+        clearDraft();
+        onClose();
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // Evento único
     setBusy(true);
     try {
       await onCrearEvento({
-        titulo: form.titulo.trim(),
-        tipo: form.tipoEv,
-        hora_inicio: form.horaIni,
-        hora_fin: form.horaFin,
-        es_recurrente: form.recurrente,
+        titulo:       form.titulo.trim(),
+        tipo:         form.tipoEv,
+        hora_inicio:  form.horaIni,
+        hora_fin:     form.horaFin,
+        es_recurrente: false,
       });
       clearDraft();
       onClose();
@@ -123,7 +154,7 @@ export function ModalMiSemana({
     <Modal
       open={open}
       onClose={cerrar}
-      title={modoOrigen === 'libre' ? 'Nuevo ítem en backlog' : `Nuevo ítem · ${fechaDia ?? ''}`}
+      title={`Nuevo ítem · ${fechaDia ?? ''}`}
       size="md"
       hasUnsavedChanges={hasChanges}
       footer={
@@ -250,9 +281,20 @@ export function ModalMiSemana({
               </div>
             </div>
             <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
-              <input type="checkbox" className="mc-checkbox" checked={form.recurrente} onChange={(e) => setForm((p) => ({ ...p, recurrente: e.target.checked }))} />
-              Recurrente
+              <input
+                type="checkbox"
+                className="mc-checkbox"
+                checked={form.recurrente}
+                onChange={(e) => {
+                  setForm((p) => ({ ...p, recurrente: e.target.checked }));
+                  if (!e.target.checked) setRecConfig({ dias_semana: [], fecha_fin: '', meses: 1 });
+                }}
+              />
+              Recurrente (se repite cada semana)
             </label>
+            {form.recurrente && (
+              <RecurrenciaForm value={recConfig} onChange={setRecConfig} />
+            )}
           </div>
         )}
       </div>

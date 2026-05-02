@@ -9,8 +9,11 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { useState } from 'react';
 
 import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
+import { EventoCard } from '@/components/semana/EventoCard';
+import { HoyPanel } from '@/components/semana/HoyPanel';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { SemanaDiaDrop } from '@/components/semana/SemanaDiaDrop';
@@ -19,10 +22,12 @@ import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { TaskItem } from '@/components/tareas/TaskItem';
 import { Button } from '@/components/ui/Button';
+import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { useMiSemanaPage } from '@/hooks/useMiSemanaPage';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { agregarDias } from '@/lib/semanas';
 import type { Evento } from '@/types';
 
@@ -31,10 +36,33 @@ import type { Evento } from '@/types';
 // ---------------------------------------------------------------------------
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-function contadorCarga(n: number): string {
-  if (n <= 2) return '🟢';
-  if (n <= 4) return '🟡';
-  return '🔴';
+type NivelCarga = 'baja' | 'media' | 'alta';
+
+function nivelCarga(n: number): NivelCarga {
+  if (n <= 2) return 'baja';
+  if (n <= 4) return 'media';
+  return 'alta';
+}
+
+const CARGA_CONFIG: Record<NivelCarga, { emoji: string; label: string }> = {
+  baja:  { emoji: '🟢', label: 'Carga baja'  },
+  media: { emoji: '🟡', label: 'Carga media' },
+  alta:  { emoji: '🔴', label: 'Carga alta'  },
+};
+
+function CargaIndicator({ n }: { n: number }) {
+  const nivel = nivelCarga(n);
+  const { emoji, label } = CARGA_CONFIG[nivel];
+  return (
+    <span
+      role="img"
+      aria-label={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
+      title={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
+      className="text-xs"
+    >
+      {emoji}
+    </span>
+  );
 }
 
 function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
@@ -68,6 +96,11 @@ export function MiSemana() {
     lunes, setLunes, sabado, diasSemana,
     uid, setSeleccionId, usuariosJefe,
     tareasPlan, eventos, isError, hoyYmd, conteos,
+    modo, setModo, esModoHoy, esBannerViernes,
+    incidenciasHoy, notasHoy, eventosHoy,
+    modalInc, setModalInc,
+    notaRapida, setNotaRapida,
+    crearIncidencia, guardarNotaRapida,
     objetivosActivos, usuariosAsignables,
     tareaDetalle, tareaCompletar, activeTareaDrag,
     activeDragId, setActiveDragId, overId,
@@ -81,7 +114,7 @@ export function MiSemana() {
     puedeGestionar,
     confirmarReprDrag, confirmarReprDetalle, confirmarBloqueo,
     confirmarCompletar, crearTareaDesdeModal, crearEventoDesdeModal,
-    guardarDetalle, eliminarDesdeDetalle, iniciarDesdeDetalle, planificarDesdeDetalle,
+    guardarDetalle, eliminarDesdeDetalle, iniciarDesdeDetalle,
   } = useMiSemanaPage();
 
   const sensors = useSensors(
@@ -96,38 +129,123 @@ export function MiSemana() {
     <div className={APP_PAGE_CLASS}>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="mc-page-header">
-        <div>
-          <h1 className="mc-page-title">Mi semana</h1>
-          <h2 className="mc-page-subtitle">
-            {fechaLocalDdMmYyyy(lunes)} — {fechaLocalDdMmYyyy(sabado)}
-          </h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
-            <div className="mc-field !mb-0">
-              <label className="mc-field-label" htmlFor="semana-miembro">Vista</label>
+      <PageHeader
+        title={esModoHoy ? 'Hoy' : 'Mi semana'}
+        subtitle={esModoHoy
+          ? fechaLocalDdMmYyyy(new Date())
+          : `${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`
+        }
+        left={
+          <>
+            {/* Toggle Hoy / Semana */}
+            <div className="mc-toggle-pill">
+              <button
+                type="button"
+                className="mc-toggle-pill-btn"
+                aria-pressed={esModoHoy}
+                onClick={() => setModo('hoy')}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                className="mc-toggle-pill-btn"
+                aria-pressed={!esModoHoy}
+                onClick={() => setModo('semana')}
+              >
+                Semana
+              </button>
+            </div>
+            {/* Flechas semana — solo en modo Semana */}
+            {!esModoHoy && (
+              <div className="mc-nav-arrows">
+                <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
+                <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, 7))} aria-label="Semana siguiente">›</button>
+              </div>
+            )}
+          </>
+        }
+        actions={
+          <div className="flex items-center gap-3">
+            {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
               <select
                 id="semana-miembro"
-                className="mc-input !w-auto min-w-[200px]"
+                aria-label="Ver semana de"
+                className="mc-input !w-auto min-w-[180px]"
                 value={uid}
                 onChange={(e) => setSeleccionId(e.target.value)}
               >
                 {usuariosJefe.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
                 ))}
               </select>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setLunes((d) => agregarDias(d, -7))}>‹</Button>
-            <Button variant="secondary" size="sm" onClick={() => setLunes((d) => agregarDias(d, 7))}>›</Button>
+            )}
+            <Button size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
+              + Nueva tarea
+            </Button>
           </div>
+        }
+      />
+
+      {/* Banner viernes */}
+      {esBannerViernes && !esModoHoy && (
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--mc-color-accent)] bg-[color-mix(in_srgb,var(--mc-color-accent)_8%,transparent)] px-4 py-3">
+          <span className="text-lg">📅</span>
+          <p className="text-sm font-medium text-[var(--mc-color-accent)]">
+            ¡Es viernes! Buen momento para planificar la próxima semana.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setLunes((d) => agregarDias(d, 7))}
+          >
+            Ver próxima semana
+          </Button>
         </div>
-      </header>
+      )}
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">Error al cargar datos.</p>}
 
+      {/* ── Panel Hoy ──────────────────────────────────────────────────── */}
+      {esModoHoy && (
+        <div className="flex flex-col gap-4">
+          {/* Eventos del día */}
+          {eventosHoy.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-4 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Eventos</span>
+              {eventosHoy.map((ev) => (
+                <span key={ev.id} className="flex items-center gap-2 rounded-full border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-3 py-1 text-xs text-[var(--mc-color-text)]">
+                  <span className="text-[var(--mc-color-text-secondary)]">
+                    {new Date(ev.fecha_inicio).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {ev.titulo}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* ── Panel Hoy: tabs en móvil · 3 columnas en md+ ───────────── */}
+          <HoyPanel
+            hoyYmd={hoyYmd}
+            tareasPlan={tareasPlan}
+            incidenciasHoy={incidenciasHoy}
+            notasHoy={notasHoy}
+            notaRapida={notaRapida}
+            setNotaRapida={setNotaRapida}
+            guardarNotaRapida={guardarNotaRapida}
+            puedeGestionar={puedeGestionar}
+            setDetalleTareaId={setDetalleTareaId}
+            setReprDetalleTarea={setReprDetalleTarea}
+            setBloquearTareaState={setBloquearTareaState}
+            setCompletarTareaId={setCompletarTareaId}
+            setModalInc={setModalInc}
+          />
+        </div>
+      )}
+
+      {/* ── Panel Semana (con DnD) ───────────────────────────────────────── */}
+      {!esModoHoy && (
       <DndContext
         sensors={sensors}
         collisionDetection={collisionSemana}
@@ -174,22 +292,10 @@ export function MiSemana() {
                     >
                       {/* Cabecera del día */}
                       <div className="flex items-center justify-between gap-1 border-b border-[var(--mc-color-border)] px-2 py-2">
-                        <div className="flex flex-col gap-1">
-                          <span className={`text-xs font-semibold ${esHoy ? 'text-[var(--mc-color-accent)]' : 'text-[var(--mc-color-text)]'}`}>
-                            {DIAS_CORTO[idx]} {d.getDate()}{esHoy ? ' · hoy' : ''}
-                          </span>
-                          {eventosEnDia(eventos, ymd).length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {eventosEnDia(eventos, ymd).map((ev) => (
-                                <span key={ev.id} className="flex items-center gap-1 text-[10px] text-[var(--mc-color-warning)]">
-                                  <span className="inline-block h-[6px] w-[6px] rounded-full bg-[var(--mc-color-warning)]" />
-                                  {new Date(ev.fecha_inicio).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs" aria-hidden>{contadorCarga(delDia.length)}</span>
+                        <span className={`text-xs font-semibold ${esHoy ? 'text-[var(--mc-color-accent)]' : 'text-[var(--mc-color-text)]'}`}>
+                          {DIAS_CORTO[idx]} {d.getDate()}{esHoy ? ' · hoy' : ''}
+                        </span>
+                        <CargaIndicator n={delDia.length} />
                       </div>
 
                       {/* Botón añadir */}
@@ -197,17 +303,20 @@ export function MiSemana() {
                         variant="ghost"
                         size="xs"
                         className="w-full justify-center border-b border-[var(--mc-color-border)] rounded-none !py-2"
-                        onClick={() => setModal({ modo: 'dia', fecha: ymd })}
+                        onClick={() => setModal({ fecha: ymd })}
                       >
                         + Tarea / evento
                       </Button>
 
-                      {/* Drop zone */}
+                      {/* Drop zone: eventos primero (no arrastrables), luego tareas */}
                       <SemanaDiaDrop
                         id={`day-${ymd}`}
                         className="flex min-h-[120px] flex-1 flex-col gap-2 p-2"
                         showPlaceholder={ph}
                       >
+                        {eventosEnDia(eventos, ymd).map((ev) => (
+                          <EventoCard key={ev.id} evento={ev} />
+                        ))}
                         {delDia.map((t) => (
                           <DraggableTareaSemana
                             key={t.id}
@@ -243,11 +352,12 @@ export function MiSemana() {
           </DragOverlay>
         </div>
       </DndContext>
+      )}
 
       {/* ── Modales ────────────────────────────────────────────────────── */}
       <ModalMiSemana
         open={modal !== null}
-        modoOrigen={modal?.modo ?? 'libre'}
+        modoOrigen="dia"
         fechaDia={modal?.fecha}
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
@@ -255,6 +365,16 @@ export function MiSemana() {
         onClose={() => setModal(null)}
         onCrearTarea={crearTareaDesdeModal}
         onCrearEvento={crearEventoDesdeModal}
+      />
+      <ModalNuevaTarea
+        open={modalInc}
+        modo="incidencia"
+        fechaReferencia={hoyYmd}
+        usuarioActualId={uid ?? ''}
+        usuariosAsignables={usuariosAsignables}
+        objetivos={objetivosActivos}
+        onClose={() => setModalInc(false)}
+        onSubmit={crearIncidencia}
       />
       <ModalCompletarTarea
         open={completarTareaId !== null}
@@ -291,7 +411,6 @@ export function MiSemana() {
         onCompletar={(t) => { setCompletarTareaId(t.id); setDetalleTareaId(null); }}
         onReprogramar={(t) => { setReprDetalleTarea(t); setDetalleTareaId(null); }}
         onBloquear={(t) => { setBloquearTareaState(t); setDetalleTareaId(null); }}
-        onPlanificar={planificarDesdeDetalle}
       />
     </div>
   );

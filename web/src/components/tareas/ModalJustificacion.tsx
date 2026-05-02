@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -14,7 +15,7 @@ export function ModalJustificacion({ open, titulo, descripcion, onClose, onConfi
   const [just, setJust] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const ok = just.trim().length >= 10;
+  const ok = just.trim().length >= MIN_JUSTIFICACION_CHARS;
 
   async function submit() {
     if (!ok) return;

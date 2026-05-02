@@ -1,4 +1,5 @@
 import { getInsforge } from '@/lib/insforge';
+import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { parseEvento, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
 import { agregarDias, semanaIsoDesdeFecha } from '@/lib/semanas';
@@ -13,18 +14,6 @@ export async function getTareasSemana(usuarioId: string, semanaISO: string): Pro
     .eq('tipo', 'planificada')
     .eq('semana_planificada', semanaISO)
     .order('fecha_planificada', { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
-}
-
-export async function getTareasLibres(usuarioId: string): Promise<Tarea[]> {
-  const insforge = getInsforge();
-  const { data, error } = await insforge.database
-    .from('tarea')
-    .select('*')
-    .eq('asignado_a', usuarioId)
-    .eq('tipo', 'libre')
-    .order('prioridad', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
 }
@@ -54,36 +43,6 @@ export async function getEventosSemana(usuarioId: string, lunes: Date): Promise<
   if (error) throw error;
   const list = (data ?? []).map((r) => parseEvento(r as Record<string, unknown>));
   return list.filter((e) => solapaSemana(e, lunes));
-}
-
-export type CrearTareaLibreInput = {
-  titulo: string;
-  prioridad: Tarea['prioridad'];
-  descripcion?: string | null;
-  asignado_a?: string | null;
-  creado_por: string;
-  objetivo_id?: string | null;
-};
-
-export async function crearTareaLibre(data: CrearTareaLibreInput): Promise<Tarea> {
-  const insforge = getInsforge();
-  const asignado = resolveAsignadoA(data.asignado_a, data.creado_por);
-  const row = {
-    titulo: data.titulo,
-    descripcion: data.descripcion ?? null,
-    prioridad: data.prioridad,
-    estado: 'pendiente' as const,
-    tipo: 'libre' as const,
-    fecha_planificada: null,
-    semana_planificada: null,
-    asignado_a: asignado,
-    creado_por: data.creado_por,
-    objetivo_id: data.objetivo_id ?? null,
-    es_imprevisto: false,
-  };
-  const { data: inserted, error } = await insforge.database.from('tarea').insert([row]).select('*').single();
-  if (error) throw error;
-  return parseTarea(inserted as Record<string, unknown>);
 }
 
 export type CrearTareaPlanificadaInput = {
@@ -118,30 +77,25 @@ export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): P
   return parseTarea(inserted as Record<string, unknown>);
 }
 
-export async function moverTareaADia(tareaId: string, fecha: string, semana: string, tipo: Tarea['tipo']): Promise<void> {
+export async function moverTareaADia(tareaId: string, fecha: string, semana: string): Promise<void> {
   const insforge = getInsforge();
-  const patch: Partial<Tarea> = { fecha_planificada: fecha, semana_planificada: semana };
-  if (tipo === 'libre') patch.tipo = 'planificada';
-  const { error } = await insforge.database.from('tarea').update(patch).eq('id', tareaId);
+  const { error } = await insforge.database.rpc('sgtd_mover_tarea_dia', {
+    p_tarea_id: tareaId,
+    p_fecha:    fecha,
+    p_semana:   semana,
+  });
   if (error) throw error;
 }
 
 export async function moverTareaEntreDias(tareaId: string, nuevaFecha: string): Promise<void> {
   const semana = semanaIsoDesdeFecha(new Date(`${nuevaFecha}T12:00:00`));
-  return moverTareaADia(tareaId, nuevaFecha, semana, 'planificada');
-}
-
-export async function moverTareaABacklog(tareaId: string): Promise<void> {
-  const insforge = getInsforge();
-  const { error } = await insforge.database
-    .from('tarea')
-    .update({ tipo: 'libre', fecha_planificada: null, semana_planificada: null })
-    .eq('id', tareaId);
-  if (error) throw error;
+  return moverTareaADia(tareaId, nuevaFecha, semana);
 }
 
 export type ActualizarTareaInput = {
   tareaId: string;
+  /** ID del usuario que realiza la edición — requerido por el RPC server-side. */
+  usuarioActorId: string;
   titulo: string;
   prioridad: Tarea['prioridad'];
   descripcion?: string | null;
@@ -149,21 +103,20 @@ export type ActualizarTareaInput = {
   asignado_a?: string | null;
 };
 
+/**
+ * Actualiza metadatos de una tarea (título, prioridad, descripción, objetivo, asignado).
+ * La validación de permisos y el log de cambios ocurren en el servidor.
+ */
 export async function actualizarTarea(input: ActualizarTareaInput): Promise<void> {
-  const insforge = getInsforge();
-  const patch: Record<string, unknown> = {
-    titulo: input.titulo.trim(),
-    prioridad: input.prioridad,
-    descripcion: input.descripcion ?? null,
-    objetivo_id: input.objetivo_id ?? null,
-  };
-  if (input.asignado_a !== undefined) {
-    patch.asignado_a =
-      input.asignado_a === null || String(input.asignado_a).trim() === ''
-        ? null
-        : String(input.asignado_a).trim();
-  }
-  const { error } = await insforge.database.from('tarea').update(patch).eq('id', input.tareaId);
+  const { error } = await getInsforge().database.rpc('sgtd_actualizar_tarea', {
+    p_tarea_id:    input.tareaId,
+    p_usuario_id:  input.usuarioActorId,
+    p_titulo:      input.titulo.trim(),
+    p_prioridad:   input.prioridad,
+    p_descripcion: input.descripcion ?? null,
+    p_objetivo_id: input.objetivo_id ?? null,
+    p_asignado_a:  input.asignado_a ?? null,
+  });
   if (error) throw error;
 }
 
@@ -209,8 +162,8 @@ export async function eliminarTareaConMotivo(input: {
   usuarioId: string;
   motivo: string;
 }): Promise<void> {
-  if (input.motivo.trim().length < 10) {
-    throw new Error('Debes registrar un motivo de al menos 10 caracteres.');
+  if (input.motivo.trim().length < MIN_JUSTIFICACION_CHARS) {
+    throw new Error(MSG_JUSTIFICACION_CORTA);
   }
   const { error } = await getInsforge().database.rpc('sgtd_eliminar_tarea_con_motivo', {
     p_tarea_id: input.tareaId,
@@ -225,8 +178,8 @@ export async function bloquearTareaConLog(input: {
   usuarioId: string;
   justificacion: string;
 }): Promise<void> {
-  if (input.justificacion.trim().length < 10) {
-    throw new Error('La justificación debe tener al menos 10 caracteres.');
+  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) {
+    throw new Error(MSG_JUSTIFICACION_CORTA);
   }
   const { error } = await getInsforge().database.rpc('sgtd_bloquear_tarea_con_log', {
     p_tarea_id: input.tareaId,
@@ -244,8 +197,8 @@ export async function reprogramarTareaConLog(input: {
   nuevoEstado?: Tarea['estado'];
 }): Promise<void> {
   const justificacion = input.justificacion.trim();
-  if (justificacion.length < 10) {
-    throw new Error('La justificación debe tener al menos 10 caracteres.');
+  if (justificacion.length < MIN_JUSTIFICACION_CHARS) {
+    throw new Error(MSG_JUSTIFICACION_CORTA);
   }
   const { error } = await getInsforge().database.rpc('sgtd_reprogramar_tarea_con_log', {
     p_tarea_id: input.tareaId,
@@ -263,8 +216,8 @@ export async function desbloquearTareaConLog(input: {
   nuevaFecha: string;
   justificacion: string;
 }): Promise<void> {
-  if (input.justificacion.trim().length < 10) {
-    throw new Error('La justificación debe tener al menos 10 caracteres.');
+  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) {
+    throw new Error(MSG_JUSTIFICACION_CORTA);
   }
   const { error } = await getInsforge().database.rpc('sgtd_desbloquear_tarea_con_log', {
     p_tarea_id: input.tareaId,
