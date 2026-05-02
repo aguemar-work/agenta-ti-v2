@@ -1,15 +1,9 @@
 /**
  * lib/estadoConfig.ts
  * Fuente única de verdad para labels, badges y estilos de estado.
- * Resuelve hallazgo 1.4: mapas duplicados en ≥5 archivos.
- *
- * Uso:
- *   import { TAREA_BADGE, TAREA_LABEL, OBJETIVO_BADGE, OBJETIVO_LABEL } from '@/lib/estadoConfig';
- *
- *   <span className={`mc-badge ${TAREA_BADGE[estado]}`}>{TAREA_LABEL[estado]}</span>
  */
 
-import type { EstadoObjetivo, EstadoTarea } from '@/types';
+import type { EstadoObjetivo, EstadoTarea, UrgenciaHoraria } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Tarea — badge class
@@ -38,7 +32,7 @@ export const TAREA_LABEL: Record<EstadoTarea, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Tarea — label en plural (para resúmenes, ej: Planificación)
+// Tarea — label en plural
 // ---------------------------------------------------------------------------
 export const TAREA_LABEL_PLURAL: Record<EstadoTarea, string> = {
   pendiente:    'pendientes',
@@ -51,7 +45,7 @@ export const TAREA_LABEL_PLURAL: Record<EstadoTarea, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Tarea — pill con color inline (para tablas con fondo propio, ej: Planificación)
+// Tarea — pill con color inline (tablas, Planificación)
 // ---------------------------------------------------------------------------
 export const TAREA_PILL: Record<EstadoTarea, string> = {
   pendiente:    'bg-[#F1EFE8] text-[#5F5E5A]',
@@ -79,4 +73,36 @@ export const OBJETIVO_LABEL: Record<EstadoObjetivo, string> = {
   activo:     'Activo',
   completado: 'Completado',
   cancelado:  'Cancelado',
+};
+
+// ---------------------------------------------------------------------------
+// Urgencia horaria — clases CSS inline para la tarjeta de tarea
+// Estas clases deben existir en el CSS global (sprint4.css o tokens.css)
+// ---------------------------------------------------------------------------
+export const URGENCIA_BORDER: Record<UrgenciaHoraria, string> = {
+  normal:      '',
+  precaucion:  'border-[#EF9F27]',
+  urgente:     'border-[#E24B4A]',
+  vencida_hoy: 'border-[#A32D2D]',
+};
+
+export const URGENCIA_BG: Record<UrgenciaHoraria, string> = {
+  normal:      '',
+  precaucion:  '',
+  urgente:     'bg-[#FCEBEB]',
+  vencida_hoy: 'bg-[#E24B4A]',
+};
+
+export const URGENCIA_BADGE: Record<UrgenciaHoraria, string> = {
+  normal:      '',
+  precaucion:  'mc-badge-warning',
+  urgente:     'mc-badge-danger',
+  vencida_hoy: 'mc-badge-danger',
+};
+
+export const URGENCIA_LABEL: Record<UrgenciaHoraria, string> = {
+  normal:      '',
+  precaucion:  'Por vencer',
+  urgente:     'Urgente',
+  vencida_hoy: 'Vencida hoy',
 };

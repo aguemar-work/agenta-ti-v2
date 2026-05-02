@@ -1,21 +1,23 @@
+/**
+ * lib/tableroEstado.ts
+ *
+ * Con el trigger de BD (migración 009), el estado 'atrasada' ya llega
+ * correcto desde Postgres. Esta función ya no necesita calcularlo —
+ * simplemente devuelve el estado real de la tarea.
+ *
+ * Se mantiene el nombre para no romper los imports existentes.
+ */
+
 import type { EstadoTarea, Tarea } from '@/types';
 
 /**
- * Estado visual para columnas Kanban.
+ * Devuelve el estado efectivo de la tarea para el Tablero.
  *
- * La fecha vencida solo degrada tareas aún accionables como pendientes. Si una
- * tarea ya fue iniciada o bloqueada, el tablero debe respetar ese estado para
- * que se mueva a su columna operativa.
+ * Antes calculaba 'atrasada' en el cliente. Ahora el trigger en BD
+ * ya lo hace, así que simplemente retornamos tarea.estado.
+ *
+ * La firma se mantiene igual para compatibilidad con código existente.
  */
-export function estadoEfectivoTablero(tarea: Tarea, hoyYmd: string): EstadoTarea {
-  if (
-    tarea.tipo === 'planificada' &&
-    tarea.fecha_planificada &&
-    tarea.fecha_planificada < hoyYmd &&
-    tarea.estado === 'pendiente'
-  ) {
-    return 'atrasada';
-  }
-
+export function estadoEfectivoTablero(tarea: Tarea, _hoyYmd: string): EstadoTarea {
   return tarea.estado;
 }

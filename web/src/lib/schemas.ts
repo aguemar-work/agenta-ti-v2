@@ -1,37 +1,25 @@
 /**
  * lib/schemas.ts
  * Schemas Zod para los tipos del dominio y parsers tipados.
- *
- * Si el schema de BD cambia (campo eliminado, tipo incorrecto), en desarrollo
- * se lanza un SchemaParseError con el detalle exacto del campo que falló.
- * En producción, el error activa el SectionErrorBoundary más cercano — la
- * sección falla de forma aislada sin tumbar el resto de la app.
- *
- * Uso en api/hooks:
- *   import { parseTarea, parseEvento, parseNota, parseUsuario } from '@/lib/schemas';
  */
 
 import { z } from 'zod';
-
 import type { Evento, NotaBitacora, Tarea, Usuario } from '@/types';
 
-// ---------------------------------------------------------------------------
-// Primitivos reutilizables
-// ---------------------------------------------------------------------------
 const id      = z.string().uuid();
 const idNul   = z.string().uuid().nullable();
 const strNul  = z.string().nullable();
-const dateStr = z.string(); // ISO string tal como llega de InsForge
+const dateStr = z.string();
 
 // ---------------------------------------------------------------------------
-// Tarea
+// Tarea — 'libre' eliminado, nota_origen_id agregado
 // ---------------------------------------------------------------------------
 export const TareaSchema = z.object({
   id:                 id,
   titulo:             z.string(),
   descripcion:        strNul,
   estado:             z.enum(['pendiente', 'en_progreso', 'reprogramada', 'completada', 'bloqueada', 'atrasada', 'cancelada']),
-  tipo:               z.enum(['planificada', 'no_planificada', 'libre']),
+  tipo:               z.enum(['planificada', 'no_planificada']),
   prioridad:          z.enum(['alta', 'media', 'baja']),
   fecha_planificada:  strNul,
   semana_planificada: strNul,
@@ -40,6 +28,7 @@ export const TareaSchema = z.object({
   objetivo_id:        idNul,
   creado_por:         id,
   es_imprevisto:      z.boolean(),
+  nota_origen_id:     idNul,
   created_at:         dateStr,
   updated_at:         dateStr,
 });
@@ -96,19 +85,8 @@ export const UsuarioSchema = z.object({
 export type UsuarioSchema = z.infer<typeof UsuarioSchema>;
 
 // ---------------------------------------------------------------------------
-// Error tipado para fallos de validacion
+// Error tipado para fallos de validación
 // ---------------------------------------------------------------------------
-
-/**
- * Lanzado cuando InsForge devuelve datos que no coinciden con el schema Zod.
- *
- * Al propagarse desde una funcion de API (query/mutacion), activa el
- * SectionErrorBoundary mas cercano. La seccion falla de forma aislada
- * sin tumbar el resto de la app.
- *
- * En DEV: incluye el campo exacto que fallo y el motivo.
- * En produccion: solo el nombre de la entidad (no expone estructura interna).
- */
 export class SchemaParseError extends Error {
   readonly label: string;
   readonly issues: z.ZodIssue[];
@@ -124,15 +102,9 @@ export class SchemaParseError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Parsers tipados
-// ---------------------------------------------------------------------------
-
 function safeParse<T>(schema: z.ZodType<T>, row: unknown, label: string): T {
   const result = schema.safeParse(row);
-  if (!result.success) {
-    throw new SchemaParseError(label, result.error.issues);
-  }
+  if (!result.success) throw new SchemaParseError(label, result.error.issues);
   return result.data;
 }
 

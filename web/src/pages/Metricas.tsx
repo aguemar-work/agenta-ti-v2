@@ -8,8 +8,9 @@ import { FilterBar } from '@/components/ui/FilterBar';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { useAuthStore } from '@/store/authStore';
 
-// ── Configuración visual ─────────────────────────────────────────────────────
-
+// ---------------------------------------------------------------------------
+// Paleta de colores por estado (consistente con el resto del sistema)
+// ---------------------------------------------------------------------------
 const COLORES: Record<string, string> = {
   completadas:   '#27500A',
   atrasadas:     '#E24B4A',
@@ -38,64 +39,121 @@ function pct(val: number, total: number) {
   return total > 0 ? Math.round((val / total) * 100) : 0;
 }
 
-function fmtPct(val: number, total: number) {
-  return `${pct(val, total)}%`;
+// ---------------------------------------------------------------------------
+// Color semáforo según porcentaje de cumplimiento
+// ---------------------------------------------------------------------------
+function colorCumplimiento(p: number) {
+  if (p >= 70) return '#27500A';
+  if (p >= 40) return '#854F0B';
+  return '#A32D2D';
 }
 
-// ── Tendencia: compara última semana con la anterior ─────────────────────────
+function bgCumplimiento(p: number) {
+  if (p >= 70) return '#EAF3DE';
+  if (p >= 40) return '#FAEEDA';
+  return '#FCEBEB';
+}
+
+// ---------------------------------------------------------------------------
+// Tendencia vs semana anterior
+// ---------------------------------------------------------------------------
 function Tendencia({ porSemana }: { porSemana: { completadas: number; total: number }[] }) {
   if (porSemana.length < 2) return null;
   const ultima   = porSemana[porSemana.length - 1];
   const anterior = porSemana[porSemana.length - 2];
-  const tasaUlt  = pct(ultima.completadas,   ultima.total);
-  const tasaAnt  = pct(anterior.completadas, anterior.total);
-  const diff = tasaUlt - tasaAnt;
+  const diff = pct(ultima.completadas, ultima.total) - pct(anterior.completadas, anterior.total);
   if (diff === 0) return null;
   const sube = diff > 0;
   return (
-    <span
-      style={{
-        fontSize: 11,
-        fontWeight: 500,
-        color: sube ? '#27500A' : '#A32D2D',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 3,
-        marginLeft: 8,
-      }}
-    >
-      {sube ? '▲' : '▼'} {Math.abs(diff)}pp vs semana anterior
+    <span style={{
+      fontSize: 11, fontWeight: 500,
+      color: sube ? '#27500A' : '#A32D2D',
+      display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 8,
+    }}>
+      {sube ? '▲' : '▼'} {Math.abs(diff)}pp vs sem. anterior
     </span>
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Card de KPI individual
+// ---------------------------------------------------------------------------
+function KpiCard({
+  value, label, color, bg, loading, size = 'md',
+}: {
+  value:    number | string;
+  label:    string;
+  color?:   string;
+  bg?:      string;
+  loading?: boolean;
+  size?:    'sm' | 'md' | 'lg';
+}) {
+  const fontSize = size === 'lg' ? 32 : size === 'md' ? 24 : 18;
+  return (
+    <div style={{
+      background:   bg ?? 'var(--mc-color-surface)',
+      border:       `1px solid ${bg ? 'transparent' : 'var(--mc-color-border)'}`,
+      borderRadius: 'var(--mc-radius-lg)',
+      padding:      '12px 16px',
+      display:      'flex',
+      flexDirection:'column',
+      gap:           4,
+    }}>
+      {loading ? (
+        <span style={{ fontSize, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>—</span>
+      ) : (
+        <span style={{ fontSize, fontWeight: 600, color: color ?? 'var(--mc-color-text)', lineHeight: 1.2 }}>
+          {value}
+        </span>
+      )}
+      <span style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página principal
+// ---------------------------------------------------------------------------
 export function Metricas() {
   const usuario = useAuthStore((s) => s.usuario);
   const esJefe  = usuario?.rol === 'jefe';
 
-  const [desde,        setDesde]        = useState(defaultDesde);
-  const [hasta,        setHasta]        = useState(() => fechaLocalYmd(new Date()));
+  const [desde,         setDesde]         = useState(defaultDesde);
+  const [hasta,         setHasta]         = useState(() => fechaLocalYmd(new Date()));
   const [miembroFiltro, setMiembroFiltro] = useState<string | undefined>(esJefe ? undefined : usuario?.id);
 
-  const { data: nombres = {} } = useUsuariosNombreTablero();
+  const { data: nombres = {} }                        = useUsuariosNombreTablero();
   const uid = esJefe ? miembroFiltro : usuario?.id;
 
-  const { data: kpis,       isLoading: loadK } = useKpisRango(desde, hasta, uid);
+  const { data: kpis,         isLoading: loadK } = useKpisRango(desde, hasta, uid);
   const { data: porSemana = [], isLoading: loadS } = useKpisPorSemana(desde, hasta, uid);
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(desde, hasta, esJefe);
 
-  const maxTotal = useMemo(() => Math.max(...porSemana.map((s) => s.total), 1), [porSemana]);
+  const maxTotal       = useMemo(() => Math.max(...porSemana.map((s) => s.total), 1), [porSemana]);
+  const cumplimiento   = kpis ? pct(kpis.completadas, kpis.total) : null;
 
-  const cumplimiento = kpis ? pct(kpis.completadas, kpis.total) : null;
+  // Resumen ejecutivo para el jefe: cuántos miembros están por debajo del 50%
+  const miembrosBajoRendimiento = useMemo(() =>
+    comparativa.filter((m) => {
+      const tot = m.completadas + m.atrasadas + m.bloqueadas + m.reprogramadas;
+      return tot > 0 && pct(m.completadas, tot) < 50;
+    }).length,
+  [comparativa]);
 
   if (!usuario) return null;
 
   return (
     <div className={APP_PAGE_CLASS}>
-      <PageHeader title="Métricas" subtitle="Indicadores de rendimiento" />
+      <PageHeader
+        title="Métricas"
+        subtitle={
+          esJefe && miembrosBajoRendimiento > 0
+            ? `${miembrosBajoRendimiento} miembro${miembrosBajoRendimiento > 1 ? 's' : ''} con cumplimiento bajo`
+            : 'Indicadores de rendimiento'
+        }
+      />
 
-      {/* Filtros */}
+      {/* ── Filtros ──────────────────────────────────────────────────────── */}
       <FilterBar>
         <FilterBar.Date id="metricas-desde" label="Desde" value={desde} onChange={setDesde} />
         <FilterBar.Date id="metricas-hasta" label="Hasta" value={hasta} onChange={setHasta} />
@@ -114,87 +172,102 @@ export function Metricas() {
         )}
       </FilterBar>
 
-      {/* ── KPIs principales ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-
-        {/* Tasa de cumplimiento — destacada como KPI principal */}
-        <div className="mc-card !p-4 flex flex-col gap-2 col-span-2 sm:col-span-1">
+      {/* ── KPI principal: cumplimiento ──────────────────────────────────── */}
+      <div style={{
+        background:   cumplimiento !== null ? bgCumplimiento(cumplimiento) : 'var(--mc-color-surface)',
+        border:       `1px solid ${cumplimiento !== null ? 'transparent' : 'var(--mc-color-border)'}`,
+        borderRadius: 'var(--mc-radius-lg)',
+        padding:      '16px 20px',
+        display:      'flex',
+        alignItems:   'center',
+        gap:           20,
+        flexWrap:     'wrap',
+        marginBottom:  4,
+      }}>
+        <div>
           {loadK ? (
-            <span className="text-3xl font-semibold text-[var(--mc-color-text-secondary)]">—</span>
+            <span style={{ fontSize: 40, fontWeight: 700, color: 'var(--mc-color-text-secondary)' }}>—</span>
           ) : (
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-semibold" style={{ color: cumplimiento !== null && cumplimiento >= 70 ? '#27500A' : cumplimiento !== null && cumplimiento >= 40 ? '#854F0B' : '#A32D2D' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 40, fontWeight: 700, color: colorCumplimiento(cumplimiento ?? 0), lineHeight: 1 }}>
                 {cumplimiento ?? 0}%
               </span>
               <Tendencia porSemana={porSemana} />
             </div>
           )}
-          <span className="text-xs font-medium text-[var(--mc-color-text-secondary)]">Tasa de cumplimiento</span>
-          {/* Mini barra de progreso */}
-          {!loadK && kpis && (
-            <div className="h-1.5 w-full rounded-full bg-[var(--mc-color-bg-secondary)] overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${cumplimiento ?? 0}%`,
-                  background: (cumplimiento ?? 0) >= 70 ? '#27500A' : (cumplimiento ?? 0) >= 40 ? '#EF9F27' : '#E24B4A',
-                }}
-              />
-            </div>
-          )}
+          <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+            Tasa de cumplimiento
+          </p>
         </div>
 
-        {/* KPIs secundarios */}
-        {([
-          { key: 'total',        label: 'Total tareas',   color: 'var(--mc-color-text)' },
-          { key: 'completadas',  label: 'Completadas',    color: '#27500A' },
-          { key: 'atrasadas',    label: 'Atrasadas',      color: '#A32D2D' },
-          { key: 'en_progreso',  label: 'En progreso',    color: '#185FA5' },
-          { key: 'bloqueadas',   label: 'Bloqueadas',     color: '#854F0B' },
-          { key: 'reprogramadas',label: 'Reprogramadas',  color: '#3C3489' },
-          { key: 'incidencias',  label: 'Incidencias',    color: 'var(--mc-color-text-secondary)' },
-        ] as const).map(({ key, label, color }) => (
-          <div key={key} className="mc-card !p-3 flex flex-col gap-1">
-            {loadK ? (
-              <span className="text-2xl font-medium text-[var(--mc-color-text-secondary)]">—</span>
-            ) : (
-              <span className="text-2xl font-medium" style={{ color }}>{kpis?.[key] ?? 0}</span>
-            )}
-            <span className="text-xs text-[var(--mc-color-text-secondary)]">{label}</span>
+        {/* Barra de progreso principal */}
+        {!loadK && kpis && (
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ height: 8, borderRadius: 8, background: 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+              <div style={{
+                height:     '100%',
+                width:      `${cumplimiento ?? 0}%`,
+                borderRadius: 8,
+                background: colorCumplimiento(cumplimiento ?? 0),
+                transition: 'width 0.4s ease',
+              }} />
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
+              {kpis.completadas} de {kpis.total} tareas completadas en el período
+            </p>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* ── Gráfico semanal ────────────────────────────────────────────────── */}
+      {/* ── Grid de KPIs secundarios ─────────────────────────────────────── */}
+      <div style={{
+        display:             'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+        gap:                  10,
+      }}>
+        <KpiCard value={kpis?.total        ?? 0} label="Total tareas"   loading={loadK} />
+        <KpiCard value={kpis?.completadas  ?? 0} label="Completadas"    color="#27500A" bg="#EAF3DE" loading={loadK} />
+        <KpiCard value={kpis?.atrasadas    ?? 0} label="Atrasadas"      color="#A32D2D" bg={kpis?.atrasadas ? '#FCEBEB' : undefined}    loading={loadK} />
+        <KpiCard value={kpis?.en_progreso  ?? 0} label="En progreso"    color="#185FA5" loading={loadK} />
+        <KpiCard value={kpis?.bloqueadas   ?? 0} label="Bloqueadas"     color="#854F0B" bg={kpis?.bloqueadas ? '#FAEEDA' : undefined}   loading={loadK} />
+        <KpiCard value={kpis?.reprogramadas ?? 0} label="Reprogramadas" color="#3C3489" loading={loadK} />
+        <KpiCard value={kpis?.incidencias  ?? 0} label="Incidencias"    color="var(--mc-color-text-secondary)" loading={loadK} />
+      </div>
+
+      {/* ── Gráfico semanal ──────────────────────────────────────────────── */}
       <div className="mc-card">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium text-[var(--mc-color-text)]">Tareas por semana</p>
-          <div className="flex flex-wrap gap-3">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--mc-color-text)' }}>Tareas por semana</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {LEYENDA.map(({ key, label }) => (
-              <div key={key} className="flex items-center gap-1.5 text-[11px] text-[var(--mc-color-text-secondary)]">
-                <span className="inline-block h-2 w-2 rounded-sm" style={{ background: COLORES[key] }} />
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: COLORES[key], flexShrink: 0 }} />
                 {label}
               </div>
             ))}
           </div>
         </div>
+
         {loadS ? (
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
+          <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
         ) : porSemana.length === 0 ? (
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin datos en el rango seleccionado.</p>
+          <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Sin datos en el rango seleccionado.</p>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {porSemana.map((s) => {
               const tasaSem = pct(s.completadas, s.total);
               return (
-                <div key={s.semanaISO} className="flex items-center gap-3">
-                  {/* Label semana */}
-                  <span className="w-16 shrink-0 text-right text-xs text-[var(--mc-color-text-secondary)]">
+                <div key={s.semanaISO} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 52, textAlign: 'right', fontSize: 11, color: 'var(--mc-color-text-secondary)', flexShrink: 0 }}>
                     {s.semana}
                   </span>
 
                   {/* Barra apilada */}
-                  <div className="flex h-6 flex-1 overflow-hidden rounded" role="img" aria-label={`Semana ${s.semana}: ${s.total} tareas`}>
+                  <div
+                    style={{ flex: 1, height: 24, display: 'flex', overflow: 'hidden', borderRadius: 4 }}
+                    role="img"
+                    aria-label={`Semana ${s.semana}: ${s.total} tareas, ${tasaSem}% cumplimiento`}
+                  >
                     {LEYENDA.map(({ key }) => {
                       const val = s[key as keyof typeof s] as number;
                       if (!val) return null;
@@ -202,27 +275,25 @@ export function Metricas() {
                       return (
                         <div
                           key={key}
-                          style={{ width: `${w}%`, background: COLORES[key], minWidth: val > 0 ? 2 : 0 }}
+                          style={{ width: `${w}%`, background: COLORES[key], minWidth: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           title={`${val} ${key}`}
-                          className="flex items-center justify-center transition-all"
                         >
                           {w > 8 && (
-                            <span className="text-[9px] font-semibold text-white/90 select-none">
+                            <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.9)', userSelect: 'none' }}>
                               {val}
                             </span>
                           )}
                         </div>
                       );
                     })}
+                    {/* Fondo gris para el espacio sobrante */}
+                    <div style={{ flex: 1, background: 'var(--mc-color-border)' }} />
                   </div>
 
                   {/* Total + tasa */}
-                  <div className="flex w-20 shrink-0 items-center justify-end gap-1.5">
-                    <span className="text-xs font-medium text-[var(--mc-color-text)]">{s.total}</span>
-                    <span
-                      className="text-[10px] font-medium"
-                      style={{ color: tasaSem >= 70 ? '#27500A' : tasaSem >= 40 ? '#854F0B' : '#A32D2D' }}
-                    >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: 72, justifyContent: 'flex-end', flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--mc-color-text)' }}>{s.total}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: colorCumplimiento(tasaSem) }}>
                       {tasaSem}%
                     </span>
                   </div>
@@ -233,21 +304,31 @@ export function Metricas() {
         )}
       </div>
 
-      {/* ── Comparativa por miembro (solo jefe) ───────────────────────────── */}
+      {/* ── Comparativa por miembro (solo jefe) ──────────────────────────── */}
       {esJefe && (
         <div className="mc-card">
-          <p className="mb-3 text-sm font-medium text-[var(--mc-color-text)]">Comparativa por miembro</p>
+          <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: 'var(--mc-color-text)' }}>
+            Comparativa por miembro
+          </p>
           {loadC ? (
-            <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
+            <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
           ) : comparativa.length === 0 ? (
-            <p className="text-sm text-[var(--mc-color-text-secondary)]">Sin datos.</p>
+            <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Sin datos.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px] border-collapse text-sm">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr className="border-b border-[var(--mc-color-border)]">
-                    {['Miembro', 'Completadas', 'Atrasadas', 'Bloqueadas', 'Reprog.', 'Cumplim.'].map((h) => (
-                      <th key={h} className="p-2 text-left text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
+                  <tr style={{ borderBottom: '1px solid var(--mc-color-border)' }}>
+                    {['Miembro', 'Complet.', 'Atras.', 'Bloq.', 'Reprog.', 'Cumplim.'].map((h) => (
+                      <th key={h} style={{
+                        padding:       '6px 8px',
+                        textAlign:     'left',
+                        fontSize:       10,
+                        fontWeight:     600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '.06em',
+                        color:         'var(--mc-color-text-secondary)',
+                      }}>
                         {h}
                       </th>
                     ))}
@@ -257,30 +338,41 @@ export function Metricas() {
                   {comparativa.map((m) => {
                     const totalM = m.completadas + m.atrasadas + m.bloqueadas + m.reprogramadas;
                     const cumplM = pct(m.completadas, totalM);
+                    const esBajo = totalM > 0 && cumplM < 50;
+
                     return (
-                      <tr key={m.usuarioId} className="border-b border-[var(--mc-color-border)] last:border-b-0 hover:bg-[var(--mc-color-bg-secondary)] transition-colors">
-                        <td className="p-2 font-medium text-[var(--mc-color-text)]">{m.nombre}</td>
-                        <td className="p-2 font-medium" style={{ color: '#27500A' }}>{m.completadas}</td>
-                        <td className="p-2 font-medium" style={{ color: '#A32D2D' }}>{m.atrasadas}</td>
-                        <td className="p-2 font-medium" style={{ color: '#854F0B' }}>{m.bloqueadas}</td>
-                        <td className="p-2 font-medium" style={{ color: '#3C3489' }}>{m.reprogramadas}</td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            {/* Mini barra */}
-                            <div className="h-1.5 w-16 rounded-full bg-[var(--mc-color-bg-secondary)] overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${cumplM}%`,
-                                  background: cumplM >= 70 ? '#27500A' : cumplM >= 40 ? '#EF9F27' : '#E24B4A',
-                                }}
-                              />
+                      <tr
+                        key={m.usuarioId}
+                        style={{
+                          borderBottom: '1px solid var(--mc-color-border)',
+                          background:   esBajo ? '#FFF8F8' : undefined,
+                        }}
+                      >
+                        <td style={{ padding: '8px', fontWeight: 500, color: 'var(--mc-color-text)' }}>
+                          {m.nombre}
+                          {esBajo && (
+                            <span style={{ marginLeft: 6, fontSize: 10, color: '#A32D2D', fontWeight: 400 }}>
+                              bajo rendimiento
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: '#27500A' }}>{m.completadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: m.atrasadas > 0 ? '#A32D2D' : 'var(--mc-color-text-secondary)' }}>{m.atrasadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: m.bloqueadas > 0 ? '#854F0B' : 'var(--mc-color-text-secondary)' }}>{m.bloqueadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: '#3C3489' }}>{m.reprogramadas}</td>
+                        <td style={{ padding: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ height: 6, width: 80, borderRadius: 6, background: 'var(--mc-color-border)', overflow: 'hidden', flexShrink: 0 }}>
+                              <div style={{
+                                height:     '100%',
+                                width:      `${cumplM}%`,
+                                borderRadius: 6,
+                                background: colorCumplimiento(cumplM),
+                                transition: 'width 0.4s ease',
+                              }} />
                             </div>
-                            <span
-                              className="text-xs font-semibold"
-                              style={{ color: cumplM >= 70 ? '#27500A' : cumplM >= 40 ? '#854F0B' : '#A32D2D' }}
-                            >
-                              {fmtPct(m.completadas, totalM)}
+                            <span style={{ fontSize: 12, fontWeight: 700, color: colorCumplimiento(cumplM), minWidth: 34 }}>
+                              {cumplM}%
                             </span>
                           </div>
                         </td>

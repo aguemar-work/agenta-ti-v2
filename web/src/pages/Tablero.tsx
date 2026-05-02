@@ -25,12 +25,8 @@ import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
-import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { ColumnaTableroId } from '@/api/tablero';
 
-// ---------------------------------------------------------------------------
-// Configuración de presentación
-// ---------------------------------------------------------------------------
 const COLUMNAS: ColumnaTableroId[] = ['pendiente', 'en_progreso', 'bloqueada', 'completada'];
 
 const collisionTablero: CollisionDetection = (args) => {
@@ -42,8 +38,6 @@ const collisionTablero: CollisionDetection = (args) => {
   if (col) return [col];
   return corners;
 };
-
-// ---------------------------------------------------------------------------
 
 export function Tablero() {
   const {
@@ -73,10 +67,15 @@ export function Tablero() {
 
   if (!usuario) return null;
 
+  // Conteo de atrasadas para el badge en la columna pendiente
+  const atrasadasEnPendiente = (columnas['pendiente'] ?? []).filter(
+    (t) => t.estado === 'atrasada'
+  ).length;
+
   return (
     <div className={APP_PAGE_CLASS}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <PageHeader
         title="Tablero"
         actions={
@@ -107,19 +106,25 @@ export function Tablero() {
               onClick={() => setMostrarCompletadas((v) => !v)}
               active={mostrarCompletadas}
               variant="toggle"
-              title={mostrarCompletadas ? 'Mostrando completadas de los últimos 7 días' : 'Mostrar tareas completadas (últimos 7 días)'}
+              title={mostrarCompletadas
+                ? 'Mostrando completadas de los últimos 7 días'
+                : 'Mostrar tareas completadas (últimos 7 días)'}
             >
               {mostrarCompletadas
-                ? <><CheckSquare size={13} aria-hidden /> Completadas <span style={{ opacity: 0.65, fontSize: '11px' }}>(últ. 7 días)</span></>
+                ? <><CheckSquare size={13} aria-hidden /> Completadas <span style={{ opacity: 0.65, fontSize: 11 }}>(últ. 7 días)</span></>
                 : <><Square size={13} aria-hidden /> Completadas</>}
             </FilterBar.Action>
           </FilterBar>
         }
       />
 
-      {isError && <p className="text-sm text-[var(--mc-color-danger)]">Error al cargar tareas.</p>}
+      {isError && (
+        <p style={{ fontSize: 13, color: 'var(--mc-color-danger)', margin: '0 0 12px' }}>
+          Error al cargar tareas.
+        </p>
+      )}
 
-      {/* ── Kanban ─────────────────────────────────────────────────────── */}
+      {/* ── Kanban ──────────────────────────────────────────────────────── */}
       <DndContext
         sensors={sensors}
         collisionDetection={collisionTablero}
@@ -142,6 +147,7 @@ export function Tablero() {
                   columna={col}
                   count={(columnas[col] ?? []).length}
                   showPlaceholder={Boolean(activeDragId && overColId === `col:${col}`)}
+                  atrasadasCount={col === 'pendiente' ? atrasadasEnPendiente : 0}
                 >
                   {(columnas[col] ?? []).map((t) => (
                     <DraggableTareaTablero
@@ -163,27 +169,33 @@ export function Tablero() {
             </div>
           </div>
 
-          {/* Drag overlay */}
+          {/* ── Drag overlay ──────────────────────────────────────────────── */}
           <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
             {tareaDragOverlay && (() => {
-              const est         = estadoEfectivoTablero(tareaDragOverlay, hoy);
-              const atrasadaBar = est === 'atrasada'  ? 'border-l-2 border-[var(--mc-color-danger)]'  : '';
-              const bloqueadaBar= est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
+              const est         = tareaDragOverlay.estado;
+              const borderColor = est === 'atrasada' ? '#E24B4A' :
+                                  est === 'bloqueada' ? '#EF9F27' : 'transparent';
               return (
                 <div
                   className="mc-drag-overlay-card pointer-events-none max-w-[300px]"
                   style={{ transform: 'rotate(2deg)', boxShadow: '0 18px 44px -8px rgba(0,0,0,0.28)' }}
                 >
-                  <div className={`mc-card !p-3 flex flex-col gap-2 ${atrasadaBar} ${bloqueadaBar}`.trim()}>
+                  <div
+                    className="mc-card !p-3 flex flex-col gap-2"
+                    style={{
+                      borderLeft:  `3px solid ${borderColor}`,
+                      paddingLeft: borderColor !== 'transparent' ? 10 : undefined,
+                    }}
+                  >
                     <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug line-clamp-2">
                       {tareaDragOverlay.titulo}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'} text-[10px]`}>
+                      <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'}`} style={{ fontSize: 10 }}>
                         {TAREA_LABEL[est] ?? est}
                       </span>
                       {nombres[tareaDragOverlay.asignado_a] && (
-                        <span className="text-[10px] text-[var(--mc-color-text-secondary)]">
+                        <span style={{ fontSize: 10, color: 'var(--mc-color-text-secondary)' }}>
                           {nombres[tareaDragOverlay.asignado_a]}
                         </span>
                       )}
@@ -196,7 +208,7 @@ export function Tablero() {
         </div>
       </DndContext>
 
-      {/* ── Modales ────────────────────────────────────────────────────── */}
+      {/* ── Modales ─────────────────────────────────────────────────────── */}
       <ModalJustificacion
         open={modalJust !== null}
         titulo={modalJust?.nuevo === 'bloqueada' ? 'Bloquear tarea' : 'Mover tarea completada'}

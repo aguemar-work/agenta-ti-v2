@@ -5,6 +5,9 @@ export type RolUsuario = 'jefe' | 'miembro';
 
 export type EstadoObjetivo = 'activo' | 'completado' | 'cancelado';
 
+/** Nivel de riesgo calculado en el frontend a partir del % de avance y fecha_limite. */
+export type NivelRiesgoObjetivo = 'critico' | 'moderado' | 'aceptable' | 'en_ritmo' | 'sin_fecha';
+
 export type EstadoTarea =
   | 'pendiente'
   | 'en_progreso'
@@ -14,7 +17,11 @@ export type EstadoTarea =
   | 'atrasada'
   | 'cancelada';
 
-export type TipoTarea = 'planificada' | 'no_planificada' | 'libre';
+/** Urgencia visual de una tarea según la hora del día. Solo aplica en vista HOY. */
+export type UrgenciaHoraria = 'normal' | 'precaucion' | 'urgente' | 'vencida_hoy';
+
+/** 'libre' eliminado — las ideas sin fecha viven en bitácora. */
+export type TipoTarea = 'planificada' | 'no_planificada';
 
 export type PrioridadTarea = 'alta' | 'media' | 'baja';
 
@@ -24,12 +31,16 @@ export type VisibilidadBitacora = 'todos' | 'solo_jefe' | 'privado';
 
 export type TipoAccionLog =
   | 'creada'
+  | 'iniciada'
   | 'reprogramada'
   | 'eliminada'
   | 'estado_cambiado'
   | 'prioridad_cambiada'
   | 'editada'
-  | 'cancelada';
+  | 'cancelada'
+  | 'bloqueada'
+  | 'desbloqueada'
+  | 'completada';
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -50,7 +61,6 @@ export interface Objetivo {
   fecha_limite: string | null;
   estado: EstadoObjetivo;
   creado_por: Id;
-  /** Usuario responsable del objetivo (puede ser jefe o miembro). */
   responsable_id: Id | null;
   created_at: string;
   updated_at: string;
@@ -71,6 +81,8 @@ export interface Tarea {
   objetivo_id: Id | null;
   creado_por: Id;
   es_imprevisto: boolean;
+  /** UUID de la nota de bitácora que originó esta tarea (trazabilidad). */
+  nota_origen_id: Id | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,10 +123,13 @@ export interface LogAccion {
   created_at: string;
 }
 
-export interface ConfiguracionSemana {
+export interface LogOT {
   id: Id;
-  fecha_inicio_semana: string;
-  notas_semana: string | null;
+  ot_id: Id;
+  usuario_id: Id;
+  accion: 'creada' | 'enviada' | 'aprobada' | 'rechazada' | 'iniciada' | 'completada' | 'cancelada' | 'editada';
+  estado_anterior: string | null;
+  estado_nuevo: string | null;
+  motivo: string | null;
   created_at: string;
-  updated_at: string;
 }

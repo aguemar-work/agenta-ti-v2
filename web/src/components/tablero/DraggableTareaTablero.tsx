@@ -1,109 +1,181 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { Clock, GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
-import { estadoEfectivoTablero } from '@/lib/tableroEstado';
+import { urgenciaHoraria } from '@/lib/tareaUrgencia';
 import type { Tarea } from '@/types';
 
 type Props = {
-  tarea: Tarea;
-  hoyYmd: string;
-  canDrag: boolean;
-  esJefe: boolean;
+  tarea:           Tarea;
+  hoyYmd:          string;
+  canDrag:         boolean;
+  esJefe:          boolean;
   asignadoNombre?: string;
-  onOpenDetalle?: () => void;
-  onIniciar?: () => void;
-  onCompletar?: () => void;
-  onBloquear?: () => void;
-  onDesbloquear?: () => void;
+  onOpenDetalle?:  () => void;
+  onIniciar?:      () => void;
+  onCompletar?:    () => void;
+  onBloquear?:     () => void;
+  onDesbloquear?:  () => void;
 };
 
 export function DraggableTareaTablero({
-  tarea,
-  hoyYmd,
-  canDrag,
-  esJefe,
-  asignadoNombre,
-  onOpenDetalle,
-  onIniciar,
-  onCompletar,
-  onBloquear,
-  onDesbloquear,
+  tarea, hoyYmd, canDrag, esJefe, asignadoNombre,
+  onOpenDetalle, onIniciar, onCompletar, onBloquear, onDesbloquear,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `kanban-${tarea.id}`,
+    id:       `kanban-${tarea.id}`,
     disabled: !canDrag,
   });
 
   const style: CSSProperties = isDragging
     ? { opacity: 0, visibility: 'hidden', touchAction: 'none' }
     : { transform: CSS.Translate.toString(transform), touchAction: canDrag ? 'none' : undefined };
-  const est = estadoEfectivoTablero(tarea, hoyYmd);
-  const atrasadaBar = est === 'atrasada' ? 'border-l-2 border-[var(--mc-color-danger)]' : '';
-  const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
+
+  const est      = tarea.estado;
+  const urgencia = urgenciaHoraria(est);
+
+  // ── Color del borde izquierdo según estado + urgencia ─────────────────
+  const borderColor =
+    est === 'atrasada'         ? '#E24B4A' :
+    est === 'bloqueada'        ? '#EF9F27' :
+    urgencia === 'vencida_hoy' ? '#A32D2D' :
+    urgencia === 'urgente'     ? '#E24B4A' :
+    urgencia === 'precaucion'  ? '#EF9F27' :
+    'transparent';
+
+  const bgColor =
+    est === 'atrasada'         ? '#FCEBEB' :
+    urgencia === 'vencida_hoy' ? '#E24B4A' :
+    urgencia === 'urgente'     ? '#FCEBEB' :
+    undefined;
+
+  const textColor =
+    urgencia === 'vencida_hoy' ? '#fff'    :
+    est === 'atrasada'          ? '#791F1F' :
+    urgencia === 'urgente'      ? '#791F1F' :
+    'var(--mc-color-text)';
+
+  const metaColor =
+    urgencia === 'vencida_hoy' ? 'rgba(255,255,255,0.8)' :
+    est === 'atrasada'          ? '#A32D2D'               :
+    'var(--mc-color-text-secondary)';
+
+  // ── Badge de urgencia horaria (solo si aplica) ─────────────────────────
+  const urgenciaLabels: Partial<Record<typeof urgencia, string>> = {
+    precaucion:  'Por vencer',
+    urgente:     'Urgente',
+    vencida_hoy: 'Vencida hoy',
+  };
+  const urgenciaLabel = urgenciaLabels[urgencia];
 
   return (
     <div ref={setNodeRef} style={style} draggable={false}>
-      <div className={`mc-card !p-3 flex flex-col gap-2 ${atrasadaBar} ${bloqueadaBar}`.trim()}>
+      <div
+        className="mc-card !p-3 flex flex-col gap-2"
+        style={{
+          borderLeft:   `3px solid ${borderColor}`,
+          paddingLeft:  borderColor !== 'transparent' ? 10 : undefined,
+          background:   bgColor,
+          transition:   'background 0.2s, border-color 0.2s',
+        }}
+      >
         <div className="flex items-start gap-2">
-          {canDrag ? (
+          {canDrag && (
             <button
               type="button"
-              className="mc-btn-ghost !p-0.5 mt-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
+              className="mc-btn-ghost !p-0.5 mt-0.5 shrink-0"
+              style={{ touchAction: 'none', color: metaColor }}
               aria-label="Arrastrar"
               {...listeners}
               {...attributes}
-              style={{ touchAction: 'none' }}
               draggable={false}
               onClick={(e) => e.stopPropagation()}
             >
               <GripVertical size={14} />
             </button>
-          ) : null}
-          <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpenDetalle}>
-            <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug line-clamp-2">{tarea.titulo}</p>
+          )}
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={onOpenDetalle}
+          >
+            <p
+              className="text-xs font-medium leading-snug line-clamp-2"
+              style={{ color: textColor }}
+            >
+              {tarea.titulo}
+            </p>
           </button>
         </div>
 
+        {/* Meta: estado + urgencia + asignado */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'} text-[10px]`}>{TAREA_LABEL[est] ?? est}</span>
-          {asignadoNombre ? <span className="text-[10px] text-[var(--mc-color-text-secondary)]">{asignadoNombre}</span> : null}
+          <span
+            className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'}`}
+            style={{ fontSize: 10 }}
+          >
+            {TAREA_LABEL[est] ?? est}
+          </span>
+          {urgenciaLabel && (
+            <span style={{
+              display:      'inline-flex',
+              alignItems:   'center',
+              gap:           3,
+              fontSize:      10,
+              fontWeight:    600,
+              padding:       '1px 6px',
+              borderRadius:  10,
+              background:    urgencia === 'vencida_hoy' ? 'rgba(255,255,255,0.2)' :
+                             urgencia === 'urgente'     ? '#F7C1C1' : '#FAC775',
+              color:         urgencia === 'vencida_hoy' ? '#fff' :
+                             urgencia === 'urgente'     ? '#791F1F' : '#633806',
+            }}>
+              <Clock size={9} />
+              {urgenciaLabel}
+            </span>
+          )}
+          {asignadoNombre && (
+            <span style={{ fontSize: 10, color: metaColor }}>{asignadoNombre}</span>
+          )}
         </div>
 
-        {est !== 'completada' && est !== 'cancelada' ? (
+        {/* CTAs */}
+        {est !== 'completada' && est !== 'cancelada' && (
           <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {(est === 'pendiente' || est === 'atrasada' || est === 'reprogramada') && onIniciar ? (
+            {(est === 'pendiente' || est === 'atrasada' || est === 'reprogramada') && onIniciar && (
               <button type="button" className="mc-btn !px-3 !py-1.5 text-xs" onClick={onIniciar}>
                 Iniciar
               </button>
-            ) : null}
-            {est === 'en_progreso' && onCompletar ? (
+            )}
+            {est === 'en_progreso' && onCompletar && (
               <button type="button" className="mc-btn !px-3 !py-1.5 text-xs" onClick={onCompletar}>
                 Completar
               </button>
-            ) : null}
-            {est !== 'bloqueada' && onBloquear ? (
+            )}
+            {est !== 'bloqueada' && onBloquear && (
               <button
                 type="button"
-                className="mc-btn-secondary !px-3 !py-1.5 text-xs !text-[var(--mc-color-warning)]"
+                className="mc-btn-secondary !px-3 !py-1.5 text-xs"
+                style={{ color: 'var(--mc-color-warning)' }}
                 onClick={onBloquear}
               >
                 Bloquear
               </button>
-            ) : null}
-            {est === 'bloqueada' && esJefe && onDesbloquear ? (
+            )}
+            {est === 'bloqueada' && esJefe && onDesbloquear && (
               <button
                 type="button"
-                className="mc-btn-secondary !px-3 !py-1.5 text-xs !text-[var(--mc-color-accent)]"
+                className="mc-btn-secondary !px-3 !py-1.5 text-xs"
+                style={{ color: 'var(--mc-color-accent)' }}
                 onClick={onDesbloquear}
               >
                 Desbloquear
               </button>
-            ) : null}
+            )}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

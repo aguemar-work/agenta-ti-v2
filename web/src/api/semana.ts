@@ -1,9 +1,14 @@
+/**
+ * api/semana.ts
+ * Capa de acceso a datos para la vista Mi Semana y operaciones de tarea.
+ */
+
 import { getInsforge } from '@/lib/insforge';
 import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { parseEvento, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
 import { agregarDias, semanaIsoDesdeFecha } from '@/lib/semanas';
-import type { Evento, Tarea, TipoEvento } from '@/types';
+import type { Evento, EstadoTarea, Tarea, TipoEvento } from '@/types';
 
 export async function getTareasSemana(usuarioId: string, semanaISO: string): Promise<Tarea[]> {
   const insforge = getInsforge();
@@ -19,10 +24,8 @@ export async function getTareasSemana(usuarioId: string, semanaISO: string): Pro
 }
 
 function solapaSemana(ev: Evento, lunes: Date): boolean {
-  const startWeek = new Date(lunes);
-  startWeek.setHours(0, 0, 0, 0);
-  const endWeek = agregarDias(lunes, 7);
-  endWeek.setHours(0, 0, 0, 0);
+  const startWeek = new Date(lunes); startWeek.setHours(0, 0, 0, 0);
+  const endWeek   = agregarDias(lunes, 7); endWeek.setHours(0, 0, 0, 0);
   const a = new Date(ev.fecha_inicio).getTime();
   const b = new Date(ev.fecha_fin).getTime();
   return a < endWeek.getTime() && b > startWeek.getTime();
@@ -30,10 +33,8 @@ function solapaSemana(ev: Evento, lunes: Date): boolean {
 
 export async function getEventosSemana(usuarioId: string, lunes: Date): Promise<Evento[]> {
   const insforge = getInsforge();
-  const startWeek = new Date(lunes);
-  startWeek.setHours(0, 0, 0, 0);
-  const endWeek = agregarDias(lunes, 7);
-  endWeek.setHours(0, 0, 0, 0);
+  const startWeek = new Date(lunes); startWeek.setHours(0, 0, 0, 0);
+  const endWeek   = agregarDias(lunes, 7); endWeek.setHours(0, 0, 0, 0);
   const { data, error } = await insforge.database
     .from('evento')
     .select('*')
@@ -41,45 +42,48 @@ export async function getEventosSemana(usuarioId: string, lunes: Date): Promise<
     .lt('fecha_inicio', endWeek.toISOString())
     .gt('fecha_fin', startWeek.toISOString());
   if (error) throw error;
-  const list = (data ?? []).map((r) => parseEvento(r as Record<string, unknown>));
-  return list.filter((e) => solapaSemana(e, lunes));
+  return (data ?? []).map((r) => parseEvento(r as Record<string, unknown>))
+    .filter((e) => solapaSemana(e, lunes));
 }
 
 export type CrearTareaPlanificadaInput = {
-  titulo: string;
-  prioridad: Tarea['prioridad'];
-  descripcion?: string | null;
-  fecha_planificada: string;
-  asignado_a?: string | null;
-  creado_por: string;
-  objetivo_id?: string | null;
+  titulo:             string;
+  prioridad:          Tarea['prioridad'];
+  descripcion?:       string | null;
+  fecha_planificada:  string;
+  asignado_a?:        string | null;
+  creado_por:         string;
+  objetivo_id?:       string | null;
+  /** UUID de la nota de bitácora que originó esta tarea (opcional). */
+  nota_origen_id?:    string | null;
 };
 
 export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): Promise<Tarea> {
   const insforge = getInsforge();
-  const semana = semanaIsoDesdeFecha(new Date(`${data.fecha_planificada}T12:00:00`));
+  const semana   = semanaIsoDesdeFecha(new Date(`${data.fecha_planificada}T12:00:00`));
   const asignado = resolveAsignadoA(data.asignado_a, data.creado_por);
   const row = {
-    titulo: data.titulo,
-    descripcion: data.descripcion ?? null,
-    prioridad: data.prioridad,
-    estado: 'pendiente' as const,
-    tipo: 'planificada' as const,
-    fecha_planificada: data.fecha_planificada,
+    titulo:             data.titulo.trim(),
+    descripcion:        data.descripcion ?? null,
+    prioridad:          data.prioridad,
+    estado:             'pendiente' as const,
+    tipo:               'planificada' as const,
+    fecha_planificada:  data.fecha_planificada,
     semana_planificada: semana,
-    asignado_a: asignado,
-    creado_por: data.creado_por,
-    objetivo_id: data.objetivo_id ?? null,
-    es_imprevisto: false,
+    asignado_a:         asignado,
+    creado_por:         data.creado_por,
+    objetivo_id:        data.objetivo_id ?? null,
+    es_imprevisto:      false,
+    nota_origen_id:     data.nota_origen_id ?? null,
   };
-  const { data: inserted, error } = await insforge.database.from('tarea').insert([row]).select('*').single();
+  const { data: inserted, error } = await insforge.database
+    .from('tarea').insert([row]).select('*').single();
   if (error) throw error;
   return parseTarea(inserted as Record<string, unknown>);
 }
 
 export async function moverTareaADia(tareaId: string, fecha: string, semana: string): Promise<void> {
-  const insforge = getInsforge();
-  const { error } = await insforge.database.rpc('sgtd_mover_tarea_dia', {
+  const { error } = await getInsforge().database.rpc('sgtd_mover_tarea_dia', {
     p_tarea_id: tareaId,
     p_fecha:    fecha,
     p_semana:   semana,
@@ -93,20 +97,15 @@ export async function moverTareaEntreDias(tareaId: string, nuevaFecha: string): 
 }
 
 export type ActualizarTareaInput = {
-  tareaId: string;
-  /** ID del usuario que realiza la edición — requerido por el RPC server-side. */
+  tareaId:        string;
   usuarioActorId: string;
-  titulo: string;
-  prioridad: Tarea['prioridad'];
-  descripcion?: string | null;
-  objetivo_id?: string | null;
-  asignado_a?: string | null;
+  titulo:         string;
+  prioridad:      Tarea['prioridad'];
+  descripcion?:   string | null;
+  objetivo_id?:   string | null;
+  asignado_a?:    string | null;
 };
 
-/**
- * Actualiza metadatos de una tarea (título, prioridad, descripción, objetivo, asignado).
- * La validación de permisos y el log de cambios ocurren en el servidor.
- */
 export async function actualizarTarea(input: ActualizarTareaInput): Promise<void> {
   const { error } = await getInsforge().database.rpc('sgtd_actualizar_tarea', {
     p_tarea_id:    input.tareaId,
@@ -120,13 +119,96 @@ export async function actualizarTarea(input: ActualizarTareaInput): Promise<void
   if (error) throw error;
 }
 
+/**
+ * Cambia el estado de una tarea vía RPC sgtd_cambiar_estado_tarea.
+ * El log se registra automáticamente en el servidor.
+ *
+ * Estados que requieren justificación: 'bloqueada', 'cancelada'
+ */
+export async function cambiarEstadoTarea(input: {
+  tareaId:        string;
+  nuevoEstado:    EstadoTarea;
+  justificacion?: string;
+}): Promise<void> {
+  const requiereJustificacion = ['bloqueada', 'cancelada'].includes(input.nuevoEstado);
+
+  if (requiereJustificacion) {
+    const j = (input.justificacion ?? '').trim();
+    if (j.length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
+  }
+
+  const { error } = await getInsforge().database.rpc('sgtd_cambiar_estado_tarea', {
+    p_tarea_id:      input.tareaId,
+    p_nuevo_estado:  input.nuevoEstado,
+    p_justificacion: input.justificacion?.trim() ?? null,
+  });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Alias hacia las RPCs existentes (sin cambios de firma)
+// ---------------------------------------------------------------------------
+
+export async function eliminarTareaConMotivo(input: {
+  tareaId:   string;
+  usuarioId: string;
+  motivo:    string;
+}): Promise<void> {
+  if (input.motivo.trim().length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
+  const { error } = await getInsforge().database.rpc('sgtd_eliminar_tarea_con_motivo', {
+    p_tarea_id:   input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_motivo:     input.motivo.trim(),
+  });
+  if (error) throw error;
+}
+
+export async function reprogramarTareaConLog(input: {
+  tareaId:       string;
+  usuarioId:     string;
+  nuevaFecha:    string;
+  justificacion: string;
+  nuevoEstado?:  Tarea['estado'];
+}): Promise<void> {
+  const j = input.justificacion.trim();
+  if (j.length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
+  const { error } = await getInsforge().database.rpc('sgtd_reprogramar_tarea_con_log', {
+    p_tarea_id:     input.tareaId,
+    p_usuario_id:   input.usuarioId,
+    p_nueva_fecha:  input.nuevaFecha,
+    p_justificacion: j,
+    p_nuevo_estado: input.nuevoEstado ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function desbloquearTareaConLog(input: {
+  tareaId:       string;
+  usuarioId:     string;
+  nuevaFecha:    string;
+  justificacion: string;
+}): Promise<void> {
+  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
+  const { error } = await getInsforge().database.rpc('sgtd_desbloquear_tarea_con_log', {
+    p_tarea_id:      input.tareaId,
+    p_usuario_id:    input.usuarioId,
+    p_nueva_fecha:   input.nuevaFecha,
+    p_justificacion: input.justificacion.trim(),
+  });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Eventos
+// ---------------------------------------------------------------------------
+
 export type CrearEventoUsuarioInput = {
-  titulo: string;
-  tipo: TipoEvento;
-  fecha_dia: string;
-  hora_inicio: string;
-  hora_fin: string;
-  usuario_id: string;
+  titulo:        string;
+  tipo:          TipoEvento;
+  fecha_dia:     string;
+  hora_inicio:   string;
+  hora_fin:      string;
+  usuario_id:    string;
   es_recurrente: boolean;
 };
 
@@ -139,91 +221,18 @@ function toIsoLocal(fechaDia: string, hora: string): string {
 
 export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promise<Evento> {
   const insforge = getInsforge();
-  const row = {
-    titulo: input.titulo.trim(),
-    tipo: input.tipo,
-    fecha_inicio: toIsoLocal(input.fecha_dia, input.hora_inicio),
-    fecha_fin: toIsoLocal(input.fecha_dia, input.hora_fin),
-    usuario_id: input.usuario_id,
-    es_recurrente: input.es_recurrente,
-  };
-  const { data: inserted, error } = await insforge.database.from('evento').insert([row]).select('*').single();
+  const { data: inserted, error } = await insforge.database
+    .from('evento')
+    .insert([{
+      titulo:        input.titulo.trim(),
+      tipo:          input.tipo,
+      fecha_inicio:  toIsoLocal(input.fecha_dia, input.hora_inicio),
+      fecha_fin:     toIsoLocal(input.fecha_dia, input.hora_fin),
+      usuario_id:    input.usuario_id,
+      es_recurrente: input.es_recurrente,
+    }])
+    .select('*')
+    .single();
   if (error) throw error;
   return parseEvento(inserted as Record<string, unknown>);
-}
-
-// =============================================================================
-// Operaciones multi-paso — RPC atómica (transaccional en Postgres).
-// Requiere: db/migrations/005_rpc_operaciones_atomicas.sql aplicado.
-// =============================================================================
-
-export async function eliminarTareaConMotivo(input: {
-  tareaId: string;
-  usuarioId: string;
-  motivo: string;
-}): Promise<void> {
-  if (input.motivo.trim().length < MIN_JUSTIFICACION_CHARS) {
-    throw new Error(MSG_JUSTIFICACION_CORTA);
-  }
-  const { error } = await getInsforge().database.rpc('sgtd_eliminar_tarea_con_motivo', {
-    p_tarea_id: input.tareaId,
-    p_usuario_id: input.usuarioId,
-    p_motivo: input.motivo.trim(),
-  });
-  if (error) throw error;
-}
-
-export async function bloquearTareaConLog(input: {
-  tareaId: string;
-  usuarioId: string;
-  justificacion: string;
-}): Promise<void> {
-  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) {
-    throw new Error(MSG_JUSTIFICACION_CORTA);
-  }
-  const { error } = await getInsforge().database.rpc('sgtd_bloquear_tarea_con_log', {
-    p_tarea_id: input.tareaId,
-    p_usuario_id: input.usuarioId,
-    p_justificacion: input.justificacion.trim(),
-  });
-  if (error) throw error;
-}
-
-export async function reprogramarTareaConLog(input: {
-  tareaId: string;
-  usuarioId: string;
-  nuevaFecha: string;
-  justificacion: string;
-  nuevoEstado?: Tarea['estado'];
-}): Promise<void> {
-  const justificacion = input.justificacion.trim();
-  if (justificacion.length < MIN_JUSTIFICACION_CHARS) {
-    throw new Error(MSG_JUSTIFICACION_CORTA);
-  }
-  const { error } = await getInsforge().database.rpc('sgtd_reprogramar_tarea_con_log', {
-    p_tarea_id: input.tareaId,
-    p_usuario_id: input.usuarioId,
-    p_nueva_fecha: input.nuevaFecha,
-    p_justificacion: justificacion,
-    p_nuevo_estado: input.nuevoEstado ?? null,
-  });
-  if (error) throw error;
-}
-
-export async function desbloquearTareaConLog(input: {
-  tareaId: string;
-  usuarioId: string;
-  nuevaFecha: string;
-  justificacion: string;
-}): Promise<void> {
-  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) {
-    throw new Error(MSG_JUSTIFICACION_CORTA);
-  }
-  const { error } = await getInsforge().database.rpc('sgtd_desbloquear_tarea_con_log', {
-    p_tarea_id: input.tareaId,
-    p_usuario_id: input.usuarioId,
-    p_nueva_fecha: input.nuevaFecha,
-    p_justificacion: input.justificacion.trim(),
-  });
-  if (error) throw error;
 }

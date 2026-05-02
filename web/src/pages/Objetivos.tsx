@@ -2,10 +2,81 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
+import { calcularPorcentajeObjetivo, nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
 import type { EstadoObjetivo, Tarea } from '@/types';
+import { PageHeader } from '@/components/layout/PageHeader';
 
+// ---------------------------------------------------------------------------
+// Barra de progreso con color según nivel de riesgo
+// ---------------------------------------------------------------------------
+function BarraProgreso({
+  pct,
+  fechaLimite,
+  tareas,
+  size = 'sm',
+}: {
+  pct:         number;
+  fechaLimite: string | null;
+  tareas?:     { estado: string; prioridad: 'alta' | 'media' | 'baja' }[];
+  size?:       'sm' | 'md';
+}) {
+  const nivel    = nivelRiesgoObjetivo(pct, fechaLimite);
+  const config   = RIESGO_CONFIG[nivel];
+  const altura   = size === 'md' ? 8 : 5;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{
+        height:       altura,
+        width:        '100%',
+        borderRadius: altura,
+        background:   nivel === 'sin_fecha' ? 'var(--mc-color-border)' :
+                      nivel === 'critico'   ? '#F7C1C1' :
+                      nivel === 'moderado'  ? '#FAC775' :
+                      '#C0DD97',
+        overflow:     'hidden',
+      }}>
+        <div style={{
+          height:       '100%',
+          width:        `${Math.min(pct, 100)}%`,
+          borderRadius: altura,
+          background:   config.barColor,
+          transition:   'width 0.4s ease',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Badge de riesgo (solo si tiene fecha_limite)
+// ---------------------------------------------------------------------------
+function BadgeRiesgo({ pct, fechaLimite }: { pct: number; fechaLimite: string | null }) {
+  const nivel  = nivelRiesgoObjetivo(pct, fechaLimite);
+  const config = RIESGO_CONFIG[nivel];
+  if (nivel === 'sin_fecha' || nivel === 'en_ritmo') return null;
+
+  return (
+    <span style={{
+      display:       'inline-block',
+      fontSize:       10,
+      fontWeight:     600,
+      padding:        '2px 7px',
+      borderRadius:   10,
+      background:     config.bgColor,
+      color:          config.textColor,
+      letterSpacing: '.02em',
+      flexShrink:     0,
+    }}>
+      {config.label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página principal
+// ---------------------------------------------------------------------------
 export function Objetivos() {
   const {
     usuario, esJefe,
@@ -44,134 +115,215 @@ export function Objetivos() {
   const canSubmitNuevo = !creandoObj && nuevoObjetivoForm.titulo.trim().length > 0
     && (esJefe ? nuevoObjetivoForm.responsableId.trim().length > 0 : true);
 
+  // Conteo de objetivos críticos para el subtítulo
+  const criticos = objetivos.filter((o) =>
+    nivelRiesgoObjetivo(o.pct, o.fecha_limite) === 'critico'
+  ).length;
+
   return (
     <div className={APP_PAGE_CLASS}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <PageHeader
         title="Objetivos"
-        subtitle="Gestión estratégica"
-        actions={
-          <Button onClick={abrirModalNuevo} size="sm">+ Nuevo objetivo</Button>
+        subtitle={
+          criticos > 0
+            ? `${criticos} objetivo${criticos > 1 ? 's' : ''} en estado crítico`
+            : 'Gestión estratégica'
         }
+        actions={<Button onClick={abrirModalNuevo} size="sm">+ Nuevo objetivo</Button>}
       />
 
-      {isError && <p className="text-sm text-[var(--mc-color-danger)]">No se pudieron cargar los objetivos.</p>}
+      {isError && (
+        <p style={{ fontSize: 13, color: 'var(--mc-color-danger)', margin: '0 0 12px' }}>
+          No se pudieron cargar los objetivos.
+        </p>
+      )}
 
-      {/* ── Layout principal ────────────────────────────────────────────── */}
+      {/* ── Layout principal ─────────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
 
-        {/* Tabla */}
+        {/* ── Tabla de objetivos ──────────────────────────────────────────── */}
         <div className="mc-card !p-0 overflow-hidden">
           <div className="mc-section-header">
             <span>Lista de objetivos</span>
           </div>
-          <div className="grid grid-cols-[1fr_80px_160px_80px_32px] gap-3 border-b border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-4 py-2">
+
+          {/* Cabecera */}
+          <div style={{
+            display:          'grid',
+            gridTemplateColumns: '1fr 80px 180px 90px 32px',
+            gap:              12,
+            borderBottom:     '1px solid var(--mc-color-border)',
+            background:       'var(--mc-color-bg)',
+            padding:          '6px 16px',
+          }}>
             {['Objetivo', 'Estado', 'Progreso', 'Límite', ''].map((h) => (
-              <span key={h} className="text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">{h}</span>
+              <span key={h} style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--mc-color-text-secondary)' }}>
+                {h}
+              </span>
             ))}
           </div>
 
           {loadO ? (
-            <p className="p-4 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
+            <p style={{ padding: 16, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
           ) : objetivos.length === 0 ? (
             <div className="mc-empty">
               <p className="mc-empty-title">Sin objetivos</p>
+              <p className="mc-empty-desc">Crea el primer objetivo estratégico del equipo</p>
             </div>
           ) : (
-            objetivos.map((o) => (
-              <div
-                key={o.id}
-                className={[
-                  'grid cursor-pointer grid-cols-[1fr_80px_160px_80px_32px] items-center gap-3',
-                  'border-b border-[var(--mc-color-border)] px-4 py-3 last:border-b-0',
-                  'hover:bg-[var(--mc-color-bg-secondary)]',
-                  seleccionId === o.id ? 'bg-[var(--mc-color-accent-soft)]' : '',
-                ].join(' ').trim()}
-                onClick={() => setSeleccionId(o.id)}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--mc-color-text)]">{o.titulo}</p>
-                  {o.descripcion && (
-                    <p className="mt-0.5 truncate text-xs text-[var(--mc-color-text-secondary)]">{o.descripcion}</p>
-                  )}
-                </div>
-                <span className={`mc-badge ${OBJETIVO_BADGE[o.estado as EstadoObjetivo]} text-[10px]`}>
-                  {OBJETIVO_LABEL[o.estado as EstadoObjetivo]}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--mc-color-border)]">
-                    <div className="h-full rounded-full bg-[var(--mc-color-accent)]" style={{ width: `${o.pct}%` }} />
-                  </div>
-                  <span className="text-[10px] text-[var(--mc-color-text-secondary)]">
-                    {o.completadas}/{o.total_tareas} · {o.pct}%
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--mc-color-text-secondary)]">{o.fecha_limite ?? '—'}</span>
+            objetivos.map((o) => {
+              const nivel  = nivelRiesgoObjetivo(o.pct, o.fecha_limite);
+              const config = RIESGO_CONFIG[nivel];
+              const esCritico = nivel === 'critico';
 
-                {/* Menú ⋯ */}
-                <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="mc-btn-ghost !p-1 text-[var(--mc-color-text-secondary)]"
-                    onClick={() => setMenuObjId(menuObjId === o.id ? null : o.id)}
-                    aria-label="Opciones"
-                    aria-expanded={menuObjId === o.id}
-                  >
-                    ···
-                  </button>
-                  {menuObjId === o.id && (
-                    <div
-                      ref={menuRef}
-                      className="absolute right-0 top-7 z-20 min-w-[160px] rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] py-1"
-                      role="menu"
-                    >
-                      {(esJefe || o.creado_por === usuario.id) && (
-                        <button type="button" className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
-                          role="menuitem" onClick={() => setMenuObjId(null)}>
-                          Editar
-                        </button>
-                      )}
-                      {puedeEliminar(o.id) && (
-                        <button type="button" className="mc-btn-danger mc-btn-sm w-full justify-start px-3"
-                          role="menuitem" onClick={() => { setMenuObjId(null); setEliminarObjId(o.id); }}>
-                          Eliminar
-                        </button>
-                      )}
+              return (
+                <div
+                  key={o.id}
+                  onClick={() => setSeleccionId(o.id)}
+                  style={{
+                    display:             'grid',
+                    gridTemplateColumns: '1fr 80px 180px 90px 32px',
+                    alignItems:          'center',
+                    gap:                  12,
+                    borderBottom:        '1px solid var(--mc-color-border)',
+                    padding:             '10px 16px',
+                    cursor:              'pointer',
+                    background:          seleccionId === o.id
+                                           ? 'var(--mc-color-accent-soft)'
+                                           : esCritico
+                                             ? '#FFF8F8'
+                                             : undefined,
+                    transition:          'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (seleccionId !== o.id) (e.currentTarget as HTMLElement).style.background = 'var(--mc-color-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      seleccionId === o.id ? 'var(--mc-color-accent-soft)' :
+                      esCritico ? '#FFF8F8' : '';
+                  }}
+                >
+                  {/* Título */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {o.titulo}
+                      </p>
+                      <BadgeRiesgo pct={o.pct} fechaLimite={o.fecha_limite} />
                     </div>
-                  )}
+                    {o.descripcion && (
+                      <p style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {o.descripcion}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Estado */}
+                  <span className={`mc-badge ${OBJETIVO_BADGE[o.estado as EstadoObjetivo]}`} style={{ fontSize: 10 }}>
+                    {OBJETIVO_LABEL[o.estado as EstadoObjetivo]}
+                  </span>
+
+                  {/* Progreso */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <BarraProgreso pct={o.pct} fechaLimite={o.fecha_limite} />
+                    <span style={{ fontSize: 10, color: config.textColor !== 'var(--mc-color-text-secondary)' ? config.textColor : 'var(--mc-color-text-secondary)' }}>
+                      {o.completadas}/{o.total_tareas} tareas · {o.pct}%
+                    </span>
+                  </div>
+
+                  {/* Fecha límite */}
+                  <span style={{ fontSize: 12, color: esCritico ? '#A32D2D' : 'var(--mc-color-text-secondary)' }}>
+                    {o.fecha_limite ?? '—'}
+                  </span>
+
+                  {/* Menú ⋯ */}
+                  <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="mc-btn-ghost !p-1"
+                      style={{ color: 'var(--mc-color-text-secondary)' }}
+                      onClick={() => setMenuObjId(menuObjId === o.id ? null : o.id)}
+                      aria-label="Opciones"
+                      aria-expanded={menuObjId === o.id}
+                    >
+                      ···
+                    </button>
+                    {menuObjId === o.id && (
+                      <div
+                        ref={menuRef}
+                        style={{ position: 'absolute', right: 0, top: 28, zIndex: 20, minWidth: 160, borderRadius: 10, border: '1px solid var(--mc-color-border)', background: 'var(--mc-color-bg)', padding: '4px 0' }}
+                        role="menu"
+                      >
+                        {(esJefe || o.creado_por === usuario.id) && (
+                          <button type="button" className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
+                            role="menuitem" onClick={() => setMenuObjId(null)}>
+                            Editar
+                          </button>
+                        )}
+                        {puedeEliminar(o.id) && (
+                          <button type="button" className="mc-btn-danger mc-btn-sm w-full justify-start px-3"
+                            role="menuitem" onClick={() => { setMenuObjId(null); setEliminarObjId(o.id); }}>
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
-        {/* Panel lateral */}
-        <div className="mc-card flex flex-col gap-4">
+        {/* ── Panel lateral ────────────────────────────────────────────────── */}
+        <div className="mc-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!objetivoSel ? (
-            <p className="text-sm text-[var(--mc-color-text-secondary)]">Selecciona un objetivo para ver sus tareas.</p>
+            <div className="mc-empty">
+              <p className="mc-empty-title">Selecciona un objetivo</p>
+              <p className="mc-empty-desc">Ver sus tareas vinculadas y progreso detallado</p>
+            </div>
           ) : (
             <>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-[var(--mc-color-text)]">{objetivoSel.titulo}</p>
+              {/* Cabecera del objetivo */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--mc-color-text)', margin: 0 }}>
+                    {objetivoSel.titulo}
+                  </p>
                   {objetivoSel.descripcion && (
-                    <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">{objetivoSel.descripcion}</p>
+                    <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', margin: '4px 0 0' }}>
+                      {objetivoSel.descripcion}
+                    </p>
                   )}
                 </div>
-                <span className={`mc-badge ${OBJETIVO_BADGE[objetivoSel.estado as EstadoObjetivo]} shrink-0 text-[10px]`}>
+                <span className={`mc-badge ${OBJETIVO_BADGE[objetivoSel.estado as EstadoObjetivo]} shrink-0`} style={{ fontSize: 10 }}>
                   {OBJETIVO_LABEL[objetivoSel.estado as EstadoObjetivo]}
                 </span>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--mc-color-border)]">
-                  <div className="h-full rounded-full bg-[var(--mc-color-accent)]" style={{ width: `${objetivoSel.pct}%` }} />
+
+              {/* Barra de progreso grande */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)' }}>Progreso</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <BadgeRiesgo pct={objetivoSel.pct} fechaLimite={objetivoSel.fecha_limite} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: RIESGO_CONFIG[nivelRiesgoObjetivo(objetivoSel.pct, objetivoSel.fecha_limite)].textColor }}>
+                      {objetivoSel.pct}%
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs text-[var(--mc-color-text-secondary)]">
-                  {objetivoSel.completadas} de {objetivoSel.total_tareas} tareas completadas · {objetivoSel.pct}%
+                <BarraProgreso pct={objetivoSel.pct} fechaLimite={objetivoSel.fecha_limite} size="md" />
+                <span style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
+                  {objetivoSel.completadas} de {objetivoSel.total_tareas} tareas completadas
+                  {objetivoSel.fecha_limite && ` · vence ${objetivoSel.fecha_limite}`}
                 </span>
               </div>
-              <div className="border-t border-[var(--mc-color-border)] pt-3">
+
+              {/* Tareas vinculadas */}
+              <div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12 }}>
                 <div className="mc-section-header !border-none !bg-transparent !p-0">
                   <span>Tareas vinculadas</span>
                   <Button variant="secondary" size="xs" onClick={() => setModalTarea(true)}>
@@ -179,17 +331,28 @@ export function Objetivos() {
                   </Button>
                 </div>
                 {loadTareas ? (
-                  <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
+                  <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', padding: '8px 0' }}>Cargando…</p>
                 ) : tareasVinc.length === 0 ? (
                   <div className="mc-empty !p-6">
                     <p className="mc-empty-title">Sin tareas vinculadas</p>
                   </div>
                 ) : (
-                  <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto', marginTop: 8 }}>
                     {tareasVinc.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--mc-color-bg-secondary)] px-3 py-2">
-                        <p className="min-w-0 flex-1 truncate text-xs text-[var(--mc-color-text)]">{t.titulo}</p>
-                        <span className={`mc-badge ${TAREA_BADGE[t.estado] ?? 'mc-badge-neutral'} shrink-0 text-[9px]`}>
+                      <div key={t.id} style={{
+                        display:        'flex',
+                        alignItems:     'center',
+                        justifyContent: 'space-between',
+                        gap:             8,
+                        borderRadius:   'var(--mc-radius-md)',
+                        background:     t.estado === 'atrasada' ? '#FCEBEB' : 'var(--mc-color-bg)',
+                        border:         `1px solid ${t.estado === 'atrasada' ? '#F7C1C1' : 'var(--mc-color-border)'}`,
+                        padding:        '7px 10px',
+                      }}>
+                        <p style={{ fontSize: 12, color: t.estado === 'atrasada' ? '#791F1F' : 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {t.titulo}
+                        </p>
+                        <span className={`mc-badge ${TAREA_BADGE[t.estado] ?? 'mc-badge-neutral'} shrink-0`} style={{ fontSize: 9 }}>
                           {TAREA_LABEL[t.estado] ?? t.estado}
                         </span>
                       </div>
@@ -202,7 +365,7 @@ export function Objetivos() {
         </div>
       </div>
 
-      {/* ── Modal: nuevo objetivo ───────────────────────────────────────── */}
+      {/* ── Modal: nuevo objetivo ──────────────────────────────────────────── */}
       <Modal
         open={modalNuevo}
         onClose={cerrarModalNuevoObjetivo}
@@ -218,32 +381,34 @@ export function Objetivos() {
           </>
         }
       >
-        <div className="flex flex-col gap-4">
-          {/* Si es miembro, mostrar aviso de que el objetivo es para sí mismo */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {!esJefe && (
-            <p className="mc-empty-desc !max-w-none !bg-[var(--mc-color-bg-secondary)] !p-3 !text-left">
+            <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', background: 'var(--mc-color-bg)', borderRadius: 8, padding: '8px 12px', margin: 0 }}>
               El objetivo se creará con <strong>{usuario.nombre}</strong> como responsable.
             </p>
           )}
-
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-titulo">Título</label>
-            <input id="obj-titulo" className="mc-input" value={nuevoObjetivoForm.titulo} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, titulo: e.target.value }))} autoFocus required />
+            <input id="obj-titulo" className="mc-input" value={nuevoObjetivoForm.titulo}
+              onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, titulo: e.target.value }))}
+              autoFocus required />
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-desc">Descripción (opcional)</label>
-            <textarea id="obj-desc" className="mc-input" style={{ minHeight: 80 }} value={nuevoObjetivoForm.descripcion} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, descripcion: e.target.value }))} />
+            <textarea id="obj-desc" className="mc-input" style={{ minHeight: 72 }}
+              value={nuevoObjetivoForm.descripcion}
+              onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, descripcion: e.target.value }))} />
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-limite">Fecha límite (opcional)</label>
-            <input id="obj-limite" type="date" className="mc-input" value={nuevoObjetivoForm.limite} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, limite: e.target.value }))} />
+            <input id="obj-limite" type="date" className="mc-input" value={nuevoObjetivoForm.limite}
+              onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, limite: e.target.value }))} />
           </div>
-
-          {/* Selector de responsable — solo para jefe */}
           {esJefe && (
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="obj-resp">Responsable</label>
-              <select id="obj-resp" className="mc-input" value={nuevoObjetivoForm.responsableId} onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, responsableId: e.target.value }))}>
+              <select id="obj-resp" className="mc-input" value={nuevoObjetivoForm.responsableId}
+                onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, responsableId: e.target.value }))}>
                 <option value="">Selecciona…</option>
                 {usuariosActivos.map((u) => (
                   <option key={u.id} value={u.id}>{u.nombre}</option>
@@ -254,7 +419,7 @@ export function Objetivos() {
         </div>
       </Modal>
 
-      {/* ── Modal: añadir tarea ─────────────────────────────────────────── */}
+      {/* ── Modal: añadir tarea ────────────────────────────────────────────── */}
       <Modal
         open={modalTarea && Boolean(seleccionId)}
         onClose={cerrarModalTareaObjetivo}
@@ -272,14 +437,15 @@ export function Objetivos() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {objetivoSel && (
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--mc-color-text-secondary)' }}>{objetivoSel.titulo}</p>
+            <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', margin: 0 }}>{objetivoSel.titulo}</p>
           )}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
             Título
-            <input className="mc-input" value={tareaObjetivoForm.titulo} onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, titulo: e.target.value }))}
+            <input className="mc-input" value={tareaObjetivoForm.titulo}
+              onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, titulo: e.target.value }))}
               placeholder="Ej: Configurar firewall perimetral…" autoFocus required />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
             Prioridad
             <select className="mc-input" value={tareaObjetivoForm.prioridad}
               onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, prioridad: e.target.value as Tarea['prioridad'] }))}>
@@ -288,9 +454,8 @@ export function Objetivos() {
               <option value="alta">Alta</option>
             </select>
           </label>
-          {/* Selector de asignado solo para jefe */}
           {esJefe && usuariosActivos.length > 0 && (
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '12px', fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>
               Responsable
               <select className="mc-input" value={tareaObjetivoForm.asignadoId}
                 onChange={(e) => setTareaObjetivoForm((p) => ({ ...p, asignadoId: e.target.value }))}>
@@ -303,7 +468,7 @@ export function Objetivos() {
         </div>
       </Modal>
 
-      {/* ── Modal: eliminar objetivo ────────────────────────────────────── */}
+      {/* ── Modal: eliminar objetivo ───────────────────────────────────────── */}
       <Modal
         open={Boolean(eliminarObjId)}
         onClose={cerrarEliminar}
@@ -318,24 +483,26 @@ export function Objetivos() {
           </>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {objetivoEliminar && (
-            <p className="text-sm text-[var(--mc-color-text-secondary)]">
-              {objetivoEliminar.titulo} · Esta acción no se puede deshacer.
+            <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', margin: 0 }}>
+              <strong>{objetivoEliminar.titulo}</strong> · Esta acción no se puede deshacer.
             </p>
           )}
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="del-motivo">
-              <span className="flex justify-between">
+              <span style={{ display: 'flex', justifyContent: 'space-between' }}>
                 Motivo de eliminación
                 <span aria-live="polite" className={`mc-char-count ${!motivoOk ? 'mc-char-count-error' : ''}`}>
                   {motivoEliminar.trim().length}/{MIN_JUSTIFICACION_CHARS}
                 </span>
               </span>
             </label>
-            <textarea id="del-motivo" className="mc-input" style={{ minHeight: 80 }} value={motivoEliminar}
+            <textarea id="del-motivo" className="mc-input" style={{ minHeight: 80 }}
+              value={motivoEliminar}
               onChange={(e) => setMotivoEliminar(e.target.value)}
-              placeholder="Indica el motivo de la eliminación…" autoFocus
+              placeholder="Indica el motivo de la eliminación…"
+              autoFocus
               aria-invalid={motivoEliminar.length > 0 && !motivoOk} />
           </div>
         </div>
