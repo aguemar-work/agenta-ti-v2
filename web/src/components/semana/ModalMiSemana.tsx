@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
 import { crearRecurrenciaEvento } from '@/api/recurrencia';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
 
@@ -157,25 +157,32 @@ export function ModalMiSemana({
       title={`Nuevo ítem · ${fechaDia ?? ''}`}
       size="md"
       hasUnsavedChanges={hasChanges}
-      footer={
-        <>
-          <Button variant="ghost" onClick={cerrar} disabled={busy}>
-            Cancelar
-          </Button>
+      footer={(
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {form.tab === 'tarea' ? (
-            <Button disabled={busy || !form.titulo.trim()} onClick={() => void submitTarea()}>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={busy || !form.titulo.trim()}
+              onClick={() => void submitTarea()}
+            >
               {busy ? 'Guardando…' : 'Crear tarea'}
             </Button>
           ) : (
             <Button
+              variant="primary"
+              size="lg"
+              fullWidth
               disabled={busy || !form.titulo.trim() || !fechaEvento}
               onClick={() => void submitEvento()}
             >
               {busy ? 'Guardando…' : 'Crear evento'}
             </Button>
           )}
-        </>
-      }
+          <CancelButton onClick={cerrar} disabled={busy} />
+        </div>
+      )}
     >
       <div className="flex flex-col gap-4">
         {modoOrigen === 'dia' && fechaDia && (

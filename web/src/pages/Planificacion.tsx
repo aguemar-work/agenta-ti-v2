@@ -1,5 +1,6 @@
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
+import { JustificacionField } from '@/components/ui/JustificacionField';
 import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { usePlanificacionPage } from '@/hooks/usePlanificacionPage';
@@ -22,14 +23,16 @@ const ESTADOS: EstadoTarea[] = ['pendiente', 'en_progreso', 'atrasada', 'bloquea
 
 const LEYENDA_CARGA = [
   { color: '#EAF3DE', label: '1–2 tareas' },
-  { color: '#FAEEDA', label: '3–4 tareas' },
+  { color: 'color-mix(in srgb, var(--mc-color-accent-soft) 65%, var(--mc-color-surface))', label: '3–4 tareas' },
   { color: '#FCEBEB', label: '5+ tareas' },
 ];
 
 function celdaClass(n: number): string {
   if (n === 0) return 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]';
   if (n <= 2)  return 'bg-[#EAF3DE] text-[#27500A]';
-  if (n <= 4)  return 'bg-[#FAEEDA] text-[#854F0B]';
+  if (n <= 4) {
+    return 'bg-[color-mix(in_srgb,var(--mc-color-accent-soft)_65%,var(--mc-color-surface))] text-[var(--mc-color-accent)]';
+  }
   return 'bg-[#FCEBEB] text-[#A32D2D]';
 }
 
@@ -324,8 +327,7 @@ export function Planificacion() {
             )}
           </div>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="quaternary"
             onClick={() => { setMostrarHistorial((v) => !v); resetHistFiltros(); }}
             style={{ display: 'flex', alignItems: 'center', gap: 5 }}
           >
@@ -410,7 +412,7 @@ export function Planificacion() {
                 </select>
               </div>
               {(histUsuarioId !== 'todos' || histTipoAccion !== 'todos') && (
-                <Button variant="ghost" size="xs" onClick={resetHistFiltros}>
+                <Button variant="quaternary" onClick={resetHistFiltros}>
                   Limpiar filtros
                 </Button>
               )}
@@ -493,7 +495,7 @@ export function Planificacion() {
             >
               + Nueva tarea
             </Button>
-            <Button variant="ghost" onClick={() => setModal(null)}>Cerrar</Button>
+            <CancelButton onClick={() => setModal(null)} label="Cerrar" />
           </div>
         }
       >
@@ -546,10 +548,10 @@ export function Planificacion() {
         size="sm"
         footer={
           <>
-            <Button variant="ghost" onClick={cerrarDevolver} disabled={busyDevolver}>Cancelar</Button>
-            <Button onClick={() => void confirmarDevolver()} disabled={busyDevolver || !motivoDevolverOk}>
-              {busyDevolver ? 'Guardando…' : 'Confirmar'}
+            <Button size="lg" fullWidth onClick={() => void confirmarDevolver()} disabled={busyDevolver || !motivoDevolverOk}>
+              {busyDevolver ? 'Guardando…' : 'Confirmar devolución'}
             </Button>
+            <CancelButton onClick={cerrarDevolver} disabled={busyDevolver} />
           </>
         }
       >
@@ -558,26 +560,13 @@ export function Planificacion() {
             <p className="text-sm text-[var(--mc-color-text-secondary)]">
               {devolverTarea.titulo}
             </p>
-            <div className="mc-field">
-              <label className="mc-field-label" htmlFor="dev-motivo">
-                <span className="flex justify-between">
-                  Justificación
-                  <span aria-live="polite" className={`mc-char-count ${!motivoDevolverOk ? 'mc-char-count-error' : ''}`}>
-                    {motivoDevolverLen}/{MIN_JUSTIFICACION_CHARS}
-                  </span>
-                </span>
-              </label>
-              <textarea
-                id="dev-motivo"
-                className="mc-input"
-                style={{ minHeight: 80, resize: 'vertical' }}
-                value={motivoDevolver}
-                onChange={(e) => setMotivoDevolver(e.target.value)}
-                placeholder="Indica el motivo para devolver esta tarea…"
-                autoFocus
-                aria-invalid={motivoDevolver.length > 0 && !motivoDevolverOk}
-              />
-            </div>
+            <JustificacionField
+              value={motivoDevolver}
+              onChange={setMotivoDevolver}
+              placeholder="Indica el motivo para devolver esta tarea…"
+              disabled={busyDevolver}
+              autoFocus
+            />
           </div>
         )}
       </Modal>

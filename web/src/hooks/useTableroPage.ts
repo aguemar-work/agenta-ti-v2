@@ -19,10 +19,12 @@ import {
   useUsuariosNombreTablero,
 } from '@/hooks/useTablero';
 import { completarTareaConResumen } from '@/hooks/useTareas';
+import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { useAuthStore } from '@/store/authStore';
 import type { EstadoTarea, Tarea } from '@/types';
+import { puedeGestionarTarea } from '@/lib/permisos';
 
 export function useTableroPage() {
   const qc = useQueryClient();
@@ -72,11 +74,7 @@ export function useTableroPage() {
       asignado_a?: string | null;
     }) => actualizarTarea(input),
     onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
-      ]);
+      await invalidateRelatedQueries(qc, ['tablero', 'semana', 'tareas-hoy']);
     },
   });
 
@@ -84,7 +82,7 @@ export function useTableroPage() {
     mutationFn: (input: { tareaId: string; usuarioId: string; motivo: string }) =>
       eliminarTareaConMotivo(input),
     onSuccess: async () => {
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false });
+      await invalidateRelatedQueries(qc, ['tablero']);
       setDetalleTareaId(null);
     },
   });
@@ -105,7 +103,7 @@ export function useTableroPage() {
 
   // ── Permisos ──────────────────────────────────────────────────────────────
   function puedeGestionar(t: Tarea): boolean {
-    return usuario?.rol === 'jefe' || t.asignado_a === usuario?.id;
+    return puedeGestionarTarea(t, usuario);
   }
 
   // ── Handlers DnD ─────────────────────────────────────────────────────────
@@ -144,11 +142,7 @@ export function useTableroPage() {
     if (nuevo === 'pendiente' && actual === 'atrasada') {
       try {
         await snapTareaFechaAlPorHacer(tid, hoy);
-        await Promise.all([
-          qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
-          qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
-          qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
-        ]);
+        await invalidateRelatedQueries(qc, ['tablero', 'semana', 'tareas-hoy']);
         toast.success('Tarea reubicada en el día actual');
       } catch (err) {
         console.error('[onDragEnd:atrasada->pendiente]', err);
@@ -193,11 +187,7 @@ export function useTableroPage() {
       await desbloquearTareaConLog({ ...input, usuarioId: usuario.id });
       setDesbloquearTarea(null);
       toast.success('Tarea desbloqueada');
-      await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
-      ]);
+      await invalidateRelatedQueries(qc, ['tablero', 'semana', 'tareas-hoy']);
     } catch (err) {
       console.error('[confirmarDesbloqueo]', err);
       toast.error('No se pudo desbloquear la tarea.');
@@ -217,11 +207,7 @@ export function useTableroPage() {
       });
       setCompletarTarea(null);
       toast.success('Tarea completada');
-      await Promise.all([
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'], exact: false }),
-        qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy'] }),
-      ]);
+      await invalidateRelatedQueries(qc, ['tablero', 'semana', 'tareas-hoy']);
     } catch (err) {
       console.error('[confirmarCompletar]', err);
       toast.error('No se pudo completar la tarea.');

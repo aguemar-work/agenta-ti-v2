@@ -7,8 +7,8 @@ import { installInsforgeFetchInterceptor } from '@/lib/insforgeFetchInterceptor'
 import { setAppIcons } from '@/lib/setAppIcons';
 import { AppProviders } from '@/providers/AppProviders';
 import '@/index.css';
-/** Sprint 4 — tras index para que animaciones, :focus-visible y skeleton no pierdan contra Tailwind. */
-import '@/styles/sprint4.css';
+/** Animaciones, skeletons y estilos de urgencia — debe ir tras index.css para no perder contra Tailwind. */
+import '@/styles/animations.css';
 
 setAppIcons();
 

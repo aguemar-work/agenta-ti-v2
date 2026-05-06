@@ -7,13 +7,16 @@ import { AlertTriangle, ClipboardCheck, Plus, Settings2, ToggleLeft, ToggleRight
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
+import { JustificacionField } from '@/components/ui/JustificacionField';
 import { OTFormModal } from '@/components/ot/OTFormModal';
 import { OTImpresion } from '@/components/ot/OTImpresion';
 import { useOrdenesTrabajoPage } from '@/hooks/useOrdenesTrabajoPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { fechaLocalYmd } from '@/lib/fecha';
+import { otVencida } from '@/lib/otHelpers';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL, MODALIDAD_OT_LABEL, PRIORIDAD_OT_BADGE, PRIORIDAD_OT_LABEL } from '@/lib/otConfig';
 import type { EstadoOT, OrdenTrabajo } from '@/api/ordenTrabajo';
 
@@ -29,18 +32,7 @@ const FILTROS: { value: EstadoOT | 'todos'; label: string }[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Helpers de alerta visual
-// ---------------------------------------------------------------------------
 
-/** Una OT está vencida si su fecha_estimada pasó y aún no está completada/cancelada */
-function otVencida(ot: OrdenTrabajo, hoyYmd: string): boolean {
-  if (['completada', 'cancelada', 'rechazada'].includes(ot.estado)) return false;
-  return Boolean(ot.fecha_estimada && ot.fecha_estimada < hoyYmd);
-}
-
-function hoyYmd(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // ---------------------------------------------------------------------------
 
@@ -71,7 +63,7 @@ export function OrdenesTrabajo() {
 
   if (!usuario) return null;
 
-  const hoy           = hoyYmd();
+  const hoy = fechaLocalYmd(new Date());
   const urgentesCount = ordenes.filter((o) => o.prioridad === 'urgente' && !['completada','cancelada','rechazada'].includes(o.estado)).length;
   const vencidasCount = ordenes.filter((o) => otVencida(o, hoy)).length;
 
@@ -89,7 +81,7 @@ export function OrdenesTrabajo() {
         title="Órdenes de trabajo"
         subtitle={esJefe ? subtituloJefe : 'Mis órdenes de trabajo'}
         actions={
-          <Button onClick={abrirNuevaOT} size="sm">
+          <Button variant="primary" onClick={abrirNuevaOT} size="sm">
             <Plus size={14} style={{ marginRight: 6 }} aria-hidden />
             Nueva OT
           </Button>
@@ -240,7 +232,7 @@ export function OrdenesTrabajo() {
                     {ESTADO_OT_LABEL[ot.estado]}
                   </span>
                   {esJefe && ot.estado === 'pendiente' && (
-                    <Button size="xs" onClick={() => mutAprobar.mutate(ot.id)} disabled={mutAprobar.isPending}>
+                    <Button variant="primary" size="xs" onClick={() => mutAprobar.mutate(ot.id)} disabled={mutAprobar.isPending}>
                       Aprobar
                     </Button>
                   )}
@@ -279,7 +271,7 @@ export function OrdenesTrabajo() {
               onKeyDown={(e) => { if (e.key === 'Enter' && canCrearTipo) mutCrearTipo.mutate(); }}
               maxLength={60}
             />
-            <Button size="sm" disabled={!canCrearTipo} onClick={() => mutCrearTipo.mutate()}>
+            <Button variant="primary" size="sm" disabled={!canCrearTipo} onClick={() => mutCrearTipo.mutate()}>
               <Plus size={14} aria-hidden /> Agregar
             </Button>
           </div>
@@ -342,29 +334,37 @@ export function OrdenesTrabajo() {
         title={viendoOT ? `${viendoOT.numero}${viendoOT.prioridad === 'urgente' ? ' · Urgente' : ''}` : ''}
         size="md"
         footer={
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {!esJefe && viendoOT && ['borrador', 'pendiente'].includes(viendoOT.estado) && (
-              <Button variant="secondary" size="sm" onClick={() => { setViendoOT(null); abrirEditarOT(viendoOT); }}>Editar</Button>
-            )}
-            {!esJefe && viendoOT && ['borrador', 'pendiente'].includes(viendoOT.estado) && (
-              <Button variant="danger" size="sm" onClick={() => { mutCancelar.mutate(viendoOT.id); setViendoOT(null); }}>Cancelar OT</Button>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Acción primaria según estado — 1 por panel */}
             {!esJefe && viendoOT?.estado === 'aprobada' && (
-              <Button size="sm" onClick={() => { mutIniciar.mutate(viendoOT.id); setViendoOT(null); }}>Iniciar ejecución</Button>
+              <Button variant="primary" size="lg" fullWidth onClick={() => { mutIniciar.mutate(viendoOT.id); setViendoOT(null); }}>Iniciar ejecución</Button>
             )}
             {!esJefe && viendoOT && ['aprobada', 'en_ejecucion'].includes(viendoOT.estado) && (
-              <Button size="sm" onClick={() => { setModalCompletar(viendoOT); setViendoOT(null); }}>Completar OT</Button>
+              <Button variant="primary" size="lg" fullWidth onClick={() => { setModalCompletar(viendoOT); setViendoOT(null); }}>Completar OT</Button>
             )}
             {esJefe && viendoOT?.estado === 'pendiente' && (
-              <Button size="sm" onClick={() => { mutAprobar.mutate(viendoOT.id); setViendoOT(null); }}>Aprobar</Button>
+              <Button variant="primary" size="lg" fullWidth onClick={() => { mutAprobar.mutate(viendoOT.id); setViendoOT(null); }}>Aprobar</Button>
             )}
-            {esJefe && viendoOT?.estado === 'pendiente' && (
-              <Button variant="danger" size="sm" onClick={() => { setModalRechazar(viendoOT); setViendoOT(null); }}>Rechazar</Button>
-            )}
+            {/* Acciones secundarias */}
             {viendoOT && ['aprobada', 'en_ejecucion', 'completada'].includes(viendoOT.estado) && (
               <Button variant="secondary" size="sm" onClick={() => { setImprimiendoOT(viendoOT); setViendoOT(null); }}>Imprimir</Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setViendoOT(null)}>Cerrar</Button>
+            {!esJefe && viendoOT && ['borrador', 'pendiente'].includes(viendoOT.estado) && (
+              <Button variant="secondary" size="sm" onClick={() => { setViendoOT(null); abrirEditarOT(viendoOT); }}>Editar</Button>
+            )}
+            {/* Zona destructive separada */}
+            {((!esJefe && viendoOT && ['borrador', 'pendiente'].includes(viendoOT.estado)) ||
+              (esJefe && viendoOT?.estado === 'pendiente')) && (
+              <div className="mc-danger-zone">
+                {!esJefe && viendoOT && ['borrador', 'pendiente'].includes(viendoOT.estado) && (
+                  <Button variant="danger" size="sm" fullWidth onClick={() => { mutCancelar.mutate(viendoOT.id); setViendoOT(null); }}>Cancelar OT</Button>
+                )}
+                {esJefe && viendoOT?.estado === 'pendiente' && (
+                  <Button variant="danger" size="sm" fullWidth onClick={() => { setModalRechazar(viendoOT); setViendoOT(null); }}>Rechazar</Button>
+                )}
+              </div>
+            )}
+            <CancelButton onClick={() => setViendoOT(null)} label="Cerrar" />
           </div>
         }
       >
@@ -443,10 +443,10 @@ export function OrdenesTrabajo() {
         size="sm"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setModalCompletar(null)}>Cancelar</Button>
-            <Button onClick={() => mutCompletar.mutate()} disabled={!canCompletar || mutCompletar.isPending}>
+            <Button variant="primary" size="lg" fullWidth onClick={() => mutCompletar.mutate()} disabled={!canCompletar || mutCompletar.isPending}>
               {mutCompletar.isPending ? 'Guardando…' : 'Confirmar cierre'}
             </Button>
+            <CancelButton onClick={() => setModalCompletar(null)} />
           </>
         }
       >
@@ -479,14 +479,14 @@ export function OrdenesTrabajo() {
         size="sm"
         footer={
           <>
-            <Button variant="ghost" onClick={() => { setModalRechazar(null); setMotivoRechazo(''); }}>Cancelar</Button>
             <Button
-              variant="danger"
+              variant="danger" size="lg" fullWidth
               disabled={motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS || mutRechazar.isPending}
               onClick={() => modalRechazar && mutRechazar.mutate({ otId: modalRechazar.id, motivo: motivoRechazo })}
             >
-              {mutRechazar.isPending ? 'Guardando…' : 'Rechazar'}
+              {mutRechazar.isPending ? 'Guardando…' : 'Rechazar orden'}
             </Button>
+            <CancelButton onClick={() => { setModalRechazar(null); setMotivoRechazo(''); }} />
           </>
         }
       >
@@ -494,17 +494,14 @@ export function OrdenesTrabajo() {
           <p style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
             {modalRechazar?.numero} — Indica el motivo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
           </p>
-          <label className="mc-field">
-            <span style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="mc-field-label">Motivo</span>
-              <span className={`mc-char-count${motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS && motivoRechazo.length > 0 ? ' mc-char-count-error' : ''}`}>
-                {motivoRechazo.trim().length}/{MIN_JUSTIFICACION_CHARS}
-              </span>
-            </span>
-            <textarea className="mc-input" style={{ minHeight: 80 }} value={motivoRechazo}
-              onChange={(e) => setMotivoRechazo(e.target.value)}
-              placeholder="Describe el motivo del rechazo…" autoFocus />
-          </label>
+          <JustificacionField
+            label="Motivo"
+            value={motivoRechazo}
+            onChange={setMotivoRechazo}
+            placeholder="Describe el motivo del rechazo…"
+            disabled={mutRechazar.isPending}
+            autoFocus
+          />
         </div>
       </Modal>
 

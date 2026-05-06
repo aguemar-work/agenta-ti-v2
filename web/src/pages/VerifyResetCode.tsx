@@ -35,7 +35,7 @@ export function VerifyResetCode() {
                     <p className="text-sm text-[var(--mc-color-text-secondary)]">
                         Enlace inválido. Por favor inicia el proceso de recuperación de nuevo.
                     </p>
-                    <Link to="/forgot-password" className="text-sm text-[var(--mc-color-accent)]">
+                    <Link to="/forgot-password" className="mc-text-link">
                         → Ir a recuperar contraseña
                     </Link>
                 </div>
@@ -160,7 +160,7 @@ export function VerifyResetCode() {
                         ))}
                     </div>
 
-                    <Button type="submit" disabled={busy || !codeCompleto}>
+                    <Button type="submit" variant="primary" fullWidth disabled={busy || !codeCompleto}>
                         {busy ? 'Verificando…' : 'Verificar código'}
                     </Button>
                 </form>
@@ -168,16 +168,13 @@ export function VerifyResetCode() {
                 <div className="mt-4 flex flex-col items-center gap-2">
                     <button
                         type="button"
-                        className="text-sm text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]"
+                        className="mc-text-link"
                         disabled={busy}
                         onClick={() => void reenviarCodigo()}
                     >
                         ¿No recibiste el código? Reenviar
                     </button>
-                    <Link
-                        to="/forgot-password"
-                        className="text-sm text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]"
-                    >
+                    <Link to="/forgot-password" className="mc-text-link-muted">
                         ← Cambiar correo
                     </Link>
                 </div>

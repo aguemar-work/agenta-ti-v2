@@ -12,12 +12,16 @@ import type { Evento, EstadoTarea, Tarea, TipoEvento } from '@/types';
 
 export async function getTareasSemana(usuarioId: string, semanaISO: string): Promise<Tarea[]> {
   const insforge = getInsforge();
+
+  // Traer tareas de la semana actual + atrasadas de semanas anteriores
+  // Las atrasadas de semanas previas tienen semana_planificada distinta pero
+  // estado='atrasada', por lo que deben aparecer en la vista Hoy/Semana.
   const { data, error } = await insforge.database
     .from('tarea')
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('tipo', 'planificada')
-    .eq('semana_planificada', semanaISO)
+    .or(`semana_planificada.eq.${semanaISO},estado.eq.atrasada`)
     .order('fecha_planificada', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
@@ -62,23 +66,21 @@ export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): P
   const insforge = getInsforge();
   const semana   = semanaIsoDesdeFecha(new Date(`${data.fecha_planificada}T12:00:00`));
   const asignado = resolveAsignadoA(data.asignado_a, data.creado_por);
-  const row = {
-    titulo:             data.titulo.trim(),
-    descripcion:        data.descripcion ?? null,
-    prioridad:          data.prioridad,
-    estado:             'pendiente' as const,
-    tipo:               'planificada' as const,
-    fecha_planificada:  data.fecha_planificada,
-    semana_planificada: semana,
-    asignado_a:         asignado,
-    creado_por:         data.creado_por,
-    objetivo_id:        data.objetivo_id ?? null,
-    es_imprevisto:      false,
-    nota_origen_id:     data.nota_origen_id ?? null,
-  };
-  const { data: inserted, error } = await insforge.database
-    .from('tarea').insert([row]).select('*').single();
+  const { data: rows, error } = await insforge.database
+    .rpc('sgtd_crear_tarea_planificada', {
+      p_titulo:             data.titulo.trim(),
+      p_descripcion:        data.descripcion ?? null,
+      p_prioridad:          data.prioridad,
+      p_fecha_planificada:  data.fecha_planificada,
+      p_semana_planificada: semana,
+      p_asignado_a:         asignado ?? null,
+      p_creado_por:         data.creado_por ?? null,
+      p_objetivo_id:        data.objetivo_id ?? null,
+      p_nota_origen_id:     data.nota_origen_id ?? null,
+      p_es_imprevisto:      false,
+    });
   if (error) throw error;
+  const inserted = Array.isArray(rows) ? rows[0] : rows;
   return parseTarea(inserted as Record<string, unknown>);
 }
 

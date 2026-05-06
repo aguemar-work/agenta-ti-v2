@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Clock, GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
+import { Button } from '@/components/ui/Button';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import { urgenciaHoraria } from '@/lib/tareaUrgencia';
 import type { Tarea } from '@/types';
@@ -85,7 +86,7 @@ export function DraggableTareaTablero({
           {canDrag && (
             <button
               type="button"
-              className="mc-btn-ghost !p-0.5 mt-0.5 shrink-0"
+              className="mc-btn-ghost mc-btn-xs !mt-0.5 shrink-0 !p-0.5"
               style={{ touchAction: 'none', color: metaColor }}
               aria-label="Arrastrar"
               {...listeners}
@@ -145,34 +146,24 @@ export function DraggableTareaTablero({
         {est !== 'completada' && est !== 'cancelada' && (
           <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
             {(est === 'pendiente' || est === 'atrasada' || est === 'reprogramada') && onIniciar && (
-              <button type="button" className="mc-btn !px-3 !py-1.5 text-xs" onClick={onIniciar}>
+              <Button variant="primary" size="sm" className="!px-3 !py-1.5 text-xs" onClick={onIniciar}>
                 Iniciar
-              </button>
+              </Button>
             )}
             {est === 'en_progreso' && onCompletar && (
-              <button type="button" className="mc-btn !px-3 !py-1.5 text-xs" onClick={onCompletar}>
+              <Button variant="primary" size="sm" className="!px-3 !py-1.5 text-xs" onClick={onCompletar}>
                 Completar
-              </button>
+              </Button>
             )}
             {est !== 'bloqueada' && onBloquear && (
-              <button
-                type="button"
-                className="mc-btn-secondary !px-3 !py-1.5 text-xs"
-                style={{ color: 'var(--mc-color-warning)' }}
-                onClick={onBloquear}
-              >
+              <Button variant="secondary" size="sm" className="!px-3 !py-1.5 text-xs" onClick={onBloquear}>
                 Bloquear
-              </button>
+              </Button>
             )}
             {est === 'bloqueada' && esJefe && onDesbloquear && (
-              <button
-                type="button"
-                className="mc-btn-secondary !px-3 !py-1.5 text-xs"
-                style={{ color: 'var(--mc-color-accent)' }}
-                onClick={onDesbloquear}
-              >
+              <Button variant="secondary" size="sm" className="!px-3 !py-1.5 text-xs" onClick={onDesbloquear}>
                 Desbloquear
-              </button>
+              </Button>
             )}
           </div>
         )}

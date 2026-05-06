@@ -1,0 +1,335 @@
+/**
+ * styles/forms.css
+ * Sistema de botones, inputs y formularios del design system Meta Canvas.
+ * Extraído de index.css.
+ */
+
+ @layer components {
+
+    /* ══════════════════════════════════════════════════════════════════════
+     * BOTONES
+     * ══════════════════════════════════════════════════════════════════════ */
+  
+    .mc-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mc-radius-md);
+      padding: 12px 20px;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      background: var(--mc-color-accent);
+      color: var(--mc-color-on-accent);
+      border: none;
+      cursor: pointer;
+      transition: background var(--mc-transition, 150ms ease);
+    }
+  
+    .mc-btn:hover { background: var(--mc-color-accent-hover); }
+    .mc-btn:active:not(:disabled) { transform: scale(0.98); }
+    .mc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── secondary ──────────────────────────────────────────────────────── */
+    .mc-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mc-radius-md);
+      padding: 12px 20px;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      background: var(--mc-color-surface);
+      color: var(--mc-color-text);
+      border: 1px solid var(--mc-color-border-strong);
+      cursor: pointer;
+    }
+  
+    .mc-btn-secondary:hover:not(:disabled) {
+      background: var(--mc-color-surface-hover);
+      border-color: var(--mc-color-border-strong);
+    }
+  
+    .mc-btn-secondary:active:not(:disabled) { transform: scale(0.98); }
+    .mc-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── ghost ──────────────────────────────────────────────────────────── */
+    .mc-btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mc-radius-md);
+      padding: 8px 12px;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      background: transparent;
+      color: var(--mc-color-text);
+      border: none;
+      cursor: pointer;
+    }
+  
+    .mc-btn-ghost:hover { background: var(--mc-color-surface-hover); }
+    .mc-btn-ghost:active:not(:disabled) { transform: scale(0.98); }
+    .mc-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── danger ─────────────────────────────────────────────────────────── */
+    .mc-btn-danger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mc-radius-md);
+      padding: 12px 20px;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      background: var(--mc-color-danger);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: background var(--mc-transition);
+    }
+  
+    .mc-btn-danger:hover:not(:disabled) { background: #e02424; }
+    .mc-btn-danger:active:not(:disabled) { transform: scale(0.98); }
+    .mc-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── tertiary — borde accent, fondo transparente ────────────────────── */
+    .mc-btn-tertiary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--mc-radius-md);
+      padding: 12px 20px;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      background: transparent;
+      color: var(--mc-color-accent);
+      border: 1px solid var(--mc-color-accent);
+      cursor: pointer;
+      transition: background var(--mc-transition), color var(--mc-transition);
+    }
+  
+    .mc-btn-tertiary:hover:not(:disabled) { background: var(--mc-color-accent-soft); }
+    .mc-btn-tertiary:active:not(:disabled) { transform: scale(0.98); }
+    .mc-btn-tertiary:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── quaternary — solo texto accent ────────────────────────────────── */
+    .mc-btn-quaternary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--mc-color-accent);
+      font-size: var(--mc-text-sm);
+      font-weight: 400;
+      padding: 4px 0;
+      height: auto;
+      border-radius: var(--mc-radius-sm);
+      cursor: pointer;
+      transition: color var(--mc-transition);
+      text-decoration: none;
+    }
+  
+    .mc-btn-quaternary:hover:not(:disabled) {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  
+    .mc-btn-quaternary:active { transform: none; }
+    .mc-btn-quaternary:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── cancel — pie de modal ──────────────────────────────────────────── */
+    .mc-btn-cancel {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: var(--mc-color-text-secondary);
+      font-size: var(--mc-text-sm);
+      font-weight: 400;
+      padding: 10px 0;
+      cursor: pointer;
+      border-radius: var(--mc-radius-sm);
+      transition: color var(--mc-transition);
+      font-family: inherit;
+    }
+  
+    .mc-btn-cancel:hover:not(:disabled) { color: var(--mc-color-text); }
+    .mc-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ── Tamaños ────────────────────────────────────────────────────────── */
+    .mc-btn-sm,
+    .mc-btn-secondary.mc-btn-sm,
+    .mc-btn-ghost.mc-btn-sm,
+    .mc-btn-danger.mc-btn-sm,
+    .mc-btn-tertiary.mc-btn-sm,
+    .mc-btn-quaternary.mc-btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  
+    .mc-btn-xs,
+    .mc-btn-secondary.mc-btn-xs,
+    .mc-btn-ghost.mc-btn-xs,
+    .mc-btn-danger.mc-btn-xs,
+    .mc-btn-tertiary.mc-btn-xs {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+  
+    .mc-btn-lg,
+    .mc-btn-secondary.mc-btn-lg,
+    .mc-btn-tertiary.mc-btn-lg,
+    .mc-btn-danger.mc-btn-lg {
+      height: 44px;
+      padding: 0 24px;
+      font-size: var(--mc-text-sm);
+      font-weight: 600;
+      border-radius: var(--mc-radius-lg);
+    }
+  
+    .mc-btn-full { width: 100%; }
+  
+    /* ── Text links ─────────────────────────────────────────────────────── */
+    .mc-text-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      background: transparent;
+      border: none;
+      color: var(--mc-color-accent);
+      font-size: var(--mc-text-sm);
+      font-weight: 400;
+      padding: 4px 0;
+      height: auto;
+      border-radius: var(--mc-radius-sm);
+      cursor: pointer;
+      transition: color var(--mc-transition);
+      text-decoration: none;
+      font-family: inherit;
+      line-height: 1.35;
+    }
+  
+    .mc-text-link:hover:not(:disabled) {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  
+    .mc-text-link:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    .mc-text-link-muted {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      background: transparent;
+      border: none;
+      color: var(--mc-color-text-secondary);
+      font-size: var(--mc-text-sm);
+      font-weight: 400;
+      padding: 4px 0;
+      height: auto;
+      border-radius: var(--mc-radius-sm);
+      cursor: pointer;
+      transition: color var(--mc-transition);
+      text-decoration: none;
+      font-family: inherit;
+      line-height: 1.35;
+    }
+  
+    .mc-text-link-muted:hover:not(:disabled) {
+      color: var(--mc-color-text);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  
+    .mc-text-link-muted:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+    /* ══════════════════════════════════════════════════════════════════════
+     * INPUTS Y FORMULARIOS
+     * ══════════════════════════════════════════════════════════════════════ */
+  
+    .mc-input {
+      background: var(--mc-color-surface);
+      border: 1px solid var(--mc-color-border-strong);
+      border-radius: var(--mc-radius-md);
+      padding: 0 12px;
+      height: 40px;
+      font-size: var(--mc-text-sm);
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+    }
+  
+    .mc-input:focus {
+      border-color: var(--mc-color-accent);
+      outline: 2px solid var(--mc-color-accent-soft);
+      outline-offset: 0;
+    }
+  
+    .mc-input:focus-visible { outline: none; }
+  
+    /* textarea: sin altura fija */
+    textarea.mc-input {
+      height: auto;
+      min-height: 80px;
+      padding: 10px 12px;
+      resize: vertical;
+      display: block;
+    }
+  
+    /* select: chevron custom */
+    select.mc-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2365676B' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+  
+    /* Estado de error */
+    .mc-input.mc-input-error { border-color: var(--mc-color-danger); }
+  
+    .mc-input.mc-input-error:focus {
+      border-color: var(--mc-color-danger);
+      outline: 2px solid color-mix(in srgb, var(--mc-color-danger) 15%, transparent);
+    }
+  
+    /* ── mc-field — wrapper label + input ──────────────────────────────── */
+    .mc-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+  
+    .mc-field-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--mc-color-text-secondary);
+      letter-spacing: 0.01em;
+    }
+  
+    .mc-field-error {
+      font-size: 12px;
+      color: var(--mc-color-danger);
+    }
+  
+    .mc-field-hint {
+      font-size: 12px;
+      color: var(--mc-color-text-secondary);
+    }
+  
+    /* ── Contador de caracteres ─────────────────────────────────────────── */
+    .mc-char-count {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--mc-color-text-secondary);
+      transition: color var(--mc-transition);
+    }
+  
+    .mc-char-count.mc-char-count-error { color: var(--mc-color-danger); }
+  
+  }

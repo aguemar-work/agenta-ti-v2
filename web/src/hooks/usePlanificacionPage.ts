@@ -29,6 +29,7 @@ import {
   reprogramarTareaConLog,
 } from '@/api/semana';
 import { getObjetivosActivos } from '@/api/objetivos';
+import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { agregarDias, inicioSemanaIso, numeroSemanaDesdeLunes, semanaIsoDesdeFecha } from '@/lib/semanas';
@@ -169,12 +170,8 @@ export function usePlanificacionPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   async function invalidarCarga() {
-    await Promise.all([
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion', 'carga', semanaISO] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'] }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['semana'] }),
-    ]);
+    await invalidateRelatedQueries(qc, ['planificacion', 'tablero', 'semana']);
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] });
   }
 
   async function confirmarDesbloqueo(input: { tareaId: string; nuevaFecha: string; justificacion: string }) {

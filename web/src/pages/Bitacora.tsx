@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 
 import { ModalConvertirEvento } from '@/components/bitacora/ModalConvertirEvento';
 import { ModalConvertirTarea } from '@/components/bitacora/ModalConvertirTarea';
@@ -171,7 +171,9 @@ export function Bitacora() {
             </select>
           </div>
           <Button
-            className="ml-auto"
+            variant="primary"
+            size="lg"
+            fullWidth
             disabled={!notaForm.contenido.trim() || mut.isPending}
             onClick={() => void guardarNota()}
           >
@@ -223,33 +225,39 @@ export function Bitacora() {
                         <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
                           Convertir en
                         </p>
-                        <button
-                          type="button"
-                          className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          role="menuitem"
+                          className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal"
                           onClick={() => {
                             setNotaParaTarea(n);
                             setMenuAbierto(null);
                           }}
                         >
                           Tarea
-                        </button>
-                        <button
-                          type="button"
-                          className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          role="menuitem"
+                          className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal"
                           onClick={() => {
                             setNotaParaEvento(n);
                             setMenuAbierto(null);
                           }}
                         >
                           Evento
-                        </button>
-                        <button
-                          type="button"
-                          className="mc-btn-ghost w-full justify-start px-3 py-2 text-xs text-[var(--mc-color-text-secondary)]"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          role="menuitem"
+                          className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal text-[var(--mc-color-text-secondary)]"
                           onClick={() => setMenuAbierto(null)}
                         >
                           Dejar como nota
-                        </button>
+                        </Button>
                       </div>
                     ) : null}
                   </div>

@@ -12,7 +12,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MoreHorizontal, X } from 'lucide-react';
 
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
+import { JustificacionField } from '@/components/ui/JustificacionField';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
@@ -46,7 +47,7 @@ const EDITAR_IDLE: EditarTareaDraft = {
 // ---------------------------------------------------------------------------
 const PRIORIDAD_ICON: Record<string, { emoji: string; label: string }> = {
   alta:  { emoji: '🔴', label: 'Prioridad alta'  },
-  media: { emoji: '🟡', label: 'Prioridad media' },
+  media: { emoji: '◆', label: 'Prioridad media' },
   baja:  { emoji: '⚪', label: 'Prioridad baja'  },
 };
 
@@ -202,14 +203,21 @@ export function ModalDetalleTareaSemana({
   function renderFooter(): ReactNode {
     if (vista === 'editar') {
       return (
-        <>
-          <Button variant="ghost" onClick={() => { clearEditarDraft(); setVista('detalle'); }} disabled={busy}>
-            Cancelar
-          </Button>
-          <Button onClick={() => void guardar()} disabled={busy || !editarForm.titulo.trim()}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => void guardar()}
+            disabled={busy || !editarForm.titulo.trim()}
+          >
             {busy ? 'Guardando…' : 'Guardar cambios'}
           </Button>
-        </>
+          <CancelButton
+            onClick={() => { clearEditarDraft(); setVista('detalle'); }}
+            disabled={busy}
+          />
+        </div>
       );
     }
     if (vista === 'eliminar') {
@@ -218,29 +226,25 @@ export function ModalDetalleTareaSemana({
           <Button variant="ghost" onClick={() => setVista('detalle')} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={() => void eliminar()} disabled={busy || !motivoOk} variant="danger">
+          <Button variant="danger" onClick={() => void eliminar()} disabled={busy || !motivoOk}>
             {busy ? 'Eliminando…' : 'Confirmar eliminación'}
           </Button>
         </>
       );
     }
     return (
-      <button
-        type="button"
-        onClick={handleModalClose}
-        disabled={busy}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 28, height: 28, borderRadius: 6,
-          border: '1px solid var(--mc-color-border)',
-          background: 'none', cursor: 'pointer',
-          color: 'var(--mc-color-text-secondary)',
-          marginLeft: 'auto',
-        }}
-        aria-label="Cerrar"
-      >
-        <X size={14} aria-hidden />
-      </button>
+      <div style={{ marginLeft: 'auto' }}>
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={handleModalClose}
+          disabled={busy}
+          aria-label="Cerrar"
+          className="!min-h-[28px] !min-w-[28px] !p-0"
+        >
+          <X size={14} aria-hidden />
+        </Button>
+      </div>
     );
   }
 
@@ -318,12 +322,12 @@ export function ModalDetalleTareaSemana({
 
                   {/* Botón principal: Iniciar o Completar según estado */}
                   {['pendiente', 'atrasada', 'reprogramada'].includes(tarea.estado) && onIniciar && (
-                    <Button size="sm" onClick={() => void onIniciar(tarea)}>
+                    <Button variant="primary" size="sm" onClick={() => void onIniciar(tarea)}>
                       Iniciar
                     </Button>
                   )}
                   {tarea.estado === 'en_progreso' && onCompletar && (
-                    <Button size="sm" onClick={() => onCompletar(tarea)}>
+                    <Button variant="primary" size="sm" onClick={() => onCompletar(tarea)}>
                       Completar
                     </Button>
                   )}
@@ -465,35 +469,14 @@ export function ModalDetalleTareaSemana({
             <p id={ELIM_HINT_ID} className="text-sm text-[var(--mc-color-text-secondary)]">
               Esta acción no se puede deshacer. Indica el motivo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
             </p>
-            <div className="mc-field">
-              <label className="mc-field-label" htmlFor="elim-motivo">
-                <span className="flex justify-between">
-                  <span>Motivo de eliminación</span>
-                  <span
-                    aria-live="polite"
-                    className={`mc-char-count ${motivoOk ? 'mc-char-count-ok' : ''}`}
-                  >
-                    {motivoLen}/{MIN_JUSTIFICACION_CHARS}
-                  </span>
-                </span>
-              </label>
-              <textarea
-                id="elim-motivo"
-                className="mc-input"
-                style={{ minHeight: 90, resize: 'vertical' }}
-                value={motivoEliminar}
-                onChange={(e) => setMotivoEliminar(e.target.value)}
-                placeholder="Indica el motivo de la eliminación…"
-                autoFocus
-                aria-describedby={elimDescribedBy}
-                aria-invalid={motivoLen > 0 && !motivoOk}
-              />
-            </div>
-            {motivoLen > 0 && !motivoOk && (
-              <p id={ELIM_ERR_ID} role="alert" className="text-xs text-[var(--mc-color-danger)]">
-                Mínimo {MIN_JUSTIFICACION_CHARS} caracteres (llevas {motivoLen}/{MIN_JUSTIFICACION_CHARS}).
-              </p>
-            )}
+            <JustificacionField
+              label="Motivo de eliminación"
+              value={motivoEliminar}
+              onChange={setMotivoEliminar}
+              placeholder="Indica el motivo de la eliminación…"
+              disabled={busy}
+              autoFocus
+            />
           </div>
         );
 

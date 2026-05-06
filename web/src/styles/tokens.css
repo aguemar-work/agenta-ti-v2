@@ -1,40 +1,125 @@
 :root {
-  --mc-color-bg: #f5f6f7;
-  --mc-color-surface: #ffffff;
-  --mc-color-surface-hover: #f2f4f7;
-  --mc-color-border: #e4e6eb;
-  --mc-color-border-strong: #ced2d9;
-  --mc-color-text: #050505;
-  --mc-color-text-secondary: #65676b;
+  /* ── Colores base ──────────────────────────────────────────────── */
+  --mc-color-bg:               #f5f6f7;
+  --mc-color-surface:          #ffffff;
+  --mc-color-surface-hover:    #f2f4f7;
+  --mc-color-border:           #e4e6eb;
+  --mc-color-border-strong:    #ced2d9;
+  --mc-color-text:             #050505;
+  --mc-color-text-secondary:   #65676b;
   --mc-color-text-placeholder: #8d949e;
-  --mc-color-neutral: #65676b;
-  --mc-color-on-accent: #ffffff;
-  --mc-color-accent: #0064e0;
-  --mc-color-accent-hover: #0057c2;
-  --mc-color-accent-soft: rgba(0, 100, 224, 0.08);
-  --mc-color-accent-border: color-mix(in srgb, var(--mc-color-accent) 38%, var(--mc-color-border));
+  --mc-color-neutral:          #65676b;
+  --mc-color-on-accent:        #ffffff;
+  --mc-color-accent:           #0064e0;
+  --mc-color-accent-hover:     #0057c2;
+  --mc-color-accent-soft:      rgba(0, 100, 224, 0.08);
+  --mc-color-accent-border:    color-mix(in srgb, var(--mc-color-accent) 38%, var(--mc-color-border));
+  --mc-color-success:          #31a24c;
+  --mc-color-warning:          #f7b928;
+  --mc-color-danger:           #fa3e3e;
+
+  /* ── Layout ────────────────────────────────────────────────────── */
   --mc-sidebar-w-collapsed: 52px;
-  --mc-sidebar-w-expanded: 220px;
-  --mc-color-success: #31a24c;
-  --mc-color-warning: #f7b928;
-  --mc-color-danger: #fa3e3e;
-  --mc-radius-sm: 6px;
-  --mc-radius-md: 8px;
-  --mc-radius-lg: 12px;
-  --mc-space-2: 8px;
-  --mc-space-3: 12px;
-  --mc-space-4: 16px;
-  --mc-space-6: 24px;
+  --mc-sidebar-w-expanded:  220px;
+  --mc-bottom-nav-h:        60px;
+  --mc-topbar-h:            56px;
+
+  /* ── Radios ────────────────────────────────────────────────────── */
+  --mc-radius-sm:   6px;
+  --mc-radius-md:   8px;
+  --mc-radius-lg:   12px;
+  --mc-radius-xl:   16px;
+  --mc-radius-pill: 20px;
+
+  /* ── Espaciado (escala 4px) ─────────────────────────────────────── */
+  --mc-space-1:  4px;
+  --mc-space-2:  8px;
+  --mc-space-3:  12px;
+  --mc-space-4:  16px;
+  --mc-space-5:  20px;
+  --mc-space-6:  24px;
+  --mc-space-8:  32px;
+  --mc-space-10: 40px;
+
+  /* ── Tipografía ─────────────────────────────────────────────────── */
+  --mc-text-xs:   11px;
+  --mc-text-sm:   13px;
+  --mc-text-base: 14px;
+  --mc-text-md:   16px;
+  --mc-text-lg:   18px;
+  --mc-text-xl:   22px;
+  --mc-text-2xl:  28px;
+  --mc-leading-tight:  1.2;
+  --mc-leading-normal: 1.5;
   --mc-font-sans: 'Inter', -apple-system, system-ui, sans-serif;
-  --mc-text-sm: 14px;
-  --mc-text-md: 16px;
-  --mc-text-lg: 20px;
-  --mc-topbar-h: 56px;
-  --mc-space-5: 20px;
-  --mc-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Iconos ─────────────────────────────────────────────────────── */
+  --mc-icon-xs: 14px;
+  --mc-icon-sm: 16px;
+  --mc-icon-md: 20px;
+  --mc-icon-lg: 24px;
+
+  /* ── Transiciones ───────────────────────────────────────────────── */
+  --mc-transition:        150ms cubic-bezier(0.4, 0, 0.2, 1);
   --mc-transition-layout: 0.2s ease;
-  /** Sombra unificada para cards (ligera) */
-  --mc-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  /** Sombra al arrastrar tarjetas (Kanban): base + profundidad extra */
+
+  /* ── Sombras ────────────────────────────────────────────────────── */
+  --mc-card-shadow:      0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --mc-card-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.12), var(--mc-card-shadow);
+  --mc-card-border:      0.5px solid var(--mc-color-border);
+
+  /* ── Estado de tarea ────────────────────────────────────────────── */
+  /*
+   * FUENTE ÚNICA de colores para todos los estados de tarea.
+   * Consumir via STATE_TOKENS en lib/estadoConfig.ts.
+   * NUNCA usar hex sueltos en TaskItem, HoyPanel, Tablero, etc.
+   */
+
+  /* atrasada */
+  --mc-state-atrasada-bg:        #FCEBEB;
+  --mc-state-atrasada-fg:        #791F1F;
+  --mc-state-atrasada-border:    #E24B4A;
+  --mc-state-atrasada-meta:      #A32D2D;
+
+  /* bloqueada */
+  --mc-state-bloqueada-bg:       transparent;
+  --mc-state-bloqueada-fg:       var(--mc-color-text);
+  --mc-state-bloqueada-border:   #EF9F27;
+  --mc-state-bloqueada-meta:     #854F0B;
+
+  /* urgencia horaria: urgente (5–6pm) */
+  --mc-state-urgente-bg:         #FCEBEB;
+  --mc-state-urgente-fg:         #791F1F;
+  --mc-state-urgente-border:     #E24B4A;
+  --mc-state-urgente-badge-bg:   #F7C1C1;
+  --mc-state-urgente-badge-fg:   #791F1F;
+
+  /* urgencia horaria: precaución (4–5pm) */
+  --mc-state-precaucion-bg:      transparent;
+  --mc-state-precaucion-fg:      var(--mc-color-text);
+  --mc-state-precaucion-border:  #EF9F27;
+  --mc-state-precaucion-badge-bg:  #FAC775;
+  --mc-state-precaucion-badge-fg:  #633806;
+
+  /* urgencia horaria: vencida hoy (≥6pm) */
+  --mc-state-vencida-bg:         #E24B4A;
+  --mc-state-vencida-fg:         #ffffff;
+  --mc-state-vencida-border:     #A32D2D;
+  --mc-state-vencida-badge-bg:   rgba(255,255,255,0.25);
+  --mc-state-vencida-badge-fg:   #ffffff;
+
+  /* en_progreso */
+  --mc-state-progreso-bg:        #E6F1FB;
+  --mc-state-progreso-fg:        #0B3F6E;
+  --mc-state-progreso-border:    #185FA5;
+
+  /* completada */
+  --mc-state-completada-bg:      #EAF3DE;
+  --mc-state-completada-fg:      #27500A;
+  --mc-state-completada-border:  #4FA64A;
+
+  /* reprogramada */
+  --mc-state-reprogramada-bg:    #EEEDFE;
+  --mc-state-reprogramada-fg:    #3C3489;
+  --mc-state-reprogramada-border:#7F77DD;
 }

@@ -129,7 +129,7 @@ export function MiSemana() {
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PageHeader
-        title={esModoHoy ? 'Hoy' : 'Mi semana'}
+        title={esModoHoy ? 'Ahora' : 'Mi semana'}
         subtitle={esModoHoy
           ? fechaLocalDdMmYyyy(new Date())
           : `${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`
@@ -144,7 +144,7 @@ export function MiSemana() {
                 aria-pressed={esModoHoy}
                 onClick={() => setModo('hoy')}
               >
-                Hoy
+                Ahora
               </button>
               <button
                 type="button"
@@ -179,7 +179,11 @@ export function MiSemana() {
                 ))}
               </select>
             )}
-            <Button size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
+            <Button
+              variant={esModoHoy ? 'quaternary' : 'secondary'}
+              size="sm"
+              onClick={() => setModal({ fecha: hoyYmd })}
+            >
               + Nueva tarea
             </Button>
           </div>
@@ -240,6 +244,7 @@ export function MiSemana() {
             setBloquearTareaState={setBloquearTareaState}
             setCompletarTareaId={setCompletarTareaId}
             setModalInc={setModalInc}
+            onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
           />
         </div>
       )}

@@ -4,7 +4,7 @@
  */
 
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
 import type { Tarea } from '@/types';
 
@@ -36,17 +36,29 @@ export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, tarea
             title={titulo}
             size="lg"
             hasUnsavedChanges={hasUnsavedChanges}
-            footer={
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <Button variant="ghost" onClick={onClose} disabled={busy}>Cancelar</Button>
-                    <Button variant="secondary" disabled={!canSave || busy} onClick={() => onGuardar(false)}>
-                        {busy ? 'Guardando…' : 'Guardar borrador'}
-                    </Button>
-                    <Button disabled={!canSave || busy} onClick={() => onGuardar(true)}>
+            footer={(
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Button
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        disabled={!canSave || busy}
+                        onClick={() => onGuardar(true)}
+                    >
                         {busy ? 'Enviando…' : 'Enviar al jefe'}
                     </Button>
+                    <Button
+                        variant="secondary"
+                        size="lg"
+                        fullWidth
+                        disabled={!canSave || busy}
+                        onClick={() => onGuardar(false)}
+                    >
+                        {busy ? 'Guardando…' : 'Guardar borrador'}
+                    </Button>
+                    <CancelButton onClick={onClose} disabled={busy} />
                 </div>
-            }
+            )}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 

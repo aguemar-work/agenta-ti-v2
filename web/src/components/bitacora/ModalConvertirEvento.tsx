@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
 import type { NotaBitacora, TipoEvento } from '@/types';
 
@@ -93,16 +93,20 @@ export function ModalConvertirEvento({ nota, onClose, onConfirm, onConfirmRecurr
       onClose={onClose}
       title="Convertir en evento"
       size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancelar
+      footer={(
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!canSubmit}
+            onClick={() => void submit()}
+          >
+            {busy ? 'Creando…' : 'Crear evento'}
           </Button>
-          <Button onClick={() => void submit()} disabled={!canSubmit}>
-            {busy ? 'Creando...' : 'Crear evento'}
-          </Button>
-        </>
-      }
+          <CancelButton onClick={onClose} disabled={busy} />
+        </div>
+      )}
     >
       <div className="flex flex-col gap-4">
         <div className="mc-field">

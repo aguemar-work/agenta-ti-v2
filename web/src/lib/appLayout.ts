@@ -1,6 +1,6 @@
 /**
  * Contenedor estándar de cada vista bajo `mc-main` (Outlet).
- * Regla global: ancho único `max-w-[1400px]` + `mc-module`; sin otros `max-w-*` en la raíz de página.
+ * Ocupa todo el ancho disponible (`w-full`); sin `max-w-*` en la raíz de página.
  */
 export const APP_PAGE_CLASS =
-  'mc-module max-w-[1400px] flex flex-col gap-6' as const;
+  'mc-module flex w-full flex-1 min-h-0 flex-col gap-6' as const;

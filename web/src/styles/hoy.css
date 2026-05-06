@@ -1,0 +1,47 @@
+/**
+ * styles/hoy.css
+ * Componentes del panel "Ahora" (modo Hoy) de Mi Semana.
+ * Extraído de index.css.
+ */
+
+ @layer components {
+
+    .mc-hoy-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      border: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg);
+      box-shadow: var(--mc-card-shadow);
+      background: var(--mc-color-surface);
+      overflow: hidden;
+    }
+  
+    .mc-hoy-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--mc-space-3);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--mc-color-text-secondary);
+    }
+  
+    .mc-hoy-col-body {
+      flex: 1;
+      min-height: 280px;
+      max-height: min(75vh, 800px);
+      overflow-y: auto;
+      padding: var(--mc-space-2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--mc-space-2);
+    }
+  
+  }

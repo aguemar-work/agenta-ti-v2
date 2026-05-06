@@ -59,15 +59,12 @@ export function ForgotPassword() {
               required
             />
           </label>
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" variant="primary" fullWidth disabled={busy}>
             {busy ? 'Enviando…' : 'Enviar código'}
           </Button>
         </form>
 
-        <Link
-          to="/login"
-          className="mt-4 text-center text-sm text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]"
-        >
+        <Link to="/login" className="mc-text-link-muted mt-4 block w-full text-center">
           ← Volver al login
         </Link>
       </div>

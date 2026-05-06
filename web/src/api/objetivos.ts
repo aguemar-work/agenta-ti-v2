@@ -61,6 +61,27 @@ export async function crearObjetivo(input: CrearObjetivoInput): Promise<Objetivo
   return parseObjetivo(inserted as Record<string, unknown>);
 }
 
+export async function completarObjetivo(input: {
+  objetivoId: string;
+  usuarioId:  string;
+}): Promise<void> {
+  const { error } = await getInsforge().database.rpc('sgtd_completar_objetivo', {
+    p_objetivo_id: input.objetivoId,
+    p_usuario_id:  input.usuarioId,
+  });
+  if (error) throw error;
+}
+
+export async function getOTsPorObjetivo(objetivoId: string): Promise<{ id: string; numero: string; estado: string; descripcion: string }[]> {
+  const { data, error } = await getInsforge().database
+    .from('orden_trabajo')
+    .select('id, numero, estado, descripcion')
+    .eq('objetivo_id', objetivoId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as { id: string; numero: string; estado: string; descripcion: string }[];
+}
+
 export async function eliminarObjetivo(input: {
   objetivoId: string;
   usuarioId: string;

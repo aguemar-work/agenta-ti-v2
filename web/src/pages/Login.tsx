@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { asegurarUsuario } from '@/api/usuario';
 import { AppLogo } from '@/components/brand/AppLogo';
+import { Button } from '@/components/ui/Button';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
 
@@ -165,31 +166,8 @@ export function Login() {
 
         /* ── Label row ── */
         .lf-row { display: flex; justify-content: space-between; align-items: center; }
-        .lf-forgot { font-size: 12px; color: var(--mc-color-text-secondary); text-decoration: none; transition: color 0.13s; }
-        .lf-forgot:hover { color: var(--mc-color-accent, #1e40af); }
-
         /* ── Divider ── */
         .lf-hr { height: 1px; background: var(--mc-color-border); }
-
-        /* ── Submit ── */
-        .lf-btn {
-          height: 43px; width: 100%; border-radius: 8px; border: none;
-          background: var(--mc-color-accent, #1e40af); color: #fff;
-          font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
-          cursor: pointer; display: flex; align-items: center; justify-content: center;
-          gap: 8px; transition: opacity 0.14s, transform 0.1s;
-        }
-        .lf-btn:hover:not(:disabled)  { opacity: 0.87; }
-        .lf-btn:active:not(:disabled) { transform: scale(0.99); }
-        .lf-btn:disabled { opacity: 0.48; cursor: not-allowed; }
-        .lf-spinner {
-          width: 14px; height: 14px;
-          border: 2px solid rgba(255,255,255,0.28);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: lf-spin 0.65s linear infinite;
-        }
-        @keyframes lf-spin { to { transform: rotate(360deg); } }
 
         /* ── Footer ── */
         .lf-footer { font-size: 12px; color: var(--mc-color-text-secondary); text-align: center; margin: 0; }
@@ -231,7 +209,7 @@ export function Login() {
               <div className="lf-field">
                 <div className="lf-row">
                   <label className="lf-label" htmlFor="lf-pwd">Contraseña</label>
-                  <Link to="/forgot-password" className="lf-forgot">¿Olvidaste tu contraseña?</Link>
+                  <Link to="/forgot-password" className="mc-text-link">¿Olvidaste tu contraseña?</Link>
                 </div>
                 <div className="lf-pwd">
                   <input
@@ -258,9 +236,9 @@ export function Login() {
 
               <div className="lf-hr" />
 
-              <button type="submit" className="lf-btn" disabled={busy}>
-                {busy ? <><span className="lf-spinner" />Verificando…</> : 'Entrar'}
-              </button>
+              <Button type="submit" variant="primary" fullWidth disabled={busy}>
+                {busy ? 'Verificando…' : 'Entrar'}
+              </Button>
             </form>
           </div>
 

@@ -51,7 +51,7 @@ export function ResetPassword() {
           <p className="text-sm text-[var(--mc-color-text-secondary)]">
             El enlace no es válido o ya expiró. Por favor inicia el proceso de nuevo.
           </p>
-          <Link to="/forgot-password" className="text-sm text-[var(--mc-color-accent)]">
+          <Link to="/forgot-password" className="mc-text-link">
             → Recuperar contraseña
           </Link>
         </div>
@@ -153,15 +153,12 @@ export function ResetPassword() {
             )}
           </label>
 
-          <Button type="submit" disabled={!canSubmit}>
+          <Button type="submit" variant="primary" fullWidth disabled={!canSubmit}>
             {busy ? 'Guardando…' : 'Cambiar contraseña'}
           </Button>
         </form>
 
-        <Link
-          to="/login"
-          className="mt-4 text-center text-sm text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]"
-        >
+        <Link to="/login" className="mc-text-link-muted mt-4 block w-full text-center">
           ← Volver al login
         </Link>
       </div>

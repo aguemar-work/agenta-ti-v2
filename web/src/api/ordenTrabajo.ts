@@ -238,11 +238,10 @@ export async function completarOT(input: {
   if (error) throw error;
 }
 
-export async function cancelarOrdenTrabajo(otId: Id, usuarioId: Id, motivo?: string): Promise<void> {
+export async function cancelarOrdenTrabajo(otId: Id, usuarioId: Id): Promise<void> {
   const { error } = await getInsforge().database.rpc('sgtd_cancelar_ot', {
     p_ot_id:      otId,
     p_usuario_id: usuarioId,
-    p_motivo:     motivo?.trim() ?? null,
   });
   if (error) throw error;
 }

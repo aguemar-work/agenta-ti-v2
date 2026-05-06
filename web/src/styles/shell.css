@@ -1,0 +1,277 @@
+/*
+ * styles/shell.css
+ * CSS del shell de la aplicación: sidebar, topbar mobile, bottom nav, drawer.
+ *
+ * Importar en index.css:
+ *   @import './styles/shell.css';
+ *
+ * NO redefinir estas clases en AppShell.tsx ni en ningún otro archivo.
+ */
+:root {
+  /* Rail fijo (solo íconos). Ancho canónico en tokens.css. */
+  --mc-sidebar-w-rail: var(--mc-sidebar-w-collapsed, 52px);
+}
+
+/* ── Layout raíz: viewport − rail (columna flex crece) ── */
+.mc-app-root {
+  display: flex;
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── Sidebar: rail de íconos (sin expand/collapse) ── */
+.mc-sidebar {
+  width: var(--mc-sidebar-w-rail);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--mc-color-surface);
+  border-right: 1px solid var(--mc-color-border);
+  overflow-x: visible;
+  overflow-y: hidden;
+  box-sizing: border-box;
+}
+
+/* Cabecera del sidebar */
+.mc-sidebar-head {
+  height: var(--mc-topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--mc-color-border);
+  flex-shrink: 0;
+}
+
+/* Links de nav: solo ícono centrado */
+.mc-sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 10px 8px;
+  border-radius: var(--mc-radius-md);
+  color: var(--mc-color-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.12s, color 0.12s;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+.mc-sidebar-link:hover {
+  background: var(--mc-color-surface-hover);
+  color: var(--mc-color-text);
+}
+.mc-sidebar-link--active {
+  background: color-mix(in srgb, var(--mc-color-accent) 10%, transparent);
+  color: var(--mc-color-accent);
+  font-weight: 600;
+}
+.mc-sidebar-link--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--mc-color-accent);
+}
+
+/* Tooltips al hover / focus (rail siempre) */
+.mc-tip {
+  position: relative;
+}
+.mc-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--mc-color-text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: var(--mc-radius-sm);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 200;
+}
+.mc-sidebar .mc-tip:hover::after,
+.mc-sidebar .mc-tip:focus-within::after {
+  opacity: 1;
+}
+
+/* Perfil: columna compacta bajo el rail */
+.mc-sidebar-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  min-width: 0;
+}
+.mc-sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--mc-color-accent) 12%, transparent);
+  color: var(--mc-color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+}
+.mc-sidebar-profile-info {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mc-sidebar-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mc-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.mc-sidebar-profile-role {
+  font-size: 11px;
+  color: var(--mc-color-text-secondary);
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* Botón logout */
+.mc-sidebar-logout {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: var(--mc-radius-md);
+  border: none; background: none; cursor: pointer; flex-shrink: 0;
+  color: var(--mc-color-text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+.mc-sidebar-logout:hover {
+  background: color-mix(in srgb, var(--mc-color-danger) 10%, transparent);
+  color: var(--mc-color-danger);
+}
+
+/* ── Columna principal: resto del viewport ── */
+.mc-app-column {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+.mc-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  padding: var(--mc-space-6, 24px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Topbar mobile ── */
+.mc-mobile-topbar {
+  display: none;
+  height: var(--mc-topbar-h);
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--mc-color-border);
+  background: var(--mc-color-surface);
+  gap: 10px;
+}
+.mc-topbar-page-name {
+  font-size: 15px; font-weight: 600; color: var(--mc-color-text);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Bottom nav ── */
+.mc-bottom-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0;
+  height: var(--mc-bottom-nav-h);
+  background: var(--mc-color-surface);
+  border-top: 1px solid var(--mc-color-border); z-index: 40;
+}
+.mc-bottom-nav-inner {
+  display: flex; align-items: stretch; height: 100%;
+}
+.mc-bottom-nav-link {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; text-decoration: none;
+  color: var(--mc-color-text-secondary);
+  font-size: 10px; font-weight: 500;
+  transition: color 0.13s; padding: 6px 4px 8px;
+  border: none; background: none; cursor: pointer;
+}
+.mc-bottom-nav-link.active,
+.mc-bottom-nav-link--active { color: var(--mc-color-accent); font-weight: 600; }
+
+/* ── Drawer "Más" ── */
+.mc-mas-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.2);
+  z-index: 45; animation: mc-fade-in 0.15s ease;
+}
+.mc-mas-drawer {
+  position: fixed; bottom: var(--mc-bottom-nav-h); left: 0; right: 0;
+  background: var(--mc-color-surface);
+  border-top: 1px solid var(--mc-color-border);
+  border-radius: 16px 16px 0 0;
+  z-index: 46; padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+}
+.mc-mas-drawer--open  { transform: translateY(0);    opacity: 1; }
+.mc-mas-drawer--closed{ transform: translateY(100%); opacity: 0; pointer-events: none; }
+.mc-mas-drawer-item {
+  padding: 11px 14px !important; font-size: 14px !important;
+  border-radius: var(--mc-radius-md) !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+}
+.mc-mas-drawer::before {
+  content: '';
+  display: block;
+  width: 36px; height: 4px;
+  border-radius: 2px;
+  background: var(--mc-color-border-strong);
+  margin: 0 auto 8px;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .mc-sidebar       { display: none; }
+  .mc-bottom-nav    { display: block; }
+  .mc-mobile-topbar { display: flex; }
+  .mc-main          { padding-bottom: calc(var(--mc-bottom-nav-h) + 16px) !important; }
+}

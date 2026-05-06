@@ -2,16 +2,25 @@ import { useState } from 'react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { JustificacionField } from '@/components/ui/JustificacionField';
 
 type Props = {
-  open: boolean;
-  titulo: string;
+  open:         boolean;
+  titulo:       string;
   descripcion?: string;
-  onClose: () => void;
-  onConfirm: (justificacion: string) => Promise<void>;
+  /** Si true, el botón de confirmar usa variant="danger" (para acciones destructivas) */
+  destructive?: boolean;
+  labelConfirm?: string;
+  onClose:      () => void;
+  onConfirm:    (justificacion: string) => Promise<void>;
 };
 
-export function ModalJustificacion({ open, titulo, descripcion, onClose, onConfirm }: Props) {
+export function ModalJustificacion({
+  open, titulo, descripcion,
+  destructive = false,
+  labelConfirm = 'Confirmar',
+  onClose, onConfirm,
+}: Props) {
   const [just, setJust] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -24,9 +33,7 @@ export function ModalJustificacion({ open, titulo, descripcion, onClose, onConfi
       await onConfirm(just.trim());
       setJust('');
       onClose();
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   return (
@@ -35,34 +42,33 @@ export function ModalJustificacion({ open, titulo, descripcion, onClose, onConfi
       onClose={onClose}
       title={titulo}
       size="sm"
-      footer={
+      footer={(
         <>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={() => void submit()} disabled={!ok || busy}>
-            {busy ? 'Guardando…' : 'Confirmar'}
+          <Button
+            variant={destructive ? 'danger' : 'primary'}
+            disabled={!ok || busy}
+            onClick={() => void submit()}
+          >
+            {busy ? 'Guardando…' : labelConfirm}
           </Button>
         </>
-      }
+      )}
     >
       <div className="flex flex-col gap-4">
-        {descripcion && <p className="text-sm text-[var(--mc-color-text-secondary)]">{descripcion}</p>}
-        <div className="mc-field">
-          <label className="mc-field-label" htmlFor="just-input">
-            Motivo / justificación (obligatorio, mín. 10 caracteres)
-          </label>
-          <textarea
-            id="just-input"
-            className="mc-input"
-            style={{ minHeight: 96, resize: 'vertical' }}
-            value={just}
-            onChange={(e) => setJust(e.target.value)}
-            required
-            minLength={10}
-            autoFocus
-          />
-        </div>
+        {descripcion && (
+          <p className="text-sm text-[var(--mc-color-text-secondary)]">{descripcion}</p>
+        )}
+
+        <JustificacionField
+          label="Motivo / justificación"
+          value={just}
+          onChange={setJust}
+          disabled={busy}
+          autoFocus
+        />
       </div>
     </Modal>
   );

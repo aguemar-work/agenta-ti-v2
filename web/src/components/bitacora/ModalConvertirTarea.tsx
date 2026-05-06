@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 
 import type { NotaBitacora, Tarea } from '@/types';
 
@@ -55,16 +55,20 @@ export function ModalConvertirTarea({ nota, onClose, onConfirm }: Props) {
       onClose={onClose}
       title="Convertir en tarea"
       size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancelar
+      footer={(
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!canSubmit}
+            onClick={() => void submit()}
+          >
+            {busy ? 'Creando…' : 'Crear tarea'}
           </Button>
-          <Button onClick={() => void submit()} disabled={!canSubmit}>
-            {busy ? 'Creando...' : 'Crear tarea'}
-          </Button>
-        </>
-      }
+          <CancelButton onClick={onClose} disabled={busy} />
+        </div>
+      )}
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-[var(--mc-color-text-secondary)]">Revisa y completa los datos antes de crear.</p>

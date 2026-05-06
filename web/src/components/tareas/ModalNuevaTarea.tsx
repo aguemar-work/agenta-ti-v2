@@ -1,92 +1,75 @@
-/**
- * components/tareas/ModalNuevaTarea.tsx
- * Migrado a <Modal> — Sprint 4.
- */
-
 import { useMemo, useState } from 'react';
-
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
 type Modo = 'dia' | 'incidencia';
 
 type Props = {
-  modo: Modo;
-  fechaDia?: string;
-  fechaReferencia: string;
-  open: boolean;
-  objetivos?: Pick<Objetivo, 'id' | 'titulo'>[];
-  usuarioActualId: string;
+  modo:               Modo;
+  fechaDia?:          string;
+  fechaReferencia:    string;
+  open:               boolean;
+  objetivos?:         Pick<Objetivo, 'id' | 'titulo'>[];
+  usuarioActualId:    string;
   usuariosAsignables?: Pick<Usuario, 'id' | 'nombre'>[];
-  onClose: () => void;
-  onSubmit: (input: {
-    titulo: string;
-    prioridad: Tarea['prioridad'];
-    descripcion: string;
+  onClose:            () => void;
+  onSubmit:           (input: {
+    titulo:       string;
+    prioridad:    Tarea['prioridad'];
+    descripcion:  string;
     objetivo_id?: string | null;
-    asignado_a: string;
+    asignado_a:   string;
   }) => Promise<void>;
 };
 
 const TITULO_MODAL: Record<Modo, (fechaDia?: string) => string> = {
-  incidencia: () => 'Nueva incidencia',
-  dia: (f = '') => `Nueva tarea · ${f}`,
+  incidencia: ()  => 'Nueva incidencia',
+  dia:        (f = '') => `Nueva tarea · ${f}`,
 };
 
 export function ModalNuevaTarea({
-  modo,
-  fechaDia,
-  fechaReferencia,
-  open,
-  objetivos = [],
-  usuarioActualId,
-  usuariosAsignables = [],
-  onClose,
-  onSubmit,
+  modo, fechaDia, fechaReferencia, open,
+  objetivos = [], usuarioActualId, usuariosAsignables = [],
+  onClose, onSubmit,
 }: Props) {
   const [busy, setBusy] = useState(false);
 
-  const initialForm = useMemo(
-    () => ({
-      titulo: '',
-      prioridad: 'media' as Tarea['prioridad'],
-      descripcion: '',
-      objetivoId: '',
-      asignadoId: usuarioActualId,
-    }),
-    [usuarioActualId],
-  );
+  const initialForm = useMemo(() => ({
+    titulo:      '',
+    prioridad:   'media' as Tarea['prioridad'],
+    descripcion: '',
+    objetivoId:  '',
+    asignadoId:  usuarioActualId,
+  }), [usuarioActualId]);
+
   const draftKey = `tarea-nueva-${modo}-${usuarioActualId}`;
   const { form, setForm, hasChanges, clearDraft } = useDraftForm(draftKey, initialForm);
 
   const fechaLimiteYmd = modo === 'dia' && fechaDia ? fechaDia : fechaReferencia;
-  const canSubmit = form.titulo.trim().length > 0 && !busy;
+  const canSubmit      = form.titulo.trim().length > 0 && !busy;
 
   async function submit() {
     if (!canSubmit) return;
     setBusy(true);
     try {
-      const asignado = modo === 'incidencia' ? usuarioActualId : (form.asignadoId.trim() || usuarioActualId);
+      const asignado = modo === 'incidencia'
+        ? usuarioActualId
+        : (form.asignadoId.trim() || usuarioActualId);
       await onSubmit({
-        titulo: form.titulo.trim(),
-        prioridad: form.prioridad,
-        descripcion: form.descripcion.trim(),
-        objetivo_id: modo === 'incidencia' ? null : (form.objetivoId || null),
-        asignado_a: asignado,
+        titulo:       form.titulo.trim(),
+        prioridad:    form.prioridad,
+        descripcion:  form.descripcion.trim(),
+        objetivo_id:  modo === 'incidencia' ? null : (form.objetivoId || null),
+        asignado_a:   asignado,
       });
       clearDraft();
       onClose();
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
-  function handleClose() {
-    clearDraft();
-    onClose();
-  }
+  function handleClose() { clearDraft(); onClose(); }
 
   return (
     <Modal
@@ -95,16 +78,20 @@ export function ModalNuevaTarea({
       title={TITULO_MODAL[modo](fechaDia)}
       size="md"
       hasUnsavedChanges={hasChanges}
-      footer={
-        <>
-          <Button variant="ghost" onClick={handleClose} disabled={busy}>
-            Cancelar
+      footer={(
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!canSubmit}
+            onClick={() => void submit()}
+          >
+            {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar incidencia' : 'Crear tarea'}
           </Button>
-          <Button onClick={() => void submit()} disabled={!canSubmit}>
-            {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar' : 'Crear'}
-          </Button>
-        </>
-      }
+          <CancelButton onClick={handleClose} disabled={busy} />
+        </div>
+      )}
     >
       <div className="flex flex-col gap-4">
         {modo === 'incidencia' ? (
@@ -175,9 +162,7 @@ export function ModalNuevaTarea({
             >
               <option value="">Sin objetivo</option>
               {objetivos.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.titulo}
-                </option>
+                <option key={o.id} value={o.id}>{o.titulo}</option>
               ))}
             </select>
           </div>

@@ -128,20 +128,20 @@ export function useRealtimeNotificaciones() {
         if (cancelledRef.current) return;
 
         setConectado(false);
-        console.warn('[useRealtimeNotificaciones] connect error:', err);
+        // Solo logear en dev; en producción el indicador gris es suficiente feedback
+        if (import.meta.env.DEV) {
+          console.warn('[useRealtimeNotificaciones] connect error:', err);
+        }
 
         // Retry con exponential backoff si quedan intentos
         if (retryCountRef.current < MAX_RETRIES) {
           const delay = RETRY_DELAYS_MS[retryCountRef.current] ?? 8_000;
           retryCountRef.current += 1;
-          console.warn(
-            `[useRealtimeNotificaciones] reintentando en ${delay}ms (intento ${retryCountRef.current}/${MAX_RETRIES})`,
-          );
           retryTimerRef.current = setTimeout(() => {
             if (!cancelledRef.current) void connect();
           }, delay);
         }
-        // Después de MAX_RETRIES la app sigue funcionando sin realtime
+        // Después de MAX_RETRIES la app sigue funcionando sin realtime (indicador gris)
       }
     }
 

@@ -39,15 +39,16 @@ export type TareaSchema = z.infer<typeof TareaSchema>;
 // Evento
 // ---------------------------------------------------------------------------
 export const EventoSchema = z.object({
-  id:            id,
-  titulo:        z.string(),
-  tipo:          z.enum(['reunion', 'entrega', 'personal', 'otro']),
-  fecha_inicio:  dateStr,
-  fecha_fin:     dateStr,
-  usuario_id:    id,
-  es_recurrente: z.boolean(),
-  created_at:    dateStr,
-  updated_at:    dateStr,
+  id:             id,
+  titulo:         z.string(),
+  tipo:           z.enum(['reunion', 'entrega', 'personal', 'otro']),
+  fecha_inicio:   dateStr,
+  fecha_fin:      dateStr,
+  usuario_id:     id,
+  es_recurrente:  z.boolean(),
+  recurrencia_id: id.nullable().optional(),
+  created_at:     dateStr,
+  updated_at:     dateStr,
 });
 
 export type EventoSchema = z.infer<typeof EventoSchema>;

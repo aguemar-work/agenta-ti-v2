@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { publicarEventoUsuario } from '@/lib/realtimePublish';
 import { getInsforge } from '@/lib/insforge';
+import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import type { Id, Tarea } from '@/types';
 
 export const Q_OT = 'ordenes-trabajo';
@@ -88,7 +89,7 @@ export function useOrdenesTrabajoPage() {
   const [nuevoTipoNombre, setNuevoTipoNombre] = useState('');
 
   // ── Invalidar ─────────────────────────────────────────────────────────────
-  const invalidarOTs = () => qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OT] });
+  const invalidarOTs = () => invalidateRelatedQueries(qc, ['ot']);
   const invalidarTipos = () => qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TIPOS_OT] });
 
   // ── Mutaciones — OTs ──────────────────────────────────────────────────────

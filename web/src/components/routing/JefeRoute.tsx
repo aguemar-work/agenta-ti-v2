@@ -9,7 +9,7 @@ export function JefeRoute({ children }: Props) {
   const rol = useAuthStore((s) => s.usuario?.rol);
 
   if (rol !== 'jefe') {
-    return <Navigate to="/hoy" replace />;
+    return <Navigate to="/semana" replace />;
   }
 
   return children;

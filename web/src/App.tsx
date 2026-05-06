@@ -69,7 +69,14 @@ export default function App() {
             </JefeRoute>
           }
         />
-        <Route path="tablero" element={<RouteWrapper label="Tablero"><Tablero /></RouteWrapper>} />
+        <Route
+          path="tablero"
+          element={
+            <JefeRoute>
+              <RouteWrapper label="Tablero"><Tablero /></RouteWrapper>
+            </JefeRoute>
+          }
+        />
         <Route path="objetivos" element={<RouteWrapper label="Objetivos"><Objetivos /></RouteWrapper>} />
         <Route path="bitacora" element={<RouteWrapper label="Bitácora"><Bitacora /></RouteWrapper>} />
         <Route path="metricas" element={<RouteWrapper label="Métricas"><Metricas /></RouteWrapper>} />

@@ -234,9 +234,14 @@ export function Modal({
           <div style={{
             padding: '12px 20px',
             borderTop: '1px solid var(--mc-color-border)',
-            display: 'flex', justifyContent: 'flex-end', gap: '8px',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'stretch',
+            flexWrap: 'wrap',
+            gap: '8px',
             flexShrink: 0,
-          }}>
+          }}
+          >
             {footer}
           </div>
         )}

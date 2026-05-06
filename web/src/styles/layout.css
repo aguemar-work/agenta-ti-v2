@@ -1,0 +1,277 @@
+/**
+ * styles/layout.css
+ * Componentes de navegación y layout de página:
+ * page-header, toggle-pill, nav-arrows, filter-bar, drawer "Más".
+ * Extraído de index.css.
+ */
+
+ @layer components {
+
+    /* ── Page header ─────────────────────────────────────────────────────── */
+    .mc-page-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--mc-color-border);
+    }
+  
+    .mc-page-header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+  
+    .mc-page-header-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  
+    .mc-page-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  
+    .mc-page-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  
+    .mc-page-title {
+      font-size: var(--mc-text-lg);
+      font-weight: 600;
+      color: var(--mc-color-text);
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+  
+    .mc-page-subtitle {
+      font-size: var(--mc-text-sm);
+      font-weight: 400;
+      color: var(--mc-color-text-secondary);
+      margin: 0;
+    }
+  
+    /* ── Toggle pill (Hoy / Semana) ─────────────────────────────────────── */
+    .mc-toggle-pill {
+      display: flex;
+      align-items: center;
+      border-radius: 8px;
+      border: 1px solid var(--mc-color-border);
+      overflow: hidden;
+      background: var(--mc-color-bg-secondary);
+    }
+  
+    .mc-toggle-pill-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--mc-color-text-secondary);
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+  
+    .mc-toggle-pill-btn:hover {
+      background: var(--mc-color-surface-hover);
+      color: var(--mc-color-text);
+    }
+  
+    .mc-toggle-pill-btn[aria-pressed="true"] {
+      background: var(--mc-color-accent);
+      color: #fff;
+    }
+  
+    /* ── Nav arrow buttons ──────────────────────────────────────────────── */
+    .mc-nav-arrows {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+  
+    .mc-nav-arrow-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+      color: var(--mc-color-text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      font-size: 14px;
+    }
+  
+    .mc-nav-arrow-btn:hover {
+      background: var(--mc-color-surface-hover);
+      color: var(--mc-color-text);
+    }
+  
+    /* ── Filter bar ──────────────────────────────────────────────────────── */
+    .mc-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 8px;
+    }
+  
+    .mc-filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: default;
+    }
+  
+    .mc-filter-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--mc-color-text-secondary);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+  
+    .mc-filter-select {
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-md);
+      background: var(--mc-color-bg);
+      color: var(--mc-color-text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      appearance: auto;
+    }
+  
+    .mc-filter-select:hover { border-color: var(--mc-color-border-hover, var(--mc-color-accent)); }
+    .mc-filter-select:focus { outline: none; border-color: var(--mc-color-accent); }
+  
+    /* Pills */
+    .mc-filter-pills {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  
+    .mc-filter-pill {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: var(--mc-radius-md);
+      border: 1px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+      color: var(--mc-color-text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+  
+    .mc-filter-pill:hover {
+      background: var(--mc-color-surface-hover);
+      color: var(--mc-color-text);
+    }
+  
+    .mc-filter-pill--active {
+      background: color-mix(in srgb, var(--mc-color-accent) 10%, transparent);
+      border-color: var(--mc-color-accent);
+      color: var(--mc-color-accent);
+      font-weight: 500;
+    }
+  
+    .mc-filter-pill-badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--mc-color-danger);
+      color: #fff;
+      border-radius: 9999px;
+      padding: 1px 5px;
+      line-height: 1.4;
+    }
+  
+    .mc-filter-action {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: var(--mc-radius-md);
+      border: 1px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+      color: var(--mc-color-text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+  
+    .mc-filter-action:hover {
+      background: var(--mc-color-surface-hover);
+      color: var(--mc-color-text);
+    }
+  
+    .mc-filter-action--active,
+    .mc-filter-action--toggle[aria-pressed="true"] {
+      background: var(--mc-color-accent);
+      border-color: var(--mc-color-accent);
+      color: #fff;
+    }
+  
+    /* ── Drawer "Más" (móvil) ────────────────────────────────────────────── */
+    .mc-topbar-page-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-left: 10px;
+      color: var(--mc-color-text);
+    }
+  
+    .mc-mas-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.4);
+    }
+  
+    .mc-mas-drawer {
+      position: fixed;
+      bottom: var(--mc-bottom-nav-h);
+      left: 0;
+      right: 0;
+      z-index: 51;
+      background: var(--mc-color-surface);
+      border-top: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: transform 0.22s ease;
+    }
+  
+    .mc-mas-drawer--closed { transform: translateY(110%); }
+    .mc-mas-drawer--open   { transform: translateY(0); }
+  
+    .mc-mas-drawer-item {
+      padding: 10px 12px;
+      border-radius: var(--mc-radius-md);
+      font-size: 14px;
+    }
+  
+  }

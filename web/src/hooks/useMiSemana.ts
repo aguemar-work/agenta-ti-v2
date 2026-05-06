@@ -47,13 +47,15 @@ export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: s
   const invalidate = async () => {
     if (!usuarioId) return;
     await Promise.all([
-      qc.invalidateQueries({ refetchType: 'active', queryKey: Q.plan(usuarioId, semanaISO) }),
-qc.invalidateQueries({ refetchType: 'active', queryKey: Q.ev(usuarioId, semanaISO) }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tareas-hoy', usuarioId], exact: false }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['tablero'], exact: false }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion'], exact: false }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_OBJ_PROG], exact: false }),
-      qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_KPIS], exact: false }),
+      // exact:false invalida TODAS las queries que empiecen con ['semana', 'plan', usuarioId]
+      // — incluye tareas de semanas anteriores que llegaron por el filtro estado.eq.atrasada
+      qc.invalidateQueries({ queryKey: ['semana', 'plan', usuarioId], exact: false }),
+      qc.invalidateQueries({ queryKey: ['semana', 'eventos', usuarioId], exact: false }),
+      qc.invalidateQueries({ queryKey: ['tareas-hoy', usuarioId], exact: false }),
+      qc.invalidateQueries({ queryKey: ['tablero'], exact: false }),
+      qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+      qc.invalidateQueries({ queryKey: [Q_OBJ_PROG], exact: false }),
+      qc.invalidateQueries({ queryKey: [Q_KPIS], exact: false }),
     ]);
   };
 

@@ -1,32 +1,25 @@
 /**
  * components/layout/PageHeader.tsx
  *
- * Componente de cabecera reutilizable para todas las vistas.
- * Estructura fija: [título + subtítulo] ←→ [acciones]
- * Con separador inferior sutil y espaciado consistente.
- *
- * Slots:
- *   title       — texto principal (h1)
- *   subtitle    — texto secundario (fecha, semana, descripción)
- *   left        — controles a la izquierda del título (toggle, flechas nav)
- *   actions     — controles a la derecha (filtros, CTA, selector)
+ * Cabecera Apple: título 24px bold, subtítulo visible, sin border-bottom.
+ * El espacio separa el header del contenido, no una línea.
+ * API idéntica — cero breaking changes.
  */
 
 import type { ReactNode } from 'react';
 
 type Props = {
-  title: string;
+  title:     string;
   subtitle?: ReactNode;
-  /** Controles pegados al bloque de título (toggle Hoy/Semana, flechas nav) */
-  left?: ReactNode;
-  /** Controles del lado derecho: filtros, selector de miembro, botón CTA */
-  actions?: ReactNode;
+  /** Controles pegados al título (toggle Hoy/Semana, flechas nav) */
+  left?:     ReactNode;
+  /** Controles del lado derecho: filtros, selector de miembro, CTA */
+  actions?:  ReactNode;
 };
 
 export function PageHeader({ title, subtitle, left, actions }: Props) {
   return (
     <header className="mc-page-header">
-      {/* Bloque izquierdo: título + subtítulo + controles de navegación */}
       <div className="mc-page-header-left">
         <div className="mc-page-header-titles">
           <h1 className="mc-page-title">{title}</h1>
@@ -36,8 +29,6 @@ export function PageHeader({ title, subtitle, left, actions }: Props) {
           <div className="mc-page-header-controls">{left}</div>
         )}
       </div>
-
-      {/* Bloque derecho: acciones */}
       {actions && (
         <div className="mc-page-header-actions">{actions}</div>
       )}

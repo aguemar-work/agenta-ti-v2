@@ -56,12 +56,8 @@ export const URGENCIA_CARD_CLASS: Record<UrgenciaHoraria, string> = {
   vencida_hoy: 'task-card--vencida-hoy',
 };
 
-export const URGENCIA_LABEL: Record<UrgenciaHoraria, string> = {
-  normal:      '',
-  precaucion:  'Por vencer',
-  urgente:     'Urgente',
-  vencida_hoy: 'Vencida hoy',
-};
+// URGENCIA_LABEL vive en lib/estadoConfig.ts — fuente única de verdad.
+// Importar desde allí: import { URGENCIA_LABEL } from '@/lib/estadoConfig';
 
 // ---------------------------------------------------------------------------
 // Nivel de riesgo de un objetivo
@@ -103,8 +99,11 @@ export function calcularPorcentajeObjetivo(tareas: TareaResumenProgreso[]): numb
 export function nivelRiesgoObjetivo(
   porcentaje: number,
   fechaLimite: string | null,
+  totalTareas?: number,
 ): NivelRiesgoObjetivo {
   if (!fechaLimite) return 'sin_fecha';
+  // Sin tareas vinculadas aún — no hay riesgo calculable, no mostrar badge
+  if (totalTareas !== undefined && totalTareas === 0) return 'sin_fecha';
 
   if (porcentaje < UMBRAL_OBJETIVO_CRITICO)   return 'critico';
   if (porcentaje < UMBRAL_OBJETIVO_MODERADO)  return 'moderado';

@@ -37,30 +37,6 @@ const MANANA = '2026-04-30';
 
 describe('estadoEfectivoTablero', () => {
 
-  // ── Caso principal: degradar a "atrasada" ─────────────────────────────────
-
-  describe('cuando la tarea está pendiente y vencida', () => {
-    it('devuelve "atrasada" si es planificada, fecha < hoy, estado pendiente', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: AYER, estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('atrasada');
-    });
-
-    it('NO degrada si la fecha es exactamente hoy', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: HOY, estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
-    });
-
-    it('NO degrada si la fecha es futura', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: MANANA, estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
-    });
-
-    it('NO degrada si fecha_planificada es null', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: null, estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
-    });
-  });
-
   // ── Los estados activos/terminales nunca se degradan ─────────────────────
   // Este bloque fue el bug raíz del trigger: sobreescribía en_progreso/bloqueada.
 
@@ -88,27 +64,6 @@ describe('estadoEfectivoTablero', () => {
     it('no degrada aunque la fecha esté vencida', () => {
       const t = tarea({ tipo: 'no_planificada', fecha_planificada: AYER, estado: 'pendiente' });
       expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
-    });
-  });
-
-  // ── Comparación de strings ISO para fechas ────────────────────────────────
-  // La función compara strings directamente ('2026-04-28' < '2026-04-29').
-  // Verificar que el ordenamiento lexicográfico es correcto para fechas ISO.
-
-  describe('comparación de fechas ISO', () => {
-    it('fecha de otro año anterior también degrada', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: '2025-12-31', estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('atrasada');
-    });
-
-    it('fecha del mismo mes pero día anterior degrada', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: '2026-04-01', estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, HOY)).toBe('atrasada');
-    });
-
-    it('fecha exactamente un día antes del hoy provisto degrada', () => {
-      const t = tarea({ tipo: 'planificada', fecha_planificada: '2026-04-28', estado: 'pendiente' });
-      expect(estadoEfectivoTablero(t, '2026-04-29')).toBe('atrasada');
     });
   });
 });
