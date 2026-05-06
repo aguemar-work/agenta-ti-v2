@@ -13,8 +13,6 @@ type Props = {
   onConfirm:  (input: { tareaId: string; nuevaFecha: string; justificacion: string }) => Promise<void>;
 };
 
-const ERR_ID = 'modal-repr-just-error';
-
 function esDomingo(ymd: string): boolean {
   if (!ymd) return false;
   // new Date('YYYY-MM-DD') interpreta en UTC — usamos T12:00 para evitar off-by-one

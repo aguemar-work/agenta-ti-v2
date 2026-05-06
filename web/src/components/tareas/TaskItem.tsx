@@ -81,7 +81,7 @@ function urgenciaStyles(urgencia: UrgenciaHoraria, est: EstadoTarea): {
 export function TaskItem({
   variant, tarea, readOnly = false, estadoVisual,
   sinAccionesRapidas = false, asignadoNombre, objetivoTitulo,
-  dragHandle, esJefe = false,
+  dragHandle,
   onOpenDetalle, onEditar, onEliminar,
   onBloquear, onReprogramar, onCompletar, onIniciar,
 }: TaskItemProps) {

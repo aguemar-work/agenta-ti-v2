@@ -41,7 +41,7 @@ eventos: qEv.data ?? [],
   };
 }
 
-export function useMiSemanaMutations(usuarioId: string | undefined, semanaISO: string) {
+export function useMiSemanaMutations(usuarioId: string | undefined, _semanaISO: string) {
   const qc = useQueryClient();
 
   const invalidate = async () => {

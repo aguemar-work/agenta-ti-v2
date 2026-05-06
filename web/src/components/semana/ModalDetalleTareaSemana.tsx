@@ -60,7 +60,6 @@ const MODAL_TITULO: Record<Vista, string> = {
 };
 
 const ELIM_HINT_ID = 'modal-detalle-eliminar-hint';
-const ELIM_ERR_ID = 'modal-detalle-eliminar-error';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -167,9 +166,6 @@ export function ModalDetalleTareaSemana({
 
   const motivoLen = motivoEliminar.trim().length;
   const motivoOk = motivoLen >= MIN_JUSTIFICACION_CHARS;
-  const elimDescribedBy =
-    [ELIM_HINT_ID, motivoLen > 0 && !motivoOk ? ELIM_ERR_ID : null].filter(Boolean).join(' ') || undefined;
-
   async function guardar() {
     if (readOnly || !tarea || !editarForm.titulo.trim()) return;
     setBusy(true);

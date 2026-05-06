@@ -5,7 +5,6 @@ import { JustificacionField } from '@/components/ui/JustificacionField';
 import type { Tarea } from '@/types';
 
 const MIN_RESUMEN = 10;
-const ERR_ID      = 'modal-completar-resumen-error';
 
 type Props = {
   open:      boolean;

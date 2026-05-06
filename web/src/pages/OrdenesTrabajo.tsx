@@ -18,7 +18,7 @@ import { FilterBar } from '@/components/ui/FilterBar';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL, MODALIDAD_OT_LABEL, PRIORIDAD_OT_BADGE, PRIORIDAD_OT_LABEL } from '@/lib/otConfig';
-import type { EstadoOT, OrdenTrabajo } from '@/api/ordenTrabajo';
+import type { EstadoOT } from '@/api/ordenTrabajo';
 
 const FILTROS: { value: EstadoOT | 'todos'; label: string }[] = [
   { value: 'todos',        label: 'Todos' },

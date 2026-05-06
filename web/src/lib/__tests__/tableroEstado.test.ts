@@ -31,7 +31,6 @@ function tarea(overrides: Partial<Tarea>): Tarea {
 
 const HOY = '2026-04-29';
 const AYER = '2026-04-28';
-const MANANA = '2026-04-30';
 
 // ---------------------------------------------------------------------------
 

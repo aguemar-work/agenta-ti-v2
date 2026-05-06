@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Button, CancelButton } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 
 import { ModalConvertirEvento } from '@/components/bitacora/ModalConvertirEvento';
 import { ModalConvertirTarea } from '@/components/bitacora/ModalConvertirTarea';
