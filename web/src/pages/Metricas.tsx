@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { useKpisComparativa, useKpisPorSemana, useKpisRango } from '@/hooks/useObjetivosMetricas';
-import { useUsuariosNombreTablero } from '@/hooks/useTablero';
+import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
@@ -122,7 +122,8 @@ export function Metricas() {
   const [hasta,         setHasta]         = useState(() => fechaLocalYmd(new Date()));
   const [miembroFiltro, setMiembroFiltro] = useState<string | undefined>(esJefe ? undefined : usuario?.id);
 
-  const { data: nombres = {} }                        = useUsuariosNombreTablero();
+  const { data: usuariosLista = [] } = useUsuariosActivos();
+  const nombres = Object.fromEntries(usuariosLista.map((u) => [u.id, u.nombre]));
   const uid = esJefe ? miembroFiltro : usuario?.id;
 
   const { data: kpis,         isLoading: loadK } = useKpisRango(desde, hasta, uid);

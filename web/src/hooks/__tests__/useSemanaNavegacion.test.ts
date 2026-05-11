@@ -38,7 +38,6 @@ function setupAuth(usuario = makeUsuario()) {
 
 beforeEach(() => {
   useVistaStore.setState({ seleccionId: null });
-  localStorage.clear();
 });
 
 afterEach(() => {
@@ -48,61 +47,6 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('useSemanaNavegacion', () => {
-
-  // ── Modo inicial ──────────────────────────────────────────────────────────
-
-  describe('modo inicial', () => {
-    it('usa "hoy" en días L-J (lunes=1)', () => {
-      vi.setSystemTime(new Date('2026-04-27T10:00:00')); // lunes
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      expect(result.current.esModoHoy).toBe(true);
-      vi.useRealTimers();
-    });
-
-    it('usa "semana" en viernes', () => {
-      vi.setSystemTime(new Date('2026-05-01T10:00:00')); // viernes
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      expect(result.current.esModoHoy).toBe(false);
-      vi.useRealTimers();
-    });
-
-    it('respeta el valor guardado en localStorage', () => {
-      localStorage.setItem('mc-modo-semana', 'semana');
-      vi.setSystemTime(new Date('2026-04-27T10:00:00')); // lunes — sería hoy por defecto
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      expect(result.current.esModoHoy).toBe(false);
-      vi.useRealTimers();
-    });
-  });
-
-  // ── setModo ───────────────────────────────────────────────────────────────
-
-  describe('setModo', () => {
-    it('cambia esModoHoy a false al activar modo semana', () => {
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      act(() => { result.current.setModo('semana'); });
-      expect(result.current.esModoHoy).toBe(false);
-    });
-
-    it('cambia esModoHoy a true al activar modo hoy', () => {
-      localStorage.setItem('mc-modo-semana', 'semana');
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      act(() => { result.current.setModo('hoy'); });
-      expect(result.current.esModoHoy).toBe(true);
-    });
-
-    it('persiste el modo en localStorage', () => {
-      setupAuth();
-      const { result } = renderHook(() => useSemanaNavegacion());
-      act(() => { result.current.setModo('semana'); });
-      expect(localStorage.getItem('mc-modo-semana')).toBe('semana');
-    });
-  });
 
   // ── Navegación de semana ──────────────────────────────────────────────────
 

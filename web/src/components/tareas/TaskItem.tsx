@@ -292,13 +292,22 @@ export function TaskItem({
   }
 
   // ── Variante WEEK ─────────────────────────────────────────────────────────
+  // Meta reducido: solo estado + urgencia. Asignado/objetivo/fecha van al detalle.
+  const metaWeek = (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs" style={textColorStyle}>
+      <span className={`mc-badge ${TAREA_BADGE[est]}`}>{TAREA_LABEL[est]}</span>
+      {urgenciaTag}
+      {readOnly && <Lock className="inline" size={12} aria-label="Solo lectura" />}
+    </div>
+  );
+
   if (variant === 'week') {
     return (
       <article
         className={`mc-task-item ${readOnly ? 'opacity-70' : ''} ${styles.containerClass}`}
         style={{
           borderLeft:   borde ? `3px solid ${borde}` : undefined,
-          paddingLeft:  borde ? 17 : undefined,    // 20px token - 3px del borde
+          paddingLeft:  borde ? 17 : undefined,
           background:   styles.bgColor ?? undefined,
           borderRadius: 'var(--mc-radius-md)',
           transition:   'background 0.2s, border-color 0.2s',
@@ -312,18 +321,23 @@ export function TaskItem({
               role={onOpenDetalle ? 'button' : undefined}
               tabIndex={onOpenDetalle ? 0 : undefined}
               onClick={() => onOpenDetalle?.(tarea)}
-              onKeyDown={(e) => { if (!onOpenDetalle) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenDetalle(tarea); } }}
+              onKeyDown={(e) => {
+                if (!onOpenDetalle) return;
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenDetalle(tarea); }
+              }}
             >
-              <div className={`flex items-start gap-2 ${lineThrough}`}>
+              <div className={`flex items-start gap-1.5 ${lineThrough}`}>
                 <h3
-                  className="text-sm font-medium"
+                  className="text-sm font-medium leading-snug"
                   style={{ color: styles.textColor || 'var(--mc-color-text)' }}
                 >
                   {tarea.titulo}
                 </h3>
-                {tarea.prioridad !== 'baja' && <Flag size={14} style={{ color: flagColor, flexShrink: 0 }} aria-hidden />}
+                {tarea.prioridad !== 'baja' && (
+                  <Flag size={12} style={{ color: flagColor, flexShrink: 0, marginTop: 3 }} aria-hidden />
+                )}
               </div>
-              {meta}
+              {metaWeek}
             </div>
             {!estaCompletada && (
               <div className="shrink-0" onClick={(e) => e.stopPropagation()}>{menuOpciones}</div>

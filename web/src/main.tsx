@@ -1,8 +1,19 @@
 import { StrictMode, Component, type ReactNode, type ErrorInfo } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import * as Sentry from '@sentry/react';
 import App from '@/App.tsx';
 import { getInsforgeEnv } from '@/lib/insforge';
+
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    // Captura el 100% de errores, 10% de trazas de rendimiento
+    tracesSampleRate: 0.1,
+  });
+}
 import { installInsforgeFetchInterceptor } from '@/lib/insforgeFetchInterceptor';
 import { setAppIcons } from '@/lib/setAppIcons';
 import { AppProviders } from '@/providers/AppProviders';
@@ -35,8 +46,10 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // En producción conecta aquí tu servicio de monitoreo (Sentry, etc.)
     console.error('[AppErrorBoundary]', error, info.componentStack);
+    if (sentryDsn) {
+      Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+    }
   }
 
   render() {

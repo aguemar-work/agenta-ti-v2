@@ -186,7 +186,7 @@ export function useOrdenesTrabajoPage() {
 
   // ── Mutaciones — Tipos de trabajo ─────────────────────────────────────────
   const mutCrearTipo = useMutation({
-    mutationFn: () => crearTipoTrabajoOT(nuevoTipoNombre, usuario!.id),
+    mutationFn: () => crearTipoTrabajoOT(nuevoTipoNombre),
     onSuccess: async () => {
       await invalidarTipos();
       setNuevoTipoNombre('');

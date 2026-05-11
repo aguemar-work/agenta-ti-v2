@@ -80,7 +80,7 @@ export function ModalMiSemana({
   const [recConfig, setRecConfig] = useState<RecurrenciaConfig>({
     dias_semana: [],
     fecha_fin: '',
-    meses: 1,
+    meses: 3,
   });
 
   const fechaEvento = modoOrigen === 'dia' ? fechaDia : undefined;
@@ -294,7 +294,7 @@ export function ModalMiSemana({
                 checked={form.recurrente}
                 onChange={(e) => {
                   setForm((p) => ({ ...p, recurrente: e.target.checked }));
-                  if (!e.target.checked) setRecConfig({ dias_semana: [], fecha_fin: '', meses: 1 });
+                  if (!e.target.checked) setRecConfig({ dias_semana: [], fecha_fin: '', meses: 3 });
                 }}
               />
               Recurrente (se repite cada semana)

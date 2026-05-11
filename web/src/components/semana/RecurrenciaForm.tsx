@@ -11,7 +11,7 @@ import type { DiaSemana } from '@/api/recurrencia';
 export type RecurrenciaConfig = {
   dias_semana: DiaSemana[];
   fecha_fin: string;    // '' = sin fecha fin
-  meses: number;        // períodos a generar (1 o 2)
+  meses: number;        // períodos a generar (1, 2 o 3)
 };
 
 const DIAS: { value: DiaSemana; label: string; short: string }[] = [
@@ -84,6 +84,7 @@ export function RecurrenciaForm({ value, onChange }: Props) {
         >
           <option value={1}>Este mes</option>
           <option value={2}>Los próximos 2 meses</option>
+          <option value={3}>Los próximos 3 meses</option>
         </select>
         <p className="mt-1 text-[10px] text-[var(--mc-color-text-secondary)]">
           Puedes generar más meses después desde la vista de recurrencias.

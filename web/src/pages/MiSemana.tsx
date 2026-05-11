@@ -12,7 +12,6 @@ import {
 
 import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
 import { EventoCard } from '@/components/semana/EventoCard';
-import { HoyPanel } from '@/components/semana/HoyPanel';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { SemanaDiaDrop } from '@/components/semana/SemanaDiaDrop';
@@ -27,40 +26,43 @@ import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Calendar } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
-import type { Evento } from '@/types';
+import type { Evento, NotaBitacora, Tarea } from '@/types';
 
 // ---------------------------------------------------------------------------
-// Helpers de presentación (sin lógica de negocio)
+// Helpers
 // ---------------------------------------------------------------------------
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 type NivelCarga = 'baja' | 'media' | 'alta';
-
 function nivelCarga(n: number): NivelCarga {
   if (n <= 2) return 'baja';
   if (n <= 4) return 'media';
   return 'alta';
 }
-
-const CARGA_CONFIG: Record<NivelCarga, { emoji: string; label: string }> = {
-  baja:  { emoji: '🟢', label: 'Carga baja'  },
-  media: { emoji: '🟡', label: 'Carga media' },
-  alta:  { emoji: '🔴', label: 'Carga alta'  },
+const CARGA_CONFIG: Record<NivelCarga, { color: string; label: string }> = {
+  baja:  { color: 'var(--mc-color-success)', label: 'Carga baja'  },
+  media: { color: 'var(--mc-color-warning)', label: 'Carga media' },
+  alta:  { color: 'var(--mc-color-danger)',  label: 'Carga alta'  },
 };
 
 function CargaIndicator({ n }: { n: number }) {
   const nivel = nivelCarga(n);
-  const { emoji, label } = CARGA_CONFIG[nivel];
+  const { color, label } = CARGA_CONFIG[nivel];
   return (
     <span
-      role="img"
-      aria-label={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
       title={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
-      className="text-xs"
-    >
-      {emoji}
-    </span>
+      aria-label={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
+      style={{
+        display:      'inline-block',
+        width:         8,
+        height:        8,
+        borderRadius: '50%',
+        background:    color,
+        flexShrink:    0,
+      }}
+    />
   );
 }
 
@@ -69,7 +71,7 @@ function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
 }
 
 const collisionSemana: CollisionDetection = (args) => {
-  const ptr    = pointerWithin(args);
+  const ptr     = pointerWithin(args);
   const zonaPtr = ptr.find((c) => String(c.id).startsWith('day-'));
   if (zonaPtr) return [zonaPtr];
   const corners = closestCorners(args);
@@ -79,15 +81,105 @@ const collisionSemana: CollisionDetection = (args) => {
 };
 
 const CONTEO_CONFIG = [
-  { key: 'pendiente',   label: 'Pendientes',   color: 'text-[var(--mc-color-text)]' },
-  { key: 'en_progreso', label: 'En progreso',  color: 'text-[var(--mc-color-accent)]' },
-  { key: 'atrasada',    label: 'Atrasadas',    color: 'text-[var(--mc-color-danger)]' },
-  { key: 'reprogramada',label: 'Reprogramadas',color: 'text-[var(--mc-color-text-secondary)]' },
-  { key: 'completada',  label: 'Completadas',  color: 'text-[var(--mc-color-success)]' },
+  { key: 'pendiente',    label: 'Pendientes',    color: 'text-[var(--mc-color-text)]' },
+  { key: 'en_progreso',  label: 'En progreso',   color: 'text-[var(--mc-color-accent)]' },
+  { key: 'atrasada',     label: 'Atrasadas',     color: 'text-[var(--mc-color-danger)]' },
+  { key: 'reprogramada', label: 'Reprogramadas', color: 'text-[var(--mc-color-text-secondary)]' },
+  { key: 'completada',   label: 'Completadas',   color: 'text-[var(--mc-color-success)]' },
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Componente
+// Sub-componentes de columna
+// ---------------------------------------------------------------------------
+
+/** Zona de incidencias — solo visible en la columna del día actual */
+function ZonaIncidencias({
+  incidencias,
+  onRegistrar,
+}: {
+  incidencias: Tarea[];
+  onRegistrar: () => void;
+}) {
+  return (
+    <div className="border-t border-dashed border-[var(--mc-color-border)] mt-1 pt-1">
+      <div className="flex items-center justify-between px-2 py-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-warning)]">
+          Incidencias
+        </span>
+        <button
+          type="button"
+          onClick={onRegistrar}
+          className="text-[10px] text-[var(--mc-color-warning)] hover:underline"
+        >
+          + registrar
+        </button>
+      </div>
+      {incidencias.length === 0 ? (
+        <p className="px-2 pb-1 text-[10px] text-[var(--mc-color-text-secondary)]">
+          Sin incidencias hoy
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1 px-2 pb-1">
+          {incidencias.map((inc) => (
+            <div
+              key={inc.id}
+              className="rounded border border-[var(--mc-color-warning)] bg-[color-mix(in_srgb,var(--mc-color-warning)_8%,transparent)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
+            >
+              {inc.titulo}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Panel lateral derecho — notas rápidas */
+function PanelNotas({
+  notas,
+  notaRapida,
+  setNotaRapida,
+  guardarNotaRapida,
+}: {
+  notas:             NotaBitacora[];
+  notaRapida:        string;
+  setNotaRapida:     (v: string) => void;
+  guardarNotaRapida: () => void;
+}) {
+  return (
+    <aside className="hidden xl:flex w-52 flex-shrink-0 flex-col gap-2 border-l border-[var(--mc-color-border)] pl-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
+        Notas
+      </p>
+      <div className="flex flex-col gap-1">
+        {notas.slice(0, 6).map((n) => (
+          <div
+            key={n.id}
+            className="rounded border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
+          >
+            {n.contenido.length > 60 ? n.contenido.slice(0, 60) + '…' : n.contenido}
+          </div>
+        ))}
+      </div>
+      <textarea
+        rows={2}
+        className="mc-input resize-none text-xs"
+        placeholder="Nota rápida…"
+        value={notaRapida}
+        onChange={(e) => setNotaRapida(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) guardarNotaRapida();
+        }}
+      />
+      <Button variant="secondary" size="xs" onClick={guardarNotaRapida} disabled={!notaRapida.trim()}>
+        Guardar nota
+      </Button>
+    </aside>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Componente principal
 // ---------------------------------------------------------------------------
 export function MiSemana() {
   const {
@@ -95,8 +187,8 @@ export function MiSemana() {
     lunes, setLunes, sabado, diasSemana,
     uid, setSeleccionId, usuariosJefe,
     tareasPlan, eventos, isError, hoyYmd, conteos,
-    setModo, esModoHoy, esBannerViernes,
-    incidenciasHoy, notasHoy, eventosHoy,
+    esBannerViernes,
+    incidenciasHoy, notasHoy,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
     crearIncidenciaHoy, guardarNotaRapida,
@@ -104,12 +196,12 @@ export function MiSemana() {
     tareaDetalle, tareaCompletar, activeTareaDrag,
     activeDragId, setActiveDragId, overId,
     onDragOver, onDragEnd,
-    modal,             setModal,
-    detalleTareaId,    setDetalleTareaId,
-    completarTareaId,  setCompletarTareaId,
-    bloquearTareaState,setBloquearTareaState,
-    reprDetalleTarea,  setReprDetalleTarea,
-    reprDragTarea,     setReprDragTarea,
+    modal,              setModal,
+    detalleTareaId,     setDetalleTareaId,
+    completarTareaId,   setCompletarTareaId,
+    bloquearTareaState, setBloquearTareaState,
+    reprDetalleTarea,   setReprDetalleTarea,
+    reprDragTarea,      setReprDragTarea,
     puedeGestionar,
     confirmarReprDrag, confirmarReprDetalle, confirmarBloqueo,
     confirmarCompletar, crearTareaDesdeModal, crearEventoDesdeModal,
@@ -129,46 +221,18 @@ export function MiSemana() {
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PageHeader
-        title={esModoHoy ? 'Ahora' : 'Mi semana'}
-        subtitle={esModoHoy
-          ? fechaLocalDdMmYyyy(new Date())
-          : `${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`
-        }
+        title="Mi semana"
+        subtitle={`${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`}
         left={
-          <>
-            {/* Toggle Hoy / Semana */}
-            <div className="mc-toggle-pill">
-              <button
-                type="button"
-                className="mc-toggle-pill-btn"
-                aria-pressed={esModoHoy}
-                onClick={() => setModo('hoy')}
-              >
-                Ahora
-              </button>
-              <button
-                type="button"
-                className="mc-toggle-pill-btn"
-                aria-pressed={!esModoHoy}
-                onClick={() => setModo('semana')}
-              >
-                Semana
-              </button>
-            </div>
-            {/* Flechas semana — solo en modo Semana */}
-            {!esModoHoy && (
-              <div className="mc-nav-arrows">
-                <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
-                <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, 7))} aria-label="Semana siguiente">›</button>
-              </div>
-            )}
-          </>
+          <div className="mc-nav-arrows">
+            <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
+            <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, 7))}  aria-label="Semana siguiente">›</button>
+          </div>
         }
         actions={
           <div className="flex items-center gap-3">
             {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
               <select
-                id="semana-miembro"
                 aria-label="Ver semana de"
                 className="mc-input !w-auto min-w-[180px]"
                 value={uid}
@@ -179,11 +243,7 @@ export function MiSemana() {
                 ))}
               </select>
             )}
-            <Button
-              variant={esModoHoy ? 'quaternary' : 'secondary'}
-              size="sm"
-              onClick={() => setModal({ fecha: hoyYmd })}
-            >
+            <Button variant="secondary" size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
               + Nueva tarea
             </Button>
           </div>
@@ -191,18 +251,13 @@ export function MiSemana() {
       />
 
       {/* Banner viernes */}
-      {esBannerViernes && !esModoHoy && (
+      {esBannerViernes && (
         <div className="flex items-center gap-3 rounded-lg border border-[var(--mc-color-accent)] bg-[color-mix(in_srgb,var(--mc-color-accent)_8%,transparent)] px-4 py-3">
-          <span className="text-lg">📅</span>
+          <Calendar size={18} aria-hidden className="text-[var(--mc-color-accent)] flex-shrink-0" />
           <p className="text-sm font-medium text-[var(--mc-color-accent)]">
             ¡Es viernes! Buen momento para planificar la próxima semana.
           </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="ml-auto"
-            onClick={() => setLunes((d) => agregarDias(d, 7))}
-          >
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setLunes((d) => agregarDias(d, 7))}>
             Ver próxima semana
           </Button>
         </div>
@@ -210,70 +265,26 @@ export function MiSemana() {
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">Error al cargar datos.</p>}
 
-      {/* ── Panel Hoy ──────────────────────────────────────────────────── */}
-      {esModoHoy && (
-        <div className="flex flex-col gap-4">
-          {/* Eventos del día */}
-          {eventosHoy.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-4 py-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Eventos</span>
-              {eventosHoy.map((ev) => (
-                <span key={ev.id} className="flex items-center gap-2 rounded-full border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-3 py-1 text-xs text-[var(--mc-color-text)]">
-                  <span className="text-[var(--mc-color-text-secondary)]">
-                    {new Date(ev.fecha_inicio).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {ev.titulo}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* ── Panel Hoy: tabs en móvil · 3 columnas en md+ ───────────── */}
-          <HoyPanel
-            hoyYmd={hoyYmd}
-            tareasPlan={tareasPlan}
-            incidenciasHoy={incidenciasHoy}
-            notasHoy={notasHoy}
-            notaRapida={notaRapida}
-            setNotaRapida={setNotaRapida}
-            guardarNotaRapida={guardarNotaRapida}
-            puedeGestionar={puedeGestionar}
-            esJefe={esJefe}
-            setDetalleTareaId={setDetalleTareaId}
-            setReprDetalleTarea={setReprDetalleTarea}
-            setBloquearTareaState={setBloquearTareaState}
-            setCompletarTareaId={setCompletarTareaId}
-            setModalInc={setModalInc}
-            onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
-          />
-        </div>
-      )}
-
-      {/* ── Panel Semana (con DnD) ───────────────────────────────────────── */}
-      {!esModoHoy && (
-      <DndContext
-        sensors={sensors}
-        collisionDetection={collisionSemana}
-        onDragStart={(e) => setActiveDragId(String(e.active.id))}
-        onDragOver={onDragOver}
-        onDragEnd={(e) => void onDragEnd(e)}
-        onDragCancel={() => { setActiveDragId(null); }}
-      >
-        <div className="flex flex-col gap-6">
-
-          {/* ── Contadores ───────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-3">
-            {CONTEO_CONFIG.map(({ key, label, color }) => (
-              <div key={key} className="mc-card flex min-w-[90px] flex-col gap-1 !p-3">
-                <span className={`text-xl font-semibold ${color}`}>
-                  {conteos[key]}
-                </span>
-                <span className="text-xs text-[var(--mc-color-text-secondary)]">{label}</span>
-              </div>
-            ))}
+      {/* ── Contadores ───────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-3">
+        {CONTEO_CONFIG.map(({ key, label, color }) => (
+          <div key={key} className="mc-card flex min-w-[90px] flex-col gap-1 !p-3">
+            <span className={`text-xl font-semibold ${color}`}>{conteos[key]}</span>
+            <span className="text-xs text-[var(--mc-color-text-secondary)]">{label}</span>
           </div>
+        ))}
+      </div>
 
-          {/* ── Agenda semanal ───────────────────────────────────────── */}
+      {/* ── Grilla semanal + panel notas ─────────────────────────────────── */}
+      <div className="flex min-w-0 gap-4">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionSemana}
+          onDragStart={(e) => setActiveDragId(String(e.active.id))}
+          onDragOver={onDragOver}
+          onDragEnd={(e) => void onDragEnd(e)}
+          onDragCancel={() => { setActiveDragId(null); }}
+        >
           <section className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
               Agenda semanal
@@ -303,7 +314,7 @@ export function MiSemana() {
                         <CargaIndicator n={delDia.length} />
                       </div>
 
-                      {/* Botón añadir */}
+                      {/* Botón añadir tarea */}
                       <Button
                         variant="ghost"
                         size="xs"
@@ -313,7 +324,7 @@ export function MiSemana() {
                         + Tarea / evento
                       </Button>
 
-                      {/* Drop zone: eventos primero (no arrastrables), luego tareas */}
+                      {/* Tareas y eventos del día */}
                       <SemanaDiaDrop
                         id={`day-${ymd}`}
                         className="flex min-h-[120px] flex-1 flex-col gap-2 p-2"
@@ -332,6 +343,14 @@ export function MiSemana() {
                           />
                         ))}
                       </SemanaDiaDrop>
+
+                      {/* Zona de incidencias — solo en el día actual */}
+                      {esHoy && (
+                        <ZonaIncidencias
+                          incidencias={incidenciasHoy}
+                          onRegistrar={() => setModalInc(true)}
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -339,7 +358,6 @@ export function MiSemana() {
             </div>
           </section>
 
-          {/* ── Drag overlay ─────────────────────────────────────────── */}
           <DragOverlay dropAnimation={{ duration: 180, easing: 'ease-out' }}>
             {activeTareaDrag && (
               <div
@@ -355,11 +373,18 @@ export function MiSemana() {
               </div>
             )}
           </DragOverlay>
-        </div>
-      </DndContext>
-      )}
+        </DndContext>
 
-      {/* ── Modales ────────────────────────────────────────────────────── */}
+        {/* Panel lateral de notas */}
+        <PanelNotas
+          notas={notasHoy}
+          notaRapida={notaRapida}
+          setNotaRapida={setNotaRapida}
+          guardarNotaRapida={guardarNotaRapida}
+        />
+      </div>
+
+      {/* ── Modales ────────────────────────────────────────────────────────── */}
       <ModalMiSemana
         open={modal !== null}
         modoOrigen="dia"
@@ -381,11 +406,11 @@ export function MiSemana() {
         onClose={() => setModalInc(false)}
         onSubmit={async (input) => {
           await crearIncidenciaHoy({
-            titulo:       input.titulo,
-            prioridad:    input.prioridad,
-            descripcion:  input.descripcion || null,
-            asignado_a:   input.asignado_a,
-            ya_resuelta:  true,
+            titulo:      input.titulo,
+            prioridad:   input.prioridad,
+            descripcion: input.descripcion || null,
+            asignado_a:  input.asignado_a,
+            ya_resuelta: true,
           });
         }}
       />

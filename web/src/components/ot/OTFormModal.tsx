@@ -22,7 +22,8 @@ type Props = {
 };
 
 export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, tareasVinculables, onClose, onGuardar, busy, hasUnsavedChanges = false }: Props) {
-    const canSave = form.descripcion.trim().length > 0 && form.area_destino.trim().length > 0 && form.fecha_estimada.length > 0;
+    const fechaEsValida = form.fecha_estimada.length > 0 && form.fecha_estimada >= new Date().toISOString().slice(0, 10);
+    const canSave = form.descripcion.trim().length > 0 && form.area_destino.trim().length > 0 && fechaEsValida;
     const titulo = editando ? `Editar ${editando.numero}` : 'Nueva orden de trabajo';
 
     function upd<K extends keyof typeof form>(key: K, val: typeof form[K]) {
@@ -132,7 +133,19 @@ export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, tarea
                     </label>
                     <label className="mc-field">
                         <span className="mc-field-label">Fecha estimada *</span>
-                        <input type="date" className="mc-input" value={form.fecha_estimada} onChange={(e) => upd('fecha_estimada', e.target.value)} required />
+                        <input
+                            type="date"
+                            className="mc-input"
+                            value={form.fecha_estimada}
+                            min={new Date().toISOString().slice(0, 10)}
+                            onChange={(e) => upd('fecha_estimada', e.target.value)}
+                            required
+                        />
+                        {form.fecha_estimada.length > 0 && !fechaEsValida && (
+                            <p className="text-xs text-[var(--mc-color-danger)] mt-1">
+                                La fecha no puede ser anterior a hoy.
+                            </p>
+                        )}
                     </label>
                     <label className="mc-field">
                         <span className="mc-field-label">Hora de inicio</span>

@@ -8,7 +8,7 @@
  * de tarea. Usar STATE_TOKENS o las constantes TAREA_* / URGENCIA_*.
  */
 
-import type { EstadoObjetivo, EstadoTarea, UrgenciaHoraria } from '@/types';
+import type { EstadoObjetivo, EstadoTarea, PrioridadTarea, UrgenciaHoraria } from '@/types';
 
 // ---------------------------------------------------------------------------
 // STATE_TOKENS — colores de estado vía CSS vars
@@ -206,4 +206,20 @@ export const URGENCIA_LABEL: Record<UrgenciaHoraria, string> = {
   precaucion:  'Por vencer',
   urgente:     'Urgente',
   vencida_hoy: 'Vencida hoy',
+};
+
+// ---------------------------------------------------------------------------
+// Prioridad — badge CSS y label
+// ---------------------------------------------------------------------------
+
+export const PRIORIDAD_BADGE: Record<PrioridadTarea, string> = {
+  alta:  'mc-badge mc-badge-prioridad-alta',
+  media: 'mc-badge mc-badge-prioridad-media',
+  baja:  'mc-badge mc-badge-prioridad-baja',
+};
+
+export const PRIORIDAD_LABEL: Record<PrioridadTarea, string> = {
+  alta:  'Alta',
+  media: 'Media',
+  baja:  'Baja',
 };

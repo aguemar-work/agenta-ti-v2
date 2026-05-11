@@ -8,14 +8,16 @@ import { useVistaStore } from '@/store/vistaStore';
 
 type Props = { children: ReactNode };
 
+// Verifica la sesión cada 4 minutos.
+// Si el token expiró o el usuario fue desactivado, cierra sesión automáticamente.
+const SESSION_CHECK_INTERVAL_MS = 4 * 60 * 1000;
+
 export function AuthProvider({ children }: Props) {
   const setAuth    = useAuthStore((s) => s.setAuth);
   const setLoading = useAuthStore((s) => s.setLoading);
   const clear      = useAuthStore((s) => s.clear);
   const onClear    = useAuthStore((s) => s.onClear);
 
-  // Registrar suscripción: cuando authStore haga clear(), resetear vistaStore.
-  // La responsabilidad de saber quién resetear vive aquí, no en el store.
   useEffect(() => {
     const unsub = onClear(() => {
       useVistaStore.getState().reset();
@@ -42,9 +44,23 @@ export function AuthProvider({ children }: Props) {
     }
   }, [clear, setAuth, setLoading]);
 
+  // Carga inicial
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  // Verificación periódica de sesión.
+  // InsForge no tiene onAuthStateChange, así que consultamos
+  // getCurrentUser() cada 4 minutos. Si falla o no hay usuario → logout.
+  useEffect(() => {
+    const id = setInterval(async () => {
+      const { data, error } = await getInsforge().auth.getCurrentUser();
+      if (error || !data.user) {
+        clear();
+      }
+    }, SESSION_CHECK_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [clear]);
 
   return children;
 }

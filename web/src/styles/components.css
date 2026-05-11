@@ -118,6 +118,21 @@
       background: color-mix(in srgb, var(--mc-color-accent) 12%, transparent);
       color: var(--mc-color-accent);
     }
+
+    .mc-badge-prioridad-alta {
+      background: color-mix(in srgb, var(--mc-color-danger) 14%, transparent);
+      color: var(--mc-color-danger);
+    }
+
+    .mc-badge-prioridad-media {
+      background: color-mix(in srgb, var(--mc-color-warning) 18%, transparent);
+      color: var(--mc-color-warning);
+    }
+
+    .mc-badge-prioridad-baja {
+      background: color-mix(in srgb, var(--mc-color-neutral) 12%, transparent);
+      color: var(--mc-color-neutral);
+    }
   
     /* ── Modal y overlay ─────────────────────────────────────────────────── */
     .mc-overlay {

@@ -4,7 +4,9 @@
  */
 
 import { getInsforge } from '@/lib/insforge';
+import { parseOrdenTrabajo, parseTipoTrabajoOT } from '@/lib/schemas';
 import type { Id } from '@/types';
+
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -98,17 +100,17 @@ export async function getTiposTrabajoOT(): Promise<TipoTrabajoOT[]> {
     .eq('activo', true)
     .order('nombre');
   if (error) throw error;
-  return (data ?? []) as TipoTrabajoOT[];
+  return (data ?? []).map((r) => parseTipoTrabajoOT(r as Record<string, unknown>)) as TipoTrabajoOT[];
 }
 
-export async function crearTipoTrabajoOT(nombre: string, createdBy: Id): Promise<TipoTrabajoOT> {
+export async function crearTipoTrabajoOT(nombre: string): Promise<TipoTrabajoOT> {
   const { data, error } = await getInsforge().database
     .from('tipo_trabajo_ot')
-    .insert([{ nombre: nombre.trim().toUpperCase(), created_by: createdBy }])
+    .insert([{ nombre: nombre.trim().toUpperCase() }])
     .select('*')
     .single();
   if (error) throw error;
-  return data as TipoTrabajoOT;
+  return parseTipoTrabajoOT(data as Record<string, unknown>) as TipoTrabajoOT;
 }
 
 export async function toggleTipoTrabajoOT(id: Id, activo: boolean): Promise<void> {
@@ -138,7 +140,7 @@ export async function getOrdenesTrabajoMiembro(usuarioId: Id): Promise<OrdenTrab
     .eq('creado_por', usuarioId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as OrdenTrabajo[];
+  return (data ?? []).map((r) => parseOrdenTrabajo(r as Record<string, unknown>)) as OrdenTrabajo[];
 }
 
 export async function getOrdenesTrabajoTodas(): Promise<OrdenTrabajo[]> {
@@ -147,7 +149,7 @@ export async function getOrdenesTrabajoTodas(): Promise<OrdenTrabajo[]> {
     .select(OT_SELECT)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as OrdenTrabajo[];
+  return (data ?? []).map((r) => parseOrdenTrabajo(r as Record<string, unknown>)) as OrdenTrabajo[];
 }
 
 // ---------------------------------------------------------------------------
@@ -175,7 +177,7 @@ export async function crearOrdenTrabajo(input: CrearOTInput): Promise<OrdenTraba
   const { data: inserted, error } = await insforge.database
     .from('orden_trabajo').insert([row]).select(OT_SELECT).single();
   if (error) throw error;
-  return inserted as OrdenTrabajo;
+  return parseOrdenTrabajo(inserted as Record<string, unknown>) as OrdenTrabajo;
 }
 
 export async function actualizarOrdenTrabajo(input: ActualizarOTInput): Promise<OrdenTrabajo> {
@@ -191,7 +193,7 @@ export async function actualizarOrdenTrabajo(input: ActualizarOTInput): Promise<
   const { data: updated, error } = await insforge.database
     .from('orden_trabajo').update(updates).eq('id', otId).select(OT_SELECT).single();
   if (error) throw error;
-  return updated as OrdenTrabajo;
+  return parseOrdenTrabajo(updated as Record<string, unknown>) as OrdenTrabajo;
 }
 
 export async function aprobarOT(otId: Id, usuarioId: Id): Promise<void> {
@@ -244,24 +246,4 @@ export async function cancelarOrdenTrabajo(otId: Id, usuarioId: Id): Promise<voi
     p_usuario_id: usuarioId,
   });
   if (error) throw error;
-}
-
-/**
- * Crea una OT pre-rellenada a partir de una incidencia abierta.
- * Retorna el UUID de la OT creada en estado 'borrador'.
- */
-export async function crearOTDesdeIncidencia(input: {
-  incidenciaId:    Id;
-  tipoTrabajoId?:  Id | null;
-  fechaEstimada?:  string | null;
-  prioridad?:      PrioridadOT;
-}): Promise<string> {
-  const { data, error } = await getInsforge().database.rpc('sgtd_crear_ot_desde_incidencia', {
-    p_incidencia_id:   input.incidenciaId,
-    p_tipo_trabajo_id: input.tipoTrabajoId ?? null,
-    p_fecha_estimada:  input.fechaEstimada ?? null,
-    p_prioridad:       input.prioridad ?? 'normal',
-  });
-  if (error) throw error;
-  return data as string;
 }

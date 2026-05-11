@@ -3,10 +3,8 @@ import {
   Calendar,
   ClipboardList,
   FileText,
-  LayoutGrid,
   LogOut,
   MoreHorizontal,
-  NotebookPen,
   Target,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -24,16 +22,14 @@ import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
 // ---------------------------------------------------------------------------
 const NAV_ITEMS = [
   { to: '/semana',          label: 'Mi semana',     icon: Calendar,      roles: ['jefe', 'miembro'] },
-  { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] },
-  { to: '/tablero',         label: 'Tablero',       icon: LayoutGrid,    roles: ['jefe'] },
   { to: '/objetivos',       label: 'Objetivos',     icon: Target,        roles: ['jefe', 'miembro'] },
-  { to: '/bitacora',        label: 'Bitácora',      icon: NotebookPen,   roles: ['jefe', 'miembro'] },
-  { to: '/metricas',        label: 'Métricas',      icon: BarChart2,     roles: ['jefe', 'miembro'] },
   { to: '/ordenes-trabajo', label: 'OT',            icon: FileText,      roles: ['jefe', 'miembro'] },
+  { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] },
+  { to: '/metricas',        label: 'Métricas',      icon: BarChart2,     roles: ['jefe'] },
 ] as const;
 
-const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/metricas', '/bitacora']      as const;
-const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos', '/bitacora']   as const;
+const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/metricas', '/ordenes-trabajo'] as const;
+const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos']                  as const;
 
 function getBottomItems(rol: string | undefined): readonly string[] {
   return rol === 'jefe' ? BOTTOM_NAV_JEFE : BOTTOM_NAV_MIEMBRO;
@@ -60,14 +56,14 @@ function RealtimeIndicator({ conectado }: { conectado: boolean }) {
         : 'Sin conexión en tiempo real — las notificaciones pueden tardar'}
       aria-label={conectado ? 'Notificaciones activas' : 'Sin notificaciones en tiempo real'}
       style={{
-        display:    'inline-block',
-        width:       8,
-        height:      8,
-        borderRadius:'50%',
-        flexShrink:  0,
-        background:  conectado ? '#31A24C' : '#CED2D9',
-        boxShadow:   conectado ? '0 0 0 2px rgba(49,162,76,0.2)' : 'none',
-        transition: 'background 0.4s ease, box-shadow 0.4s ease',
+        display:      'inline-block',
+        width:         8,
+        height:        8,
+        borderRadius: '50%',
+        flexShrink:    0,
+        background:    conectado ? '#31A24C' : '#CED2D9',
+        boxShadow:     conectado ? '0 0 0 2px rgba(49,162,76,0.2)' : 'none',
+        transition:   'background 0.4s ease, box-shadow 0.4s ease',
       }}
     />
   );
@@ -77,25 +73,25 @@ function RealtimeIndicator({ conectado }: { conectado: boolean }) {
 // AppShell
 // ---------------------------------------------------------------------------
 export function AppShell() {
-  const navigate   = useNavigate();
-  const usuario    = useAuthStore((s) => s.usuario);
-  const clear      = useAuthStore((s) => s.clear);
-  const { conectado }         = useRealtimeNotificaciones();
-  const [masDrawerOpen,    setMasDrawerOpen]    = useState(false);
+  const navigate  = useNavigate();
+  const usuario   = useAuthStore((s) => s.usuario);
+  const clear     = useAuthStore((s) => s.clear);
+  const { conectado }          = useRealtimeNotificaciones();
+  const [masDrawerOpen,     setMasDrawerOpen]     = useState(false);
   const [confirmandoLogout, setConfirmandoLogout] = useState(false);
-  const [logoutPending,    setLogoutPending]    = useState(false);
+  const [logoutPending,     setLogoutPending]     = useState(false);
   const location = useLocation();
 
-  const visibleNav    = NAV_ITEMS.filter((item) =>
+  const visibleNav   = NAV_ITEMS.filter((item) =>
     !usuario?.rol || (item.roles as readonly string[]).includes(usuario.rol),
   );
-  const bottomItems   = getBottomItems(usuario?.rol);
-  const bottomNav     = visibleNav.filter((item) => bottomItems.includes(item.to));
-  const masNav        = visibleNav.filter((item) => !bottomItems.includes(item.to));
-  const paginaActual  = NAV_ITEMS.find((item) => location.pathname.startsWith(item.to))?.label ?? '';
-  const initials      = getInitials(usuario?.nombre);
-  const esJefe        = usuario?.rol === 'jefe';
-  const perfilTip     = usuario?.nombre
+  const bottomItems  = getBottomItems(usuario?.rol);
+  const bottomNav    = visibleNav.filter((item) => bottomItems.includes(item.to));
+  const masNav       = visibleNav.filter((item) => !bottomItems.includes(item.to));
+  const paginaActual = NAV_ITEMS.find((item) => location.pathname.startsWith(item.to))?.label ?? '';
+  const initials     = getInitials(usuario?.nombre);
+  const esJefe       = usuario?.rol === 'jefe';
+  const perfilTip    = usuario?.nombre
     ? `${usuario.nombre} · ${esJefe ? 'Jefe de área' : 'Miembro del equipo'}`
     : 'Perfil';
 
@@ -115,7 +111,7 @@ export function AppShell() {
     <>
       <div className="mc-app-root">
 
-        {/* ── Sidebar desktop (rail de íconos + tooltip) ─────────────── */}
+        {/* ── Sidebar desktop ──────────────────────────────────────────── */}
         <SectionErrorBoundary label="Sidebar">
           <nav
             id="mc-sidebar-nav"
@@ -128,12 +124,12 @@ export function AppShell() {
 
             <div
               style={{
-                flex:           1,
-                overflowY:      'auto',
-                overflowX:      'hidden',
-                padding:        '6px 6px',
-                display:        'flex',
-                flexDirection:  'column',
+                flex:          1,
+                overflowY:     'auto',
+                overflowX:     'hidden',
+                padding:       '6px 6px',
+                display:       'flex',
+                flexDirection: 'column',
                 gap:            2,
               }}
             >

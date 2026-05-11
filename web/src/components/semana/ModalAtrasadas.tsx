@@ -1,22 +1,26 @@
 /**
  * components/semana/ModalAtrasadas.tsx
  *
- * Modal que lista todas las tareas atrasadas.
- * Cada fila tiene: título + fecha original + botones Reprogramar / Bloquear / Eliminar (jefe).
- * No hay "reprogramar todo" — cada tarea se gestiona individualmente.
+ * Lista tareas atrasadas con acciones por fila.
+ *
+ * Cambios V4:
+ *   - Colores hardcodeados reemplazados por tokens CSS (dark mode safe)
+ *   - Eliminar usa ghost con color danger (no danger sólido)
+ *   - Prioridad usa PRIORIDAD_BADGE del design system
  */
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { PRIORIDAD_BADGE, PRIORIDAD_LABEL } from '@/lib/estadoConfig';
 import type { Tarea } from '@/types';
 
 interface ModalAtrasadasProps {
-  atrasadas:    Tarea[];
-  esJefe:       boolean;
-  onReprogramar:(t: Tarea) => void;
-  onBloquear:   (t: Tarea) => void;
-  onEliminar?:  (t: Tarea) => void;
-  onClose:      () => void;
+  atrasadas:     Tarea[];
+  esJefe:        boolean;
+  onReprogramar: (t: Tarea) => void;
+  onBloquear:    (t: Tarea) => void;
+  onEliminar?:   (t: Tarea) => void;
+  onClose:       () => void;
 }
 
 export function ModalAtrasadas({
@@ -28,69 +32,66 @@ export function ModalAtrasadas({
       title="Tareas atrasadas"
       onClose={onClose}
     >
-      <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', margin: '0 0 12px' }}>
+      <p className="text-xs text-[var(--mc-color-text-secondary)] mb-3">
         {atrasadas.length} tarea{atrasadas.length > 1 ? 's' : ''} sin resolver de días anteriores
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+      <div className="flex flex-col gap-2">
         {atrasadas.map((t) => (
           <div
             key={t.id}
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
             style={{
-              display:       'flex',
-              alignItems:    'center',
-              gap:            10,
-              padding:       '10px 12px',
-              borderRadius:  'var(--mc-radius-md)',
-              border:        '0.5px solid #F7C1C1',
-              background:    '#FCEBEB',
+              border:     '0.5px solid var(--mc-state-atrasada-border)',
+              background: 'var(--mc-state-atrasada-bg)',
             }}
           >
-            {/* Indicador */}
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: '#E24B4A', flexShrink: 0, display: 'inline-block',
-            }} />
+            {/* Indicador de color */}
+            <span
+              style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: 'var(--mc-state-atrasada-border)',
+                flexShrink: 0, marginTop: 5,
+              }}
+              aria-hidden
+            />
 
             {/* Contenido */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                fontSize: 13, fontWeight: 600, color: '#791F1F',
-                margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
+            <div className="flex flex-1 min-w-0 flex-col gap-1">
+              <p
+                className="text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap"
+                style={{ color: 'var(--mc-state-atrasada-fg)' }}
+              >
                 {t.titulo}
               </p>
-              {t.fecha_planificada && (
-                <p style={{ fontSize: 11, color: '#A32D2D', margin: '1px 0 0' }}>
-                  Planificada para{' '}
-                  {new Date(`${t.fecha_planificada}T12:00:00`).toLocaleDateString('es', {
-                    weekday: 'short', day: 'numeric', month: 'short',
-                  })}
-                  {t.prioridad === 'alta' && ' · Alta prioridad'}
-                </p>
-              )}
+              <div className="flex items-center gap-2">
+                {t.fecha_planificada && (
+                  <span className="text-[11px]" style={{ color: 'var(--mc-state-atrasada-meta)' }}>
+                    {new Date(`${t.fecha_planificada}T12:00:00`).toLocaleDateString('es', {
+                      weekday: 'short', day: 'numeric', month: 'short',
+                    })}
+                  </span>
+                )}
+                <span className={`text-[10px] ${PRIORIDAD_BADGE[t.prioridad]}`}>
+                  {PRIORIDAD_LABEL[t.prioridad]}
+                </span>
+              </div>
             </div>
 
             {/* Acciones */}
-            <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onReprogramar(t)}
-              >
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button variant="secondary" size="sm" onClick={() => onReprogramar(t)}>
                 Reprogramar
               </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onBloquear(t)}
-              >
+              <Button variant="secondary" size="sm" onClick={() => onBloquear(t)}>
                 Bloquear
               </Button>
               {esJefe && onEliminar && (
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="sm"
                   onClick={() => onEliminar(t)}
+                  style={{ color: 'var(--mc-color-danger)', borderColor: 'var(--mc-color-danger)' }}
                 >
                   Eliminar
                 </Button>
@@ -100,18 +101,10 @@ export function ModalAtrasadas({
         ))}
       </div>
 
-      {/* Footer informativo */}
-      <div style={{
-        marginTop:    16,
-        paddingTop:   12,
-        borderTop:   '0.5px solid var(--mc-color-border)',
-        fontSize:     11,
-        color:        'var(--mc-color-text-secondary)',
-        lineHeight:    1.5,
-      }}>
-        Reprogramar requiere justificación. Bloquear indica que hay un impedimento externo.
+      <p className="mt-4 pt-3 border-t border-[var(--mc-color-border)] text-[11px] text-[var(--mc-color-text-secondary)] leading-relaxed">
+        Reprogramar requiere justificación. Bloquear indica un impedimento externo.
         {esJefe && ' Eliminar es permanente.'}
-      </div>
+      </p>
     </Modal>
   );
 }

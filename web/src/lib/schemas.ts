@@ -124,3 +124,58 @@ export function parseNota(row: Record<string, unknown>): NotaBitacora {
 export function parseUsuario(row: Record<string, unknown>): Usuario {
   return safeParse(UsuarioSchema, row, 'Usuario') as Usuario;
 }
+
+// ---------------------------------------------------------------------------
+// OrdenTrabajo
+// ---------------------------------------------------------------------------
+export const TipoTrabajoOTSchema = z.object({
+  id:         z.string().uuid(),
+  nombre:     z.string(),
+  activo:     z.boolean(),
+  created_at: z.string(),
+});
+
+export const OrdenTrabajoSchema = z.object({
+  id:                   z.string().uuid(),
+  numero:               z.string(),
+  creado_por:           z.string().uuid(),
+  tipo_trabajo_id:      z.string().uuid().nullable(),
+  tarea_id:             z.string().uuid().nullable(),
+  objetivo_id:          z.string().uuid().nullable(),
+  estado:               z.enum(['borrador', 'pendiente', 'aprobada', 'en_ejecucion', 'completada', 'rechazada', 'cancelada']),
+  prioridad:            z.enum(['normal', 'urgente']),
+  descripcion:          z.string(),
+  area_destino:         z.string(),
+  ubicacion:            z.string().nullable(),
+  modalidad:            z.enum(['presencial', 'remoto', 'viaje']),
+  fecha_estimada:       z.string(),
+  hora_inicio_est:      z.string().nullable(),
+  duracion_est_min:     z.number().nullable(),
+  equipos_materiales:   z.string().nullable(),
+  observaciones:        z.string().nullable(),
+  aprobado_por:         z.string().uuid().nullable(),
+  fecha_aprobacion:     z.string().nullable(),
+  motivo_rechazo:       z.string().nullable(),
+  fecha_inicio_real:    z.string().nullable(),
+  fecha_fin_real:       z.string().nullable(),
+  observaciones_cierre: z.string().nullable(),
+  receptor_nombre:      z.string().nullable(),
+  receptor_dni:         z.string().nullable(),
+  receptor_cargo:       z.string().nullable(),
+  created_at:           z.string(),
+  updated_at:           z.string(),
+  // Relaciones opcionales (joins)
+  tipo_trabajo: z.object({ nombre: z.string() }).nullable().optional(),
+  creador:      z.object({ nombre: z.string(), email: z.string() }).nullable().optional(),
+  aprobador:    z.object({ nombre: z.string() }).nullable().optional(),
+  tarea:        z.object({ titulo: z.string() }).nullable().optional(),
+  objetivo:     z.object({ titulo: z.string() }).nullable().optional(),
+});
+
+export function parseTipoTrabajoOT(row: Record<string, unknown>) {
+  return safeParse(TipoTrabajoOTSchema, row, 'TipoTrabajoOT');
+}
+
+export function parseOrdenTrabajo(row: Record<string, unknown>) {
+  return safeParse(OrdenTrabajoSchema, row, 'OrdenTrabajo');
+}

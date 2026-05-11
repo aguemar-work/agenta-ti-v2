@@ -17,7 +17,7 @@ export type CrearRecurrenciaEventoInput = {
   dias_semana: DiaSemana[];
   fecha_inicio: string;  // 'YYYY-MM-DD' — primer día desde el que aplica
   fecha_fin?: string;    // 'YYYY-MM-DD' — null = sin fin
-  meses?: number;        // cuántos meses generar (default 1)
+  meses?: number;        // cuántos meses generar (default 3)
 };
 
 /**
@@ -38,7 +38,7 @@ export async function crearRecurrenciaEvento(
       p_dias_semana:  input.dias_semana,
       p_fecha_inicio: input.fecha_inicio,
       p_fecha_fin:    input.fecha_fin ?? null,
-      p_meses:        input.meses ?? 1,
+      p_meses:        input.meses ?? 3,
     },
   );
   if (error) throw error;
@@ -51,7 +51,7 @@ export async function crearRecurrenciaEvento(
  */
 export async function extenderRecurrenciaEvento(
   recurrenciaId: string,
-  mesesAdelante = 1,
+  mesesAdelante = 3,
 ): Promise<number> {
   const { data, error } = await getInsforge().database.rpc(
     'sgtd_generar_eventos_recurrentes',

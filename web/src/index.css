@@ -9,8 +9,6 @@
  @import './styles/forms.css';
  @import './styles/layout.css';
  @import './styles/tasks.css';
- @import './styles/kanban.css';
- @import './styles/hoy.css';
  
  @tailwind base;
  @tailwind components;

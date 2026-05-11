@@ -2,7 +2,7 @@ import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { parseTarea } from '@/lib/schemas';
 import { inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
-import type { ConfiguracionSemana, Tarea, Usuario } from '@/types';
+import type { Tarea, Usuario } from '@/types';
 
 /** Tareas planificadas de miembros activos en la semana ISO. */
 export async function getCargaEquipoSemana(semanaISO: string): Promise<Tarea[]> {
@@ -63,44 +63,6 @@ export function fechaLunesDesdeSemanaIso(semanaISO: string): string {
     }
   }
   return fechaLocalYmd(inicioSemanaIso(new Date(isoYear, 5, 15)));
-}
-
-export async function getNotaSemana(semanaISO: string): Promise<ConfiguracionSemana | null> {
-  const insforge = getInsforge();
-  const lunesStr = fechaLunesDesdeSemanaIso(semanaISO);
-  const { data, error } = await insforge.database
-    .from('configuracion_semana')
-    .select('*')
-    .eq('fecha_inicio_semana', lunesStr)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? (data as unknown as ConfiguracionSemana) : null;
-}
-
-export async function upsertNotaSemana(semanaISO: string, nota: string): Promise<void> {
-  const insforge = getInsforge();
-  const fechaInicio = fechaLunesDesdeSemanaIso(semanaISO);
-  const { data: existente } = await insforge.database
-    .from('configuracion_semana')
-    .select('id')
-    .eq('fecha_inicio_semana', fechaInicio)
-    .maybeSingle();
-
-  if (existente?.id) {
-    const { error } = await insforge.database
-      .from('configuracion_semana')
-      .update({ notas_semana: nota })
-      .eq('id', (existente as { id: string }).id);
-    if (error) throw error;
-  } else {
-    const { error } = await insforge.database.from('configuracion_semana').insert([
-      {
-        fecha_inicio_semana: fechaInicio,
-        notas_semana: nota,
-      },
-    ]);
-    if (error) throw error;
-  }
 }
 
 /** Incidencias (tareas imprevistas) registradas por miembros en el rango de la semana. */
