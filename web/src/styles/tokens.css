@@ -15,8 +15,13 @@
   --mc-color-text:             #050505;
   --mc-color-text-secondary:   #65676b;
   --mc-color-text-placeholder: #8d949e;
+  --mc-color-text-tertiary:    #8a8f98;
   --mc-color-text-disabled:    #bcc0c7;
   --mc-color-neutral:          #65676b;
+
+  /* Brand morado (shell nav activo, CTAs de formulario unificado) */
+  --mc-brand-violet:       #534ab7;
+  --mc-brand-violet-soft: #eeedfe;
 
   /* ── Acento / Brand ─────────────────────────────────────────────── */
   --mc-color-on-accent:        #ffffff;
@@ -179,4 +184,25 @@
   --mc-state-reprogramada-bg:    #EEEDFE;
   --mc-state-reprogramada-fg:    #3C3489;
   --mc-state-reprogramada-border:#7F77DD;
+
+  /* ── Incidencias ─ registro neutral (NO advertencia) ────────────── */
+  --mc-state-incidencia-bg:      color-mix(in srgb, var(--mc-color-info) 8%, transparent);
+  --mc-state-incidencia-border:  var(--mc-color-info);
+  --mc-state-incidencia-fg:      var(--mc-color-info);
+
+  /* ── Soft backgrounds para filas/tablas ─────────────────────────── */
+  --mc-state-completada-bg-soft: #EAF3DE;
+  --mc-state-atrasada-bg-soft:   #FCEBEB;
+  --mc-state-precaucion-bg-soft: #FAEEDA;
+
+  /* Fondo muy suave para filas con alerta leve (ej. "bajo rendimiento") */
+  --mc-state-row-danger-soft:    color-mix(in srgb, var(--mc-color-danger) 3%, transparent);
+
+  /* Variantes claras para tramos de barras de progreso */
+  --mc-state-completada-bar-soft: color-mix(in srgb, var(--mc-color-success) 35%, var(--mc-color-surface));
+  --mc-state-atrasada-bar-soft:   color-mix(in srgb, var(--mc-color-danger)  30%, var(--mc-color-surface));
+  --mc-state-precaucion-bar-soft: color-mix(in srgb, var(--mc-color-warning) 38%, var(--mc-color-surface));
+
+  /* Color neutro de "pendientes" usado en gráficos (gris desaturado) */
+  --mc-color-neutral-soft:       #B4B2A9;
 }

@@ -5,19 +5,20 @@ import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { KpiCard } from '@/components/ui/KpiCard';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { useAuthStore } from '@/store/authStore';
 
 // ---------------------------------------------------------------------------
-// Paleta de colores por estado (consistente con el resto del sistema)
+// Paleta de colores por estado — vía tokens (lib/estadoConfig + tokens.css)
 // ---------------------------------------------------------------------------
 const COLORES: Record<string, string> = {
-  completadas:   '#27500A',
-  atrasadas:     '#E24B4A',
-  bloqueadas:    '#EF9F27',
-  reprogramadas: '#7F77DD',
-  en_progreso:   '#185FA5',
-  pendientes:    '#B4B2A9',
+  completadas:   'var(--mc-state-completada-fg)',
+  atrasadas:     'var(--mc-state-atrasada-border)',
+  bloqueadas:    'var(--mc-color-warning)',
+  reprogramadas: 'var(--mc-state-reprogramada-border)',
+  en_progreso:   'var(--mc-state-progreso-border)',
+  pendientes:    'var(--mc-color-neutral-soft)',
 };
 
 const LEYENDA = [
@@ -43,15 +44,15 @@ function pct(val: number, total: number) {
 // Color semáforo según porcentaje de cumplimiento
 // ---------------------------------------------------------------------------
 function colorCumplimiento(p: number) {
-  if (p >= 70) return '#27500A';
-  if (p >= 40) return '#854F0B';
-  return '#A32D2D';
+  if (p >= 70) return 'var(--mc-state-completada-fg)';
+  if (p >= 40) return 'var(--mc-state-bloqueada-meta)';
+  return 'var(--mc-state-atrasada-meta)';
 }
 
 function bgCumplimiento(p: number) {
-  if (p >= 70) return '#EAF3DE';
-  if (p >= 40) return '#FAEEDA';
-  return '#FCEBEB';
+  if (p >= 70) return 'var(--mc-state-completada-bg-soft)';
+  if (p >= 40) return 'var(--mc-state-precaucion-bg-soft)';
+  return 'var(--mc-state-atrasada-bg-soft)';
 }
 
 // ---------------------------------------------------------------------------
@@ -67,47 +68,11 @@ function Tendencia({ porSemana }: { porSemana: { completadas: number; total: num
   return (
     <span style={{
       fontSize: 11, fontWeight: 500,
-      color: sube ? '#27500A' : '#A32D2D',
+      color: sube ? 'var(--mc-state-completada-fg)' : 'var(--mc-state-atrasada-meta)',
       display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 8,
     }}>
       {sube ? '▲' : '▼'} {Math.abs(diff)}pp vs sem. anterior
     </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Card de KPI individual
-// ---------------------------------------------------------------------------
-function KpiCard({
-  value, label, color, bg, loading, size = 'md',
-}: {
-  value:    number | string;
-  label:    string;
-  color?:   string;
-  bg?:      string;
-  loading?: boolean;
-  size?:    'sm' | 'md' | 'lg';
-}) {
-  const fontSize = size === 'lg' ? 32 : size === 'md' ? 24 : 18;
-  return (
-    <div style={{
-      background:   bg ?? 'var(--mc-color-surface)',
-      border:       `1px solid ${bg ? 'transparent' : 'var(--mc-color-border)'}`,
-      borderRadius: 'var(--mc-radius-lg)',
-      padding:      '12px 16px',
-      display:      'flex',
-      flexDirection:'column',
-      gap:           4,
-    }}>
-      {loading ? (
-        <span style={{ fontSize, fontWeight: 600, color: 'var(--mc-color-text-secondary)' }}>—</span>
-      ) : (
-        <span style={{ fontSize, fontWeight: 600, color: color ?? 'var(--mc-color-text)', lineHeight: 1.2 }}>
-          {value}
-        </span>
-      )}
-      <span style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', fontWeight: 500 }}>{label}</span>
-    </div>
   );
 }
 
@@ -226,13 +191,13 @@ export function Metricas() {
         gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
         gap:                  10,
       }}>
-        <KpiCard value={kpis?.total        ?? 0} label="Total tareas"   loading={loadK} />
-        <KpiCard value={kpis?.completadas  ?? 0} label="Completadas"    color="#27500A" bg="#EAF3DE" loading={loadK} />
-        <KpiCard value={kpis?.atrasadas    ?? 0} label="Atrasadas"      color="#A32D2D" bg={kpis?.atrasadas ? '#FCEBEB' : undefined}    loading={loadK} />
-        <KpiCard value={kpis?.en_progreso  ?? 0} label="En progreso"    color="#185FA5" loading={loadK} />
-        <KpiCard value={kpis?.bloqueadas   ?? 0} label="Bloqueadas"     color="#854F0B" bg={kpis?.bloqueadas ? '#FAEEDA' : undefined}   loading={loadK} />
-        <KpiCard value={kpis?.reprogramadas ?? 0} label="Reprogramadas" color="#3C3489" loading={loadK} />
-        <KpiCard value={kpis?.incidencias  ?? 0} label="Incidencias"    color="var(--mc-color-text-secondary)" loading={loadK} />
+        <KpiCard value={kpis?.total          ?? 0} label="Total tareas"   variant="neutral" loading={loadK} />
+        <KpiCard value={kpis?.completadas    ?? 0} label="Completadas"    variant="success" emphasized={(kpis?.completadas    ?? 0) > 0} loading={loadK} />
+        <KpiCard value={kpis?.atrasadas      ?? 0} label="Atrasadas"      variant="danger"  emphasized={(kpis?.atrasadas      ?? 0) > 0} loading={loadK} />
+        <KpiCard value={kpis?.en_progreso    ?? 0} label="En progreso"    variant="info"    loading={loadK} />
+        <KpiCard value={kpis?.bloqueadas     ?? 0} label="Bloqueadas"     variant="warning" emphasized={(kpis?.bloqueadas     ?? 0) > 0} loading={loadK} />
+        <KpiCard value={kpis?.reprogramadas  ?? 0} label="Reprogramadas"  variant="neutral" loading={loadK} />
+        <KpiCard value={kpis?.incidencias    ?? 0} label="Incidencias"    variant="info"    emphasized={(kpis?.incidencias    ?? 0) > 0} loading={loadK} />
       </div>
 
       {/* ── Gráfico semanal ──────────────────────────────────────────────── */}
@@ -346,21 +311,21 @@ export function Metricas() {
                         key={m.usuarioId}
                         style={{
                           borderBottom: '1px solid var(--mc-color-border)',
-                          background:   esBajo ? '#FFF8F8' : undefined,
+                          background:   esBajo ? 'var(--mc-state-row-danger-soft)' : undefined,
                         }}
                       >
                         <td style={{ padding: '8px', fontWeight: 500, color: 'var(--mc-color-text)' }}>
                           {m.nombre}
                           {esBajo && (
-                            <span style={{ marginLeft: 6, fontSize: 10, color: '#A32D2D', fontWeight: 400 }}>
+                            <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--mc-state-atrasada-meta)', fontWeight: 400 }}>
                               bajo rendimiento
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: '8px', fontWeight: 600, color: '#27500A' }}>{m.completadas}</td>
-                        <td style={{ padding: '8px', fontWeight: 600, color: m.atrasadas > 0 ? '#A32D2D' : 'var(--mc-color-text-secondary)' }}>{m.atrasadas}</td>
-                        <td style={{ padding: '8px', fontWeight: 600, color: m.bloqueadas > 0 ? '#854F0B' : 'var(--mc-color-text-secondary)' }}>{m.bloqueadas}</td>
-                        <td style={{ padding: '8px', fontWeight: 600, color: '#3C3489' }}>{m.reprogramadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: 'var(--mc-state-completada-fg)' }}>{m.completadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: m.atrasadas > 0 ? 'var(--mc-state-atrasada-meta)' : 'var(--mc-color-text-secondary)' }}>{m.atrasadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: m.bloqueadas > 0 ? 'var(--mc-state-bloqueada-meta)' : 'var(--mc-color-text-secondary)' }}>{m.bloqueadas}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: 'var(--mc-state-reprogramada-fg)' }}>{m.reprogramadas}</td>
                         <td style={{ padding: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ height: 6, width: 80, borderRadius: 6, background: 'var(--mc-color-border)', overflow: 'hidden', flexShrink: 0 }}>
@@ -374,6 +339,9 @@ export function Metricas() {
                             </div>
                             <span style={{ fontSize: 12, fontWeight: 700, color: colorCumplimiento(cumplM), minWidth: 34 }}>
                               {cumplM}%
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', whiteSpace: 'nowrap' }}>
+                              {m.completadas}/{totalM} tareas
                             </span>
                           </div>
                         </td>

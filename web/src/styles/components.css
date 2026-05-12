@@ -526,6 +526,73 @@
       flex-shrink: 0;
     }
 
+    .mc-modal-footer--stack {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--mc-space-2);
+    }
+
+    .mc-btn-modal-primary {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 40px;
+      padding: 0 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: var(--mc-brand-violet);
+      color: #fff;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .mc-btn-modal-primary:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--mc-brand-violet) 88%, #000);
+    }
+    .mc-btn-modal-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .mc-modal-form-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: var(--mc-radius-md);
+      border: 0.5px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+    }
+    .mc-modal-form-tabs button {
+      flex: 1;
+      border: none;
+      border-radius: var(--mc-radius-sm);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      background: transparent;
+      color: var(--mc-color-text-secondary);
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    .mc-modal-form-tabs button:hover:not(:disabled) {
+      background: var(--mc-color-bg-secondary);
+      color: var(--mc-color-text);
+    }
+    .mc-modal-form-tabs button.mc-modal-form-tabs__active {
+      background: var(--mc-color-surface);
+      color: var(--mc-color-text);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+    .mc-modal-form-tabs button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     /* Confirmación de descarte — overlay interno */
     .mc-modal-confirm-overlay {
       position: absolute;
@@ -620,75 +687,177 @@
       text-align: left;
     }
 
-    /* ── EventoCard ───────────────────────────────────────────────────── */
-    .mc-evento-card {
+    /* ── Tarjeta tarea semana (columna) ─────────────────────────────── */
+    .mc-semana-task-card {
+      position: relative;
       display: flex;
-      align-items: stretch;
-      border-radius: var(--mc-radius-md);
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
       border: 0.5px solid var(--mc-color-border);
-      overflow: hidden;
-      min-height: 0;
-      transition: box-shadow var(--mc-transition-fast);
-    }
-
-    .mc-evento-card-bar {
-      width: 3px;
-      flex-shrink: 0;
-    }
-
-    .mc-evento-card-body {
-      flex: 1;
-      padding: 5px 8px;
+      background: var(--mc-color-surface);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.12s ease;
+      box-sizing: border-box;
       min-width: 0;
     }
+    .mc-semana-task-card:hover {
+      border-color: var(--mc-color-border-hover);
+      box-shadow: none;
+    }
+    .mc-semana-task-card__row-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      min-width: 0;
+    }
+    .mc-semana-task-card__title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.35;
+      color: var(--mc-color-text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+    .mc-semana-task-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+    .mc-semana-task-card__objetivo {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--mc-color-text-tertiary);
+      text-align: right;
+      max-width: 55%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-    .mc-evento-card-title {
-      font-size: 12px;
+    /* ── EventoCard (misma familia visual; reunión = borde izquierdo) ─ */
+    .mc-evento-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 0.5px solid var(--mc-color-border);
+      background: var(--mc-color-surface);
+      min-height: 0;
+      box-sizing: border-box;
+      transition: border-color 0.12s ease;
+    }
+    .mc-evento-card:hover {
+      border-color: var(--mc-color-border-hover);
+      box-shadow: none;
+    }
+    .mc-evento-card--reunion {
+      border-left: 2.5px solid var(--mc-brand-violet);
+    }
+    .mc-evento-card__title {
+      margin: 0;
+      font-size: 13px;
       font-weight: 500;
       color: var(--mc-color-text);
       line-height: 1.35;
-      margin: 0 0 3px;
       overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
     }
-
-    .mc-evento-card-meta {
+    .mc-evento-card__footer {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: var(--mc-space-1);
+      justify-content: space-between;
+      gap: 6px;
     }
-
     .mc-evento-card-badge {
       font-size: 10px;
       font-weight: 500;
-      padding: 1px 6px;
+      padding: 2px 6px;
       border-radius: var(--mc-radius-sm);
       color: #fff;
       flex-shrink: 0;
     }
-
-    .mc-evento-card-hora {
+    .mc-evento-card-meta {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 3px;
+      gap: 6px;
       font-size: 10px;
       color: var(--mc-color-text-secondary);
     }
-
+    .mc-evento-card-hora {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
     .mc-evento-card-duracion {
       font-size: 10px;
       color: var(--mc-color-text-secondary);
     }
-
     .mc-evento-card-recurrente {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 2px;
-      font-size: 10px;
-      color: var(--mc-color-text-secondary);
+    }
+
+    /* ── Drawer lateral (p. ej. notas Mi semana) ─────────────────────── */
+    .mc-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25);
+      z-index: 60;
+      animation: mc-fade-in var(--mc-duration-fast) var(--mc-ease);
+    }
+    .mc-drawer-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(360px, 100vw - 40px);
+      background: var(--mc-color-surface);
+      border-left: 0.5px solid var(--mc-color-border);
+      z-index: 61;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+      animation: mc-slide-in-right var(--mc-duration-normal) var(--mc-ease);
+    }
+    .mc-drawer-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 0.5px solid var(--mc-color-border);
+      flex-shrink: 0;
+    }
+    .mc-drawer-panel-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--mc-color-text);
+    }
+    .mc-drawer-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
     }
 
     /* ── Inline code ──────────────────────────────────────────────────── */
@@ -700,6 +869,216 @@
       background: var(--mc-color-surface-hover);
       color: var(--mc-color-text);
       border: 0.5px solid var(--mc-color-border);
+    }
+
+    /* ── KpiCard ─────────────────────────────────────────────────────── */
+    .mc-kpi-card {
+      display:        flex;
+      align-items:    center;
+      gap:            var(--mc-space-3);
+      background:     var(--mc-color-surface);
+      border:         0.5px solid var(--mc-color-border);
+      border-radius:  var(--mc-radius-lg);
+      transition:
+        background var(--mc-transition-fast),
+        border-color var(--mc-transition-fast),
+        box-shadow var(--mc-transition-fast),
+        transform var(--mc-transition-fast);
+      outline-offset: 2px;
+    }
+    .mc-kpi-card-icon { flex-shrink: 0; width: 20px; height: 20px; }
+    .mc-kpi-card-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+    .mc-kpi-card-value {
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--mc-color-text);
+      display: inline-flex;
+      align-items: baseline;
+      gap: var(--mc-space-2);
+    }
+    .mc-kpi-card-label {
+      font-size: var(--mc-text-xs);
+      color: var(--mc-color-text-secondary);
+      line-height: 1.3;
+      font-weight: 500;
+    }
+
+    .mc-kpi-card--sm {
+      padding: var(--mc-space-2) var(--mc-space-3);
+      gap: var(--mc-space-2);
+    }
+    .mc-kpi-card--sm .mc-kpi-card-value { font-size: 18px; }
+    .mc-kpi-card--sm .mc-kpi-card-icon  { width: 16px; height: 16px; }
+
+    .mc-kpi-card--md {
+      padding: var(--mc-space-3) var(--mc-space-4);
+      min-width: 140px;
+    }
+    .mc-kpi-card--md .mc-kpi-card-value { font-size: 22px; }
+
+    .mc-kpi-card--lg {
+      padding: var(--mc-space-4) var(--mc-space-5);
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--mc-space-2);
+    }
+    .mc-kpi-card--lg .mc-kpi-card-value { font-size: 32px; }
+    .mc-kpi-card--lg .mc-kpi-card-icon  { width: 24px; height: 24px; }
+
+    .mc-kpi-card--clickable { cursor: pointer; }
+    .mc-kpi-card--clickable:hover {
+      box-shadow:   var(--mc-shadow-md);
+      border-color: var(--mc-color-border-hover);
+      transform:    translateY(-1px);
+    }
+    .mc-kpi-card--clickable:focus-visible {
+      outline: 2px solid var(--mc-color-accent);
+    }
+    .mc-kpi-card--active {
+      outline:        2px solid var(--mc-color-accent);
+      outline-offset: -1px;
+      box-shadow:     var(--mc-shadow-sm);
+    }
+
+    /* ── EmptyState compact (variante sin icono para sub-zonas) ──────── */
+    .mc-empty--compact {
+      padding: var(--mc-space-3) var(--mc-space-2);
+      gap: 2px;
+    }
+    .mc-empty--compact .mc-empty-title {
+      font-size: var(--mc-text-xs);
+      color: var(--mc-color-text-secondary);
+      font-weight: 500;
+    }
+    .mc-empty-icon {
+      color: var(--mc-color-text-placeholder);
+      margin-bottom: var(--mc-space-1);
+    }
+    .mc-empty-cta {
+      margin-top: var(--mc-space-2);
+      display: flex;
+      justify-content: center;
+    }
+
+    /* ── List-grid (alternativa a mc-table para layouts con grid) ────── */
+    .mc-list-header {
+      display: grid;
+      gap: var(--mc-space-3);
+      align-items: center;
+      padding: 6px var(--mc-space-4);
+      background: var(--mc-color-bg);
+      border-bottom: 0.5px solid var(--mc-color-border);
+    }
+    .mc-list-header-cell {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-list-row {
+      display: grid;
+      gap: var(--mc-space-3);
+      align-items: center;
+      padding: 10px var(--mc-space-4);
+      border-bottom: 0.5px solid var(--mc-color-border);
+      cursor: pointer;
+      transition: background var(--mc-transition-fast);
+    }
+    .mc-list-row:hover { background: var(--mc-color-surface-hover); }
+    .mc-list-row--selected { background: var(--mc-color-accent-soft); }
+    .mc-list-row--selected:hover { background: var(--mc-color-accent-soft); }
+    .mc-list-row--atrasada {
+      background: var(--mc-state-atrasada-bg-soft);
+      border-left: 3px solid var(--mc-state-atrasada-border);
+    }
+    .mc-list-row--atrasada:hover {
+      background: color-mix(in srgb, var(--mc-state-atrasada-bg-soft) 80%, var(--mc-color-surface-hover));
+    }
+
+    /* ── Section header variante plain (sin borde/fondo/padding) ────── */
+    .mc-section-header--plain {
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+
+    /* ── StatusBadge (design-tokens --ds-*) ───────────────────────────────
+       Pill 11px, dot 5px, fondo suave + texto rampa; sin borde. */
+    .ds-status-badge {
+      display:         inline-flex;
+      align-items:     center;
+      gap:             6px;
+      padding:         3px 10px;
+      border-radius:   var(--ds-radius-pill);
+      font-family:     var(--ds-font-family);
+      font-size:       var(--ds-font-meta-size);
+      font-weight:     var(--ds-font-meta-weight);
+      line-height:     var(--ds-font-meta-leading);
+      box-sizing:      border-box;
+      white-space:     nowrap;
+      max-width:       100%;
+    }
+
+    .ds-status-badge__dot {
+      width:         5px;
+      height:        5px;
+      border-radius: 50%;
+      flex-shrink:   0;
+    }
+
+    .ds-status-badge__label {
+      overflow:     hidden;
+      text-overflow: ellipsis;
+      min-width:    0;
+    }
+
+    .ds-status-badge--pendiente {
+      background: var(--ds-color-neutral-bg);
+      color:      var(--ds-color-text);
+    }
+    .ds-status-badge--pendiente .ds-status-badge__dot {
+      background: var(--ds-color-neutral);
+    }
+
+    .ds-status-badge--en_progreso {
+      background: var(--ds-color-brand-bg);
+      color:      var(--ds-color-brand-fg-on-bg);
+    }
+    .ds-status-badge--en_progreso .ds-status-badge__dot {
+      background: var(--ds-color-brand);
+    }
+
+    .ds-status-badge--completada {
+      background: var(--ds-color-success-bg);
+      color:      var(--ds-color-success-fg);
+    }
+    .ds-status-badge--completada .ds-status-badge__dot {
+      background: var(--ds-color-success);
+    }
+
+    .ds-status-badge--atrasada {
+      background: var(--ds-color-danger-bg);
+      color:      var(--ds-color-danger-fg);
+    }
+    .ds-status-badge--atrasada .ds-status-badge__dot {
+      background: var(--ds-color-danger);
+    }
+
+    .ds-status-badge--reprogramada {
+      background: var(--ds-color-info-bg);
+      color:      var(--ds-color-info-fg);
+    }
+    .ds-status-badge--reprogramada .ds-status-badge__dot {
+      background: var(--ds-color-info);
+    }
+
+    .ds-status-badge--reunion {
+      background: var(--ds-color-warning-bg);
+      color:      var(--ds-color-warning-fg);
+    }
+    .ds-status-badge--reunion .ds-status-badge__dot {
+      background: var(--ds-color-warning);
     }
 
   }

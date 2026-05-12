@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { MoreHorizontal } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
@@ -17,10 +18,14 @@ function BarraProgreso({ pct, fechaLimite, size = 'sm', totalTareas }: { pct: nu
   const nivel  = nivelRiesgoObjetivo(pct, fechaLimite, totalTareas);
   const config = RIESGO_CONFIG[nivel];
   const h      = size === 'md' ? 8 : 5;
+  const bgTrack =
+    nivel === 'sin_fecha' ? 'var(--mc-color-border)' :
+    nivel === 'critico'   ? 'var(--mc-state-atrasada-bar-soft)' :
+    nivel === 'moderado'  ? 'var(--mc-state-precaucion-bar-soft)' :
+                            'var(--mc-state-completada-bar-soft)';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <div style={{ height: h, width: '100%', borderRadius: h, overflow: 'hidden',
-        background: nivel === 'sin_fecha' ? 'var(--mc-color-border)' : nivel === 'critico' ? '#F7C1C1' : nivel === 'moderado' ? '#FAC775' : '#C0DD97' }}>
+      <div style={{ height: h, width: '100%', borderRadius: h, overflow: 'hidden', background: bgTrack }}>
         <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, borderRadius: h, background: config.barColor, transition: 'width 0.4s ease' }} />
       </div>
     </div>
@@ -131,20 +136,18 @@ export function Objetivos() {
               <div
                 key={o.id}
                 onClick={() => setSeleccionId(o.id)}
-                style={{
-                  display: 'grid', gridTemplateColumns: '1fr 80px 180px 90px 32px', alignItems: 'center', gap: 12,
-                  borderBottom: '1px solid var(--mc-color-border)', padding: '10px 16px', cursor: 'pointer',
-                  background: seleccionId === o.id ? 'var(--mc-color-accent-soft)' : esCrit ? '#FFF8F8' : undefined,
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { if (seleccionId !== o.id) (e.currentTarget as HTMLElement).style.background = 'var(--mc-color-surface-hover)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = seleccionId === o.id ? 'var(--mc-color-accent-soft)' : esCrit ? '#FFF8F8' : ''; }}
+                className={[
+                  'mc-list-row',
+                  seleccionId === o.id ? 'mc-list-row--selected' : '',
+                  seleccionId !== o.id && esCrit ? 'mc-list-row--atrasada' : '',
+                ].filter(Boolean).join(' ')}
+                style={{ gridTemplateColumns: '1fr 80px 180px 90px 32px' }}
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.titulo}</p>
                     <BadgeRiesgo pct={o.pct} fechaLimite={o.fecha_limite} totalTareas={o.total_tareas} />
-                    {vencido && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: '#FCEBEB', color: '#A32D2D' }}>Vencido</span>}
+                    {vencido && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'var(--mc-state-atrasada-bg-soft)', color: 'var(--mc-state-atrasada-meta)' }}>Vencido</span>}
                   </div>
                   {o.descripcion && <p style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.descripcion}</p>}
                 </div>
@@ -158,7 +161,7 @@ export function Objetivos() {
                   </span>
                 </div>
 
-                <span style={{ fontSize: 12, color: esCrit ? '#A32D2D' : 'var(--mc-color-text-secondary)' }}>{o.fecha_limite ?? '—'}</span>
+                <span style={{ fontSize: 12, color: esCrit ? 'var(--mc-state-atrasada-meta)' : 'var(--mc-color-text-secondary)' }}>{o.fecha_limite ?? '—'}</span>
 
                 <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="xs" className="!p-1 text-[var(--mc-color-text-secondary)]"
@@ -174,7 +177,9 @@ export function Objetivos() {
                       setMenuObjId(o.id);
                       menuBtnRef.current = e.currentTarget as HTMLButtonElement;
                     }}
-                    aria-label="Opciones" aria-expanded={menuObjId === o.id}>···</Button>
+                    aria-label="Opciones" aria-expanded={menuObjId === o.id}>
+                    <MoreHorizontal size={16} aria-hidden />
+                  </Button>
                 </div>
               </div>
             );
@@ -216,7 +221,7 @@ export function Objetivos() {
 
               {/* Tareas */}
               <div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12 }}>
-                <div className="mc-section-header !border-none !bg-transparent !p-0">
+                <div className="mc-section-header mc-section-header--plain">
                   <span>Tareas vinculadas</span>
                   {esJefe && <Button variant="secondary" size="xs" onClick={() => setModalTarea(true)}>+ Añadir</Button>}
                 </div>
@@ -232,11 +237,11 @@ export function Objetivos() {
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                           borderRadius: 'var(--mc-radius-md)', padding: '7px 10px', cursor: 'pointer',
-                          background: t.estado === 'atrasada' ? '#FCEBEB' : 'var(--mc-color-bg)',
-                          border: `1px solid ${t.estado === 'atrasada' ? '#F7C1C1' : 'var(--mc-color-border)'}`,
+                          background: t.estado === 'atrasada' ? 'var(--mc-state-atrasada-bg-soft)' : 'var(--mc-color-bg)',
+                          border: `1px solid ${t.estado === 'atrasada' ? 'var(--mc-state-atrasada-border)' : 'var(--mc-color-border)'}`,
                         }}
                       >
-                        <p style={{ fontSize: 12, color: t.estado === 'atrasada' ? '#791F1F' : 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{t.titulo}</p>
+                        <p style={{ fontSize: 12, color: t.estado === 'atrasada' ? 'var(--mc-state-atrasada-fg)' : 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{t.titulo}</p>
                         <span className={`mc-badge ${TAREA_BADGE[t.estado as EstadoTarea] ?? 'mc-badge-neutral'} shrink-0`} style={{ fontSize: 9 }}>{TAREA_LABEL[t.estado as EstadoTarea] ?? t.estado}</span>
                       </div>
                     ))}
@@ -247,7 +252,7 @@ export function Objetivos() {
               {/* OTs — solo visor */}
               {(loadOTs || otsVinc.length > 0) && (
                 <div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12 }}>
-                  <div className="mc-section-header !border-none !bg-transparent !p-0" style={{ marginBottom: 8 }}>
+                  <div className="mc-section-header mc-section-header--plain" style={{ marginBottom: 8 }}>
                     <span>OTs vinculadas</span>
                     <span style={{ fontSize: 10, color: 'var(--mc-color-text-secondary)' }}>Solo referencia</span>
                   </div>
@@ -275,7 +280,16 @@ export function Objetivos() {
 
       {/* Modal: nuevo objetivo */}
       <Modal open={modalNuevo} onClose={cerrarModalNuevoObjetivo} title="Nuevo objetivo" size="sm" hasUnsavedChanges={nuevoObjetivoHasChanges}
-        footer={<><Button variant="primary" size="lg" fullWidth onClick={() => void submitNuevoObjetivo()} disabled={!canSubmitNuevo}>{creandoObj ? 'Guardando…' : 'Crear objetivo'}</Button><CancelButton onClick={cerrarModalNuevoObjetivo} disabled={creandoObj} /></>}>
+        bodyClassName="mc-modal-form"
+        footerClassName="mc-modal-footer--stack"
+        footer={(
+          <>
+            <button type="button" className="mc-btn-modal-primary" onClick={() => void submitNuevoObjetivo()} disabled={!canSubmitNuevo || creandoObj}>
+              {creandoObj ? 'Guardando…' : 'Crear objetivo'}
+            </button>
+            <CancelButton onClick={cerrarModalNuevoObjetivo} disabled={creandoObj} />
+          </>
+        )}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="obj-titulo">Título</label>

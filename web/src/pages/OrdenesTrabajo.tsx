@@ -162,12 +162,22 @@ export function OrdenesTrabajo() {
       <PageHeader
         title="Órdenes de trabajo"
         subtitle={esJefe ? subtituloJefe : 'Mis órdenes de trabajo'}
-        actions={
-          <Button variant="primary" onClick={abrirNuevaOT} size="sm">
-            <Plus size={14} style={{ marginRight: 6 }} aria-hidden />
-            Nueva OT
-          </Button>
-        }
+        actions={(
+          <div className="mc-page-header-toolbar">
+            <FilterBar.Pills
+              value={filtroEstado}
+              onChange={(v) => setFiltroEstado(v as typeof filtroEstado)}
+              options={FILTROS.map(({ value, label }) => ({
+                value,
+                label,
+                badge: value === 'pendiente' ? pendientesCount : undefined,
+              }))}
+            />
+            <Button variant="primary" onClick={abrirNuevaOT} size="sm">
+              + Nueva OT
+            </Button>
+          </div>
+        )}
       />
 
       {isError && (
@@ -175,18 +185,6 @@ export function OrdenesTrabajo() {
           No se pudieron cargar las órdenes de trabajo.
         </p>
       )}
-
-      <FilterBar>
-        <FilterBar.Pills
-          value={filtroEstado}
-          onChange={(v) => setFiltroEstado(v as typeof filtroEstado)}
-          options={FILTROS.map(({ value, label }) => ({
-            value,
-            label,
-            badge: value === 'pendiente' ? pendientesCount : undefined,
-          }))}
-        />
-      </FilterBar>
 
       {/* ── Lista de OTs ─────────────────────────────────────────────────── */}
       <div className="mc-card !p-0 overflow-hidden">
@@ -605,7 +603,7 @@ export function OrdenesTrabajo() {
           tiposTrabajo={tiposTrabajo}
           onClose={() => setModalForm(false)}
           tareasVinculables={tareasVinculables}
-          onGuardar={(enviar) => editandoOT ? mutActualizar.mutate(enviar) : mutCrear.mutate(enviar)}
+          onGuardar={() => (editandoOT ? mutActualizar.mutate() : mutCrear.mutate())}
           busy={mutCrear.isPending || mutActualizar.isPending}
         />
       )}

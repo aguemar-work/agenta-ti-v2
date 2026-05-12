@@ -331,5 +331,15 @@
     }
   
     .mc-char-count.mc-char-count-error { color: var(--mc-color-danger); }
-  
+
+    /* Modal: formulario unificado — inputs/select 36px (textarea excluida) */
+    .mc-modal-form .mc-input:not(textarea) {
+      height:     36px;
+      min-height: 36px;
+    }
+    .mc-modal-form select.mc-input {
+      height:     36px;
+      min-height: 36px;
+    }
+
   }

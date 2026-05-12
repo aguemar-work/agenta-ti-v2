@@ -10,6 +10,8 @@ import type { Tarea } from '@/types';
 type Props = {
   tarea: Tarea;
   hoyYmd: string;
+  /** Título del objetivo vinculado (si existe). */
+  objetivoTitulo?: string | null;
   readOnly?: boolean;
   onOpenDetalle?: (t: Tarea) => void;
 };
@@ -17,6 +19,7 @@ type Props = {
 export function DraggableTareaSemana({
   tarea,
   hoyYmd,
+  objetivoTitulo,
   readOnly,
   onOpenDetalle,
 }: Props) {
@@ -27,7 +30,6 @@ export function DraggableTareaSemana({
 
   const style: CSSProperties = isDragging
     ? {
-        // Sin transform mientras se arrastra: evita salto/flicker del original.
         opacity: 0,
         visibility: 'hidden',
         touchAction: readOnly ? undefined : 'none',
@@ -38,14 +40,11 @@ export function DraggableTareaSemana({
       };
 
   const est = estadoEfectivoTablero(tarea, hoyYmd);
-  const atrasadaBar  = est === 'atrasada'  ? 'border-l-2 border-[var(--mc-color-danger)]'  : '';
-  const bloqueadaBar = est === 'bloqueada' ? 'border-l-2 border-[var(--mc-color-warning)]' : '';
-
 
   return (
     <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>
       <div
-        className={`mc-card !p-2 flex items-start gap-2 cursor-pointer hover:border-[var(--mc-color-border-hover)] ${atrasadaBar} ${bloqueadaBar}`.trim()}
+        className="mc-semana-task-card"
         onClick={() => onOpenDetalle?.(tarea)}
         role="button"
         tabIndex={0}
@@ -53,23 +52,31 @@ export function DraggableTareaSemana({
           if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea);
         }}
       >
-        {!readOnly ? (
-          <button
-            type="button"
-            className="mc-btn-ghost !p-0.5 mt-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
-            aria-label="Arrastrar tarea"
-            {...listeners}
-            {...attributes}
-            style={{ touchAction: 'none' }}
-            draggable={false}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical size={14} />
-          </button>
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-[var(--mc-color-text)] leading-snug mb-1 line-clamp-2">{tarea.titulo}</p>
-          <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'} text-[10px]`}>{TAREA_LABEL[est] ?? est}</span>
+        <div className="mc-semana-task-card__row-top">
+          {!readOnly ? (
+            <button
+              type="button"
+              className="mc-btn-ghost !p-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
+              aria-label="Arrastrar tarea"
+              {...listeners}
+              {...attributes}
+              style={{ touchAction: 'none' }}
+              draggable={false}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical size={14} />
+            </button>
+          ) : null}
+          <p className="mc-semana-task-card__title">{tarea.titulo}</p>
+        </div>
+
+        <div className="mc-semana-task-card__footer">
+          <span className={`mc-badge ${TAREA_BADGE[est] ?? 'mc-badge-neutral'}`} style={{ fontSize: 10 }}>
+            {TAREA_LABEL[est] ?? est}
+          </span>
+          <span className="mc-semana-task-card__objetivo">
+            {objetivoTitulo?.trim() ? objetivoTitulo : '\u00a0'}
+          </span>
         </div>
       </div>
     </div>

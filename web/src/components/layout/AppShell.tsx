@@ -1,12 +1,12 @@
 import {
-  BarChart2,
-  Calendar,
-  ClipboardList,
-  FileText,
-  LogOut,
-  MoreHorizontal,
-  Target,
-} from 'lucide-react';
+  IconCalendarWeek,
+  IconChartBar,
+  IconClipboardList,
+  IconDots,
+  IconFileDescription,
+  IconLogout,
+  IconTarget,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -18,21 +18,30 @@ import { useAuthStore } from '@/store/authStore';
 import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
 
 // ---------------------------------------------------------------------------
-// Nav config
+// Nav config (grupos + íconos Tabler)
 // ---------------------------------------------------------------------------
-const NAV_ITEMS = [
-  { to: '/semana',          label: 'Mi semana',     icon: Calendar,      roles: ['jefe', 'miembro'] },
-  { to: '/objetivos',       label: 'Objetivos',     icon: Target,        roles: ['jefe', 'miembro'] },
-  { to: '/ordenes-trabajo', label: 'Órdenes',       icon: FileText,      roles: ['jefe', 'miembro'] },
-  { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] },
-  { to: '/metricas',        label: 'Métricas',      icon: BarChart2,     roles: ['jefe'] },
+const NAV_WORKSPACE = [
+  { to: '/semana',          label: 'Mi semana',     icon: IconCalendarWeek,  roles: ['jefe', 'miembro'] as const },
+  { to: '/objetivos',       label: 'Objetivos',     icon: IconTarget,          roles: ['jefe', 'miembro'] as const },
+  { to: '/ordenes-trabajo', label: 'Órdenes',       icon: IconFileDescription, roles: ['jefe', 'miembro'] as const },
 ] as const;
+
+const NAV_GESTION = [
+  { to: '/planificacion',   label: 'Planificación', icon: IconClipboardList, roles: ['jefe'] as const },
+  { to: '/metricas',        label: 'Métricas',      icon: IconChartBar,        roles: ['jefe'] as const },
+] as const;
+
+const NAV_ALL = [...NAV_WORKSPACE, ...NAV_GESTION] as const;
 
 const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/metricas', '/ordenes-trabajo'] as const;
 const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos']                  as const;
 
 function getBottomItems(rol: string | undefined): readonly string[] {
   return rol === 'jefe' ? BOTTOM_NAV_JEFE : BOTTOM_NAV_MIEMBRO;
+}
+
+function filterNav<T extends { to: string; roles: readonly string[] }>(items: readonly T[], rol: string | undefined): T[] {
+  return items.filter((item) => !rol || (item.roles as readonly string[]).includes(rol));
 }
 
 // ---------------------------------------------------------------------------
@@ -82,18 +91,15 @@ export function AppShell() {
   const [logoutPending,     setLogoutPending]     = useState(false);
   const location = useLocation();
 
-  const visibleNav   = NAV_ITEMS.filter((item) =>
-    !usuario?.rol || (item.roles as readonly string[]).includes(usuario.rol),
-  );
-  const bottomItems  = getBottomItems(usuario?.rol);
+  const rol = usuario?.rol;
+  const navWorkspace = filterNav(NAV_WORKSPACE, rol);
+  const navGestion   = filterNav(NAV_GESTION, rol);
+  const visibleNav   = filterNav(NAV_ALL, rol);
+  const bottomItems  = getBottomItems(rol);
   const bottomNav    = visibleNav.filter((item) => bottomItems.includes(item.to));
   const masNav       = visibleNav.filter((item) => !bottomItems.includes(item.to));
-  const paginaActual = NAV_ITEMS.find((item) => location.pathname.startsWith(item.to))?.label ?? '';
+  const paginaActual = NAV_ALL.find((item) => location.pathname.startsWith(item.to))?.label ?? '';
   const initials     = getInitials(usuario?.nombre);
-  const esJefe       = usuario?.rol === 'jefe';
-  const perfilTip    = usuario?.nombre
-    ? `${usuario.nombre} · ${esJefe ? 'Jefe de área' : 'Miembro del equipo'}`
-    : 'Perfil';
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -118,66 +124,57 @@ export function AppShell() {
             className="mc-sidebar"
             aria-label="Navegación principal"
           >
-            <div className="mc-sidebar-head">
+            <div className="mc-sidebar-brand">
               <AppBrandIcon size={26} />
-            </div>
-
-            <div
-              style={{
-                flex:          1,
-                overflowY:     'auto',
-                overflowX:     'hidden',
-                padding:       '6px 6px',
-                display:       'flex',
-                flexDirection: 'column',
-                gap:            2,
-              }}
-            >
-              {visibleNav.map(({ to, label, icon: Icon }) => (
-                <div key={to} className="mc-tip" data-tip={label}>
-                  <NavLink
-                    to={to}
-                    end
-                    aria-label={label}
-                    className={({ isActive }) =>
-                      `mc-sidebar-link${isActive ? ' mc-sidebar-link--active' : ''}`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <Icon size={16} aria-hidden style={{ flexShrink: 0 }} />
-                        <span className="mc-sidebar-nav-label">{label}</span>
-                        {isActive && <span className="sr-only">(página actual)</span>}
-                      </>
-                    )}
-                  </NavLink>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--mc-color-border)', flexShrink: 0 }}>
-              <div className="mc-sidebar-profile">
-                <div className="mc-tip" data-tip={perfilTip}>
-                  <div className="mc-sidebar-avatar" aria-hidden>{initials}</div>
-                </div>
-                <div className="mc-sidebar-profile-info" aria-live="polite">
-                  <p className="mc-sidebar-profile-name">{usuario?.nombre}</p>
-                  <p className="mc-sidebar-profile-role">
-                    {esJefe ? 'Jefe de área' : 'Miembro del equipo'}
-                  </p>
-                </div>
-                <RealtimeIndicator conectado={conectado} />
-                <div className="mc-tip" data-tip="Cerrar sesión">
-                  <button
-                    type="button"
-                    className="mc-sidebar-logout"
-                    onClick={() => setConfirmandoLogout(true)}
-                    aria-label="Cerrar sesión"
-                  >
-                    <LogOut size={15} aria-hidden />
-                  </button>
-                </div>
+              <span className="mc-sidebar-brand-name">Nexora</span>
+              <span className="mc-sidebar-brand-spacer" aria-hidden />
+              <div className="mc-sidebar-avatar" title={usuario?.nombre ?? 'Usuario'} aria-hidden>
+                {initials}
               </div>
+            </div>
+
+            <div className="mc-sidebar-scroll">
+              <p className="mc-sidebar-section-label">Trabajo</p>
+              {navWorkspace.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end
+                  className="mc-sidebar-nav-link"
+                >
+                  <Icon size={18} stroke={1.75} aria-hidden />
+                  <span className="mc-sidebar-nav-label">{label}</span>
+                </NavLink>
+              ))}
+
+              {navGestion.length > 0 && (
+                <>
+                  <p className="mc-sidebar-section-label">Gestión</p>
+                  {navGestion.map(({ to, label, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end
+                      className="mc-sidebar-nav-link"
+                    >
+                      <Icon size={18} stroke={1.75} aria-hidden />
+                      <span className="mc-sidebar-nav-label">{label}</span>
+                    </NavLink>
+                  ))}
+                </>
+              )}
+            </div>
+
+            <div className="mc-sidebar-footer">
+              <RealtimeIndicator conectado={conectado} />
+              <button
+                type="button"
+                className="mc-sidebar-logout"
+                onClick={() => setConfirmandoLogout(true)}
+                aria-label="Cerrar sesión"
+              >
+                <IconLogout size={18} stroke={1.75} aria-hidden />
+              </button>
             </div>
           </nav>
         </SectionErrorBoundary>
@@ -199,7 +196,7 @@ export function AppShell() {
                 onClick={() => setConfirmandoLogout(true)}
                 aria-label="Cerrar sesión"
               >
-                <LogOut size={17} aria-hidden />
+                <IconLogout size={18} stroke={1.75} aria-hidden />
               </button>
             </div>
 
@@ -232,17 +229,10 @@ export function AppShell() {
                 to={to}
                 end
                 onClick={() => setMasDrawerOpen(false)}
-                className={({ isActive }) =>
-                  `mc-sidebar-link${isActive ? ' mc-sidebar-link--active' : ''}`
-                }
+                className="mc-sidebar-nav-link"
               >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={20} aria-hidden style={{ flexShrink: 0 }} />
-                    <span>{label}</span>
-                    {isActive && <span className="sr-only">(página actual)</span>}
-                  </>
-                )}
+                <Icon size={20} stroke={1.75} aria-hidden />
+                <span className="mc-sidebar-nav-label">{label}</span>
               </NavLink>
             ))}
           </div>
@@ -260,7 +250,7 @@ export function AppShell() {
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon size={20} aria-hidden />
+                      <Icon size={20} stroke={1.75} aria-hidden />
                       <span>{label}</span>
                       {isActive && <span className="sr-only">(página actual)</span>}
                     </>
@@ -277,7 +267,7 @@ export function AppShell() {
                   aria-label="Más módulos"
                   style={{ flex: '1 1 0' }}
                 >
-                  <MoreHorizontal size={20} aria-hidden />
+                  <IconDots size={20} stroke={1.75} aria-hidden />
                   <span>Más</span>
                 </button>
               )}

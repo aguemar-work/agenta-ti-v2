@@ -4,7 +4,7 @@
  */
 
 import { Modal } from '@/components/ui/Modal';
-import { Button, CancelButton } from '@/components/ui/Button';
+import { CancelButton } from '@/components/ui/Button';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
 import type { Tarea } from '@/types';
 
@@ -16,7 +16,7 @@ type Props = {
     tiposTrabajo: TipoTrabajoOT[];
     tareasVinculables: Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
     onClose: () => void;
-    onGuardar: (enviar: boolean) => void;
+    onGuardar: () => void;
     busy: boolean;
     hasUnsavedChanges?: boolean;
 };
@@ -37,26 +37,18 @@ export function OTFormModal({ open, editando, form, setForm, tiposTrabajo, tarea
             title={titulo}
             size="lg"
             hasUnsavedChanges={hasUnsavedChanges}
+            bodyClassName="mc-modal-form"
+            footerClassName="mc-modal-footer--stack"
             footer={(
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        fullWidth
+                    <button
+                        type="button"
+                        className="mc-btn-modal-primary"
                         disabled={!canSave || busy}
-                        onClick={() => onGuardar(true)}
+                        onClick={() => onGuardar()}
                     >
-                        {busy ? 'Enviando…' : 'Enviar al jefe'}
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        size="lg"
-                        fullWidth
-                        disabled={!canSave || busy}
-                        onClick={() => onGuardar(false)}
-                    >
-                        {busy ? 'Guardando…' : 'Guardar borrador'}
-                    </Button>
+                        {busy ? 'Enviando…' : (editando ? 'Guardar y enviar' : 'Enviar al jefe')}
+                    </button>
                     <CancelButton onClick={onClose} disabled={busy} />
                 </div>
             )}

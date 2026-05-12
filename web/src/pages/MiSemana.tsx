@@ -19,16 +19,17 @@ import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { TaskItem } from '@/components/tareas/TaskItem';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { useMiSemanaPage } from '@/hooks/useMiSemanaPage';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { Calendar } from 'lucide-react';
+import { Calendar, StickyNote } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
-import type { Evento, NotaBitacora, Tarea } from '@/types';
+import type { Evento, Tarea } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,12 +82,14 @@ const collisionSemana: CollisionDetection = (args) => {
 };
 
 const CONTEO_CONFIG = [
-  { key: 'pendiente',    label: 'Pendientes',    color: 'text-[var(--mc-color-text)]' },
-  { key: 'en_progreso',  label: 'En progreso',   color: 'text-[var(--mc-color-accent)]' },
-  { key: 'atrasada',     label: 'Atrasadas',     color: 'text-[var(--mc-color-danger)]' },
-  { key: 'reprogramada', label: 'Reprogramadas', color: 'text-[var(--mc-color-text-secondary)]' },
-  { key: 'completada',   label: 'Completadas',   color: 'text-[var(--mc-color-success)]' },
+  { key: 'pendiente',    label: 'Pendientes'    },
+  { key: 'en_progreso',  label: 'En progreso'   },
+  { key: 'atrasada',     label: 'Atrasadas'     },
+  { key: 'reprogramada', label: 'Reprogramadas' },
+  { key: 'completada',   label: 'Completadas'   },
 ] as const;
+
+type FiltroEstado = typeof CONTEO_CONFIG[number]['key'];
 
 // ---------------------------------------------------------------------------
 // Sub-componentes de columna
@@ -103,13 +106,13 @@ function ZonaIncidencias({
   return (
     <div className="border-t border-dashed border-[var(--mc-color-border)] mt-1 pt-1">
       <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-warning)]">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-info)]">
           Incidencias
         </span>
         <button
           type="button"
           onClick={onRegistrar}
-          className="text-[10px] text-[var(--mc-color-warning)] hover:underline"
+          className="text-[10px] text-[var(--mc-color-info)] hover:underline"
         >
           + registrar
         </button>
@@ -123,7 +126,7 @@ function ZonaIncidencias({
           {incidencias.map((inc) => (
             <div
               key={inc.id}
-              className="rounded border border-[var(--mc-color-warning)] bg-[color-mix(in_srgb,var(--mc-color-warning)_8%,transparent)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
+              className="rounded border border-[var(--mc-state-incidencia-border)] bg-[var(--mc-state-incidencia-bg)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
             >
               {inc.titulo}
             </div>
@@ -131,50 +134,6 @@ function ZonaIncidencias({
         </div>
       )}
     </div>
-  );
-}
-
-/** Panel lateral derecho — notas rápidas */
-function PanelNotas({
-  notas,
-  notaRapida,
-  setNotaRapida,
-  guardarNotaRapida,
-}: {
-  notas:             NotaBitacora[];
-  notaRapida:        string;
-  setNotaRapida:     (v: string) => void;
-  guardarNotaRapida: () => void;
-}) {
-  return (
-    <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col gap-2 border-l border-[var(--mc-color-border)] pl-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-        Notas
-      </p>
-      <div className="flex flex-col gap-1">
-        {notas.slice(0, 6).map((n) => (
-          <div
-            key={n.id}
-            className="rounded border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
-          >
-            {n.contenido.length > 80 ? n.contenido.slice(0, 80) + '…' : n.contenido}
-          </div>
-        ))}
-      </div>
-      <textarea
-        rows={2}
-        className="mc-input resize-none text-xs"
-        placeholder="Nota rápida…"
-        value={notaRapida}
-        onChange={(e) => setNotaRapida(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) guardarNotaRapida();
-        }}
-      />
-      <Button variant="secondary" size="xs" onClick={guardarNotaRapida} disabled={!notaRapida.trim()}>
-        Guardar nota
-      </Button>
-    </aside>
   );
 }
 
@@ -213,42 +172,70 @@ export function MiSemana() {
     useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado | null>(null);
+  const [notasDrawerOpen, setNotasDrawerOpen] = useState(false);
+
+  const tituloObjetivoPorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of objetivosActivos) m.set(o.id, o.titulo);
+    return m;
+  }, [objetivosActivos]);
+
+  function toggleFiltro(key: FiltroEstado) {
+    setFiltroEstado((prev) => (prev === key ? null : key));
+  }
+
   if (!usuario) return null;
   if (!uid) return <p className="text-sm text-[var(--mc-color-text-secondary)]">Preparando vista…</p>;
 
   return (
     <div className={APP_PAGE_CLASS}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <PageHeader
-        title="Mi semana"
-        subtitle={`${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`}
-        left={
-          <div className="mc-nav-arrows">
-            <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
-            <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, 7))}  aria-label="Semana siguiente">›</button>
-          </div>
-        }
-        actions={
-          <div className="flex items-center gap-3">
-            {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
-              <select
-                aria-label="Ver semana de"
-                className="mc-input !w-auto min-w-[180px]"
-                value={uid}
-                onChange={(e) => setSeleccionId(e.target.value)}
-              >
-                {usuariosJefe.map((u) => (
-                  <option key={u.id} value={u.id}>{u.nombre}</option>
-                ))}
-              </select>
-            )}
+      {/* ── Cabecera módulo ─────────────────────────────────────────────── */}
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1 className="text-[20px] font-medium leading-tight text-[var(--mc-color-text)] m-0">
+            Mi semana
+          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="mc-nav-arrows flex items-center gap-1">
+              <button type="button" className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
+              <button type="button" className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, 7))} aria-label="Semana siguiente">›</button>
+            </div>
+            <span className="text-sm text-[var(--mc-color-text-secondary)] whitespace-nowrap">
+              {fechaLocalDdMmYyyy(lunes)} – {fechaLocalDdMmYyyy(sabado)}
+            </span>
             <Button variant="secondary" size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
               + Nueva tarea
             </Button>
+            <button
+              type="button"
+              className="mc-btn-secondary mc-btn-sm inline-flex items-center gap-1.5"
+              onClick={() => setNotasDrawerOpen(true)}
+              aria-expanded={notasDrawerOpen}
+              aria-controls="mc-misemana-notas-drawer"
+            >
+              <StickyNote size={14} aria-hidden />
+              Notas
+            </button>
           </div>
-        }
-      />
+        </div>
+        {esJefe && usuariosJefe && usuariosJefe.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[var(--mc-color-text-secondary)]">Ver semana de</span>
+            <select
+              aria-label="Ver semana de"
+              className="mc-input !w-auto min-w-[180px]"
+              value={uid}
+              onChange={(e) => setSeleccionId(e.target.value)}
+            >
+              {usuariosJefe.map((u) => (
+                <option key={u.id} value={u.id}>{u.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </header>
 
       {/* Banner viernes */}
       {esBannerViernes && (
@@ -265,18 +252,49 @@ export function MiSemana() {
 
       {isError && <p className="text-sm text-[var(--mc-color-danger)]">Error al cargar datos.</p>}
 
-      {/* ── Contadores ───────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3">
-        {CONTEO_CONFIG.map(({ key, label, color }) => (
-          <div key={key} className="mc-card flex min-w-[90px] flex-col gap-1 !p-3">
-            <span className={`text-xl font-semibold ${color}`}>{conteos[key]}</span>
-            <span className="text-xs text-[var(--mc-color-text-secondary)]">{label}</span>
-          </div>
-        ))}
+      {/* ── Resumen por estado (cards compactas) ─────────────────────────── */}
+      <div className="flex flex-wrap items-stretch gap-3">
+        {CONTEO_CONFIG.map(({ key, label }) => {
+          const n        = conteos[key] ?? 0;
+          const disabled = n === 0 && filtroEstado !== key;
+          const active   = filtroEstado === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              onClick={disabled ? undefined : () => toggleFiltro(key)}
+              className={[
+                'flex min-w-[100px] flex-1 flex-col justify-center rounded-lg border border-[var(--mc-color-border)]',
+                'bg-[var(--mc-color-bg-secondary)] px-3 py-3 text-left transition-colors',
+                active ? 'border-[var(--mc-brand-violet)] ring-1 ring-[var(--mc-brand-violet-soft)]' : '',
+                disabled ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--mc-color-border-hover)]',
+              ].join(' ')}
+            >
+              <span className="text-[22px] font-semibold leading-none tabular-nums text-[var(--mc-color-text)]">{n}</span>
+              <span className="mt-1 text-[11px] font-medium text-[var(--mc-color-text-secondary)]">{label}</span>
+            </button>
+          );
+        })}
+        {filtroEstado && (
+          <Button
+            variant="quaternary"
+            size="sm"
+            onClick={() => setFiltroEstado(null)}
+            aria-label="Limpiar filtro"
+          >
+            Limpiar filtro
+          </Button>
+        )}
       </div>
+      {filtroEstado && (
+        <p className="text-xs text-[var(--mc-color-text-secondary)]" role="status" aria-live="polite">
+          Mostrando solo tareas <strong className="text-[var(--mc-color-text)]">{CONTEO_CONFIG.find((c) => c.key === filtroEstado)?.label.toLowerCase()}</strong>. Los eventos siguen visibles.
+        </p>
+      )}
 
-      {/* ── Grilla semanal + panel notas ─────────────────────────────────── */}
-      <div className="flex min-w-0 gap-4">
+      {/* ── Grilla semanal ───────────────────────────────────────────────── */}
+      <div className="min-w-0">
         <DndContext
           sensors={sensors}
           collisionDetection={collisionSemana}
@@ -292,10 +310,16 @@ export function MiSemana() {
             <div className="mc-card !p-0 overflow-hidden">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:gap-0">
                 {diasSemana.map((d, idx) => {
-                  const ymd    = fechaLocalYmd(d);
-                  const delDia = tareasPlan.filter((t) => t.fecha_planificada === ymd);
-                  const esHoy  = ymd === hoyYmd;
-                  const ph     = Boolean(activeDragId && overId === `day-${ymd}`);
+                  const ymd       = fechaLocalYmd(d);
+                  const delDia    = tareasPlan.filter((t) => t.fecha_planificada === ymd);
+                  const delDiaVis = (filtroEstado
+                    ? delDia.filter((t) => estadoEfectivoTablero(t, hoyYmd) === filtroEstado)
+                    : delDia
+                  ).slice().sort(
+                    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+                  );
+                  const esHoy     = ymd === hoyYmd;
+                  const ph        = Boolean(activeDragId && overId === `day-${ymd}`);
 
                   return (
                     <div
@@ -308,9 +332,19 @@ export function MiSemana() {
                     >
                       {/* Cabecera del día */}
                       <div className="flex items-center justify-between gap-1 border-b border-[var(--mc-color-border)] px-2 py-2">
-                        <span className={`text-xs font-semibold ${esHoy ? 'text-[var(--mc-color-accent)]' : 'text-[var(--mc-color-text)]'}`}>
-                          {DIAS_CORTO[idx]} {d.getDate()}{esHoy ? ' · hoy' : ''}
-                        </span>
+                        <div className="flex items-baseline gap-1.5 text-[12px] text-[var(--mc-color-text)]">
+                          <span className="font-medium">{DIAS_CORTO[idx]}</span>
+                          <span className="inline-flex items-center gap-1 font-bold tabular-nums">
+                            {esHoy ? (
+                              <span
+                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mc-brand-violet)]"
+                                title="Hoy"
+                                aria-label="Hoy"
+                              />
+                            ) : null}
+                            {d.getDate()}
+                          </span>
+                        </div>
                         <CargaIndicator n={delDia.length} />
                       </div>
 
@@ -333,11 +367,12 @@ export function MiSemana() {
                         {eventosEnDia(eventos, ymd).map((ev) => (
                           <EventoCard key={ev.id} evento={ev} />
                         ))}
-                        {delDia.map((t) => (
+                        {delDiaVis.map((t) => (
                           <DraggableTareaSemana
                             key={t.id}
                             tarea={t}
                             hoyYmd={hoyYmd}
+                            objetivoTitulo={t.objetivo_id ? tituloObjetivoPorId.get(t.objetivo_id) ?? null : null}
                             readOnly={!puedeGestionar(t)}
                             onOpenDetalle={(x) => setDetalleTareaId(x.id)}
                           />
@@ -374,15 +409,68 @@ export function MiSemana() {
             )}
           </DragOverlay>
         </DndContext>
-
-        {/* Panel lateral de notas */}
-        <PanelNotas
-          notas={notasHoy}
-          notaRapida={notaRapida}
-          setNotaRapida={setNotaRapida}
-          guardarNotaRapida={guardarNotaRapida}
-        />
       </div>
+
+      {notasDrawerOpen && (
+        <>
+          <div
+            className="mc-drawer-overlay"
+            onClick={() => setNotasDrawerOpen(false)}
+            aria-hidden
+          />
+          <aside
+            id="mc-misemana-notas-drawer"
+            className="mc-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Notas del día"
+          >
+            <div className="mc-drawer-panel-header">
+              <h2 className="mc-drawer-panel-title">Notas</h2>
+              <button
+                type="button"
+                className="mc-modal-close"
+                onClick={() => setNotasDrawerOpen(false)}
+                aria-label="Cerrar panel de notas"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="mc-drawer-panel-body">
+              {notasHoy.length === 0 ? (
+                <EmptyState compact title="Sin notas" />
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {notasHoy.slice(0, 20).map((n) => (
+                    <div
+                      key={n.id}
+                      className="rounded border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-2 py-1.5 text-[11px] text-[var(--mc-color-text)]"
+                    >
+                      {n.contenido.length > 200 ? `${n.contenido.slice(0, 200)}…` : n.contenido}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <textarea
+                rows={3}
+                className="mc-input resize-none text-xs"
+                placeholder="Nota rápida…"
+                value={notaRapida}
+                onChange={(e) => setNotaRapida(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) guardarNotaRapida();
+                }}
+              />
+              <Button variant="secondary" size="sm" onClick={guardarNotaRapida} disabled={!notaRapida.trim()}>
+                Guardar nota
+              </Button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* ── Modales ────────────────────────────────────────────────────────── */}
       <ModalMiSemana

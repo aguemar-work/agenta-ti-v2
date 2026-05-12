@@ -1,6 +1,7 @@
 import { Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
+import { KpiCard } from '@/components/ui/KpiCard';
 import { ModalDesbloquear } from '@/components/tareas/ModalDesbloquear';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { usePlanificacionPage } from '@/hooks/usePlanificacionPage';
@@ -10,8 +11,8 @@ import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { TAREA_LABEL_PLURAL, TAREA_PILL } from '@/lib/estadoConfig';
 import { agregarDias } from '@/lib/semanas';
-import { type ElementType } from 'react';
-import { AlertTriangle, CheckCircle, Clock, History, XCircle } from 'lucide-react';
+import { useRef } from 'react';
+import { AlertTriangle, CheckCircle, Clock, History, Info, XCircle } from 'lucide-react';
 import type { EstadoTarea, LogAccion, TipoAccionLog } from '@/types';
 import type { LogActividadItem } from '@/api/audit';
 
@@ -23,80 +24,18 @@ const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const ESTADOS: EstadoTarea[] = ['pendiente', 'en_progreso', 'atrasada', 'bloqueada', 'completada', 'reprogramada'];
 
 const LEYENDA_CARGA = [
-  { color: '#EAF3DE', label: '1–2 tareas' },
+  { color: 'var(--mc-state-completada-bg-soft)', label: '1–2 tareas' },
   { color: 'color-mix(in srgb, var(--mc-color-accent-soft) 65%, var(--mc-color-surface))', label: '3–4 tareas' },
-  { color: '#FCEBEB', label: '5+ tareas' },
+  { color: 'var(--mc-state-atrasada-bg-soft)', label: '5+ tareas' },
 ];
-
-// ---------------------------------------------------------------------------
-// KPI card del resumen ejecutivo
-// ---------------------------------------------------------------------------
-type KpiVariant = 'neutral' | 'warning' | 'danger' | 'success';
-
-const KPI_STYLES: Record<KpiVariant, { num: string; bg: string; border: string }> = {
-  neutral: {
-    num:    'var(--mc-color-text)',
-    bg:     'var(--mc-color-bg-secondary)',
-    border: 'var(--mc-color-border)',
-  },
-  warning: {
-    num:    'var(--mc-color-warning)',
-    bg:     'color-mix(in srgb, var(--mc-color-warning) 8%, transparent)',
-    border: 'color-mix(in srgb, var(--mc-color-warning) 30%, transparent)',
-  },
-  danger: {
-    num:    'var(--mc-color-danger)',
-    bg:     'color-mix(in srgb, var(--mc-color-danger) 8%, transparent)',
-    border: 'color-mix(in srgb, var(--mc-color-danger) 30%, transparent)',
-  },
-  success: {
-    num:    'var(--mc-color-success)',
-    bg:     'color-mix(in srgb, var(--mc-color-success) 8%, transparent)',
-    border: 'color-mix(in srgb, var(--mc-color-success) 30%, transparent)',
-  },
-};
-
-function ResumenKpi({
-  valor, label, variant = 'neutral', icon: Icon,
-}: {
-  valor:    number;
-  label:    string;
-  variant?: KpiVariant;
-  icon:     ElementType;
-}) {
-  const s = KPI_STYLES[variant];
-  return (
-    <div style={{
-      display:       'flex',
-      alignItems:    'center',
-      gap:            12,
-      padding:       '12px 16px',
-      borderRadius:  'var(--mc-radius-lg)',
-      background:     s.bg,
-      border:        `0.5px solid ${s.border}`,
-      minWidth:       140,
-      flex:          '1 1 140px',
-    }}>
-      <Icon size={20} style={{ color: s.num, flexShrink: 0 }} aria-hidden />
-      <div>
-        <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: s.num, lineHeight: 1 }}>
-          {valor}
-        </p>
-        <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--mc-color-text-secondary)', lineHeight: 1.3 }}>
-          {label}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function celdaClass(n: number): string {
   if (n === 0) return 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]';
-  if (n <= 2)  return 'bg-[#EAF3DE] text-[#27500A]';
+  if (n <= 2)  return 'bg-[var(--mc-state-completada-bg-soft)] text-[var(--mc-state-completada-fg)]';
   if (n <= 4) {
     return 'bg-[color-mix(in_srgb,var(--mc-color-accent-soft)_65%,var(--mc-color-surface))] text-[var(--mc-color-accent)]';
   }
-  return 'bg-[#FCEBEB] text-[#A32D2D]';
+  return 'bg-[var(--mc-state-atrasada-bg-soft)] text-[var(--mc-state-atrasada-meta)]';
 }
 
 function labelTipoLog(t: TipoAccionLog): string {
@@ -151,12 +90,22 @@ export function Planificacion() {
 
   const nombreMiembro = Object.fromEntries(miembros.map((m) => [m.id, m.nombre]));
 
+  // Refs para hacer scroll desde los KPIs ejecutivos a cada sección.
+  const refHeatmap     = useRef<HTMLElement | null>(null);
+  const refActividad   = useRef<HTMLElement | null>(null);
+  const refIncidencias = useRef<HTMLElement | null>(null);
+  const refLogs        = useRef<HTMLElement | null>(null);
+
+  function scrollTo(ref: React.RefObject<HTMLElement | null>) {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <div className={APP_PAGE_CLASS}>
 
       <PageHeader
         title="Planificación"
-        subtitle={`Semana ${numSem} · ${fechaLocalDdMmYyyy(lunes)} — ${fechaLocalDdMmYyyy(sabado)}`}
+        subtitle={`Semana ${numSem}: del ${fechaLocalDdMmYyyy(lunes)} al ${fechaLocalDdMmYyyy(sabado)}`}
         left={
           <div className="mc-nav-arrows">
             <button className="mc-nav-arrow-btn" onClick={() => setLunes((d) => agregarDias(d, -7))} aria-label="Semana anterior">‹</button>
@@ -167,34 +116,46 @@ export function Planificacion() {
 
       {/* ── Resumen ejecutivo ──────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        <ResumenKpi
-          valor={conteoSemana.atrasada ?? 0}
+        <KpiCard
+          size="md"
+          value={conteoSemana.atrasada ?? 0}
           label="Tareas atrasadas del equipo"
           variant={(conteoSemana.atrasada ?? 0) > 0 ? 'danger' : 'success'}
+          emphasized
           icon={AlertTriangle}
+          onClick={() => scrollTo(refHeatmap)}
         />
-        <ResumenKpi
-          valor={otsPendientes.length}
+        <KpiCard
+          size="md"
+          value={otsPendientes.length}
           label="OTs pendientes de aprobación"
           variant={otsPendientes.length > 0 ? 'warning' : 'success'}
+          emphasized
           icon={Clock}
+          onClick={() => scrollTo(refActividad)}
         />
-        <ResumenKpi
-          valor={incidencias.length}
+        <KpiCard
+          size="md"
+          value={incidencias.length}
           label="Incidencias esta semana"
-          variant={incidencias.length > 3 ? 'warning' : 'neutral'}
-          icon={XCircle}
+          variant={incidencias.length > 5 ? 'warning' : 'neutral'}
+          emphasized={incidencias.length > 5}
+          icon={Info}
+          onClick={() => scrollTo(refIncidencias)}
         />
-        <ResumenKpi
-          valor={logsPend.length}
+        <KpiCard
+          size="md"
+          value={logsPend.length}
           label="Justificaciones sin leer"
           variant={logsPend.length > 0 ? 'warning' : 'neutral'}
+          emphasized={logsPend.length > 0}
           icon={History}
+          onClick={() => scrollTo(refLogs)}
         />
       </div>
 
       {/* ── Tabla de carga ─────────────────────────────────────────────── */}
-      <section>
+      <section ref={refHeatmap}>
         <div className="mc-section-header">
           <span>Carga de trabajo por miembro</span>
         </div>
@@ -210,7 +171,12 @@ export function Planificacion() {
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--mc-color-border)]">
-                <th className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">Miembro</th>
+                <th
+                  className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]"
+                  style={{ position: 'sticky', left: 0, background: 'var(--mc-color-surface)', zIndex: 2 }}
+                >
+                  Miembro
+                </th>
                 {diasLab.map((d, i) => (
                   <th key={fechaLocalYmd(d)} className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
                     {DIAS_CORTO[i]} {d.getDate()}
@@ -224,7 +190,12 @@ export function Planificacion() {
                 const totalSem = diasLab.reduce((acc, d) => acc + cuenta(u.id, fechaLocalYmd(d)), 0);
                 return (
                   <tr key={u.id} className="border-b border-[var(--mc-color-border)]">
-                    <td className="p-2 font-medium text-[var(--mc-color-text)]">{u.nombre}</td>
+                    <td
+                      className="p-2 font-medium text-[var(--mc-color-text)]"
+                      style={{ position: 'sticky', left: 0, background: 'var(--mc-color-surface)', zIndex: 1 }}
+                    >
+                      {u.nombre}
+                    </td>
                     {diasLab.map((d) => {
                       const ymd = fechaLocalYmd(d);
                       const n   = cuenta(u.id, ymd);
@@ -248,7 +219,12 @@ export function Planificacion() {
 
               {/* Fila resumen por estado */}
               <tr className="border-t border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)]">
-                <td className="p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">Resumen del día</td>
+                <td
+                  className="p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]"
+                  style={{ position: 'sticky', left: 0, background: 'var(--mc-color-bg-secondary)', zIndex: 1 }}
+                >
+                  Resumen del día
+                </td>
                 {diasLab.map((d) => {
                   const ymd    = fechaLocalYmd(d);
                   const counts = conteoEstadosDia(ymd);
@@ -285,7 +261,7 @@ export function Planificacion() {
       </section>
 
       {/* ── Actividad del equipo ─────────────────────────────────────────── */}
-      <section>
+      <section ref={refActividad}>
         <div className="mc-section-header">
           <span>Actividad del equipo esta semana</span>
           <span className="rounded-full bg-[var(--mc-color-bg-secondary)] px-2 py-0.5 text-xs font-medium text-[var(--mc-color-text-secondary)]">
@@ -356,10 +332,10 @@ export function Planificacion() {
       </section>
 
       {/* ── Incidencias del equipo ────────────────────────────────────── */}
-      <section>
+      <section ref={refIncidencias}>
         <div className="mc-section-header">
           <span className="flex items-center gap-2">
-            <AlertTriangle size={14} className="text-[var(--mc-color-warning)]" aria-hidden />
+            <Info size={14} className="text-[var(--mc-color-info)]" aria-hidden />
             Incidencias registradas esta semana
           </span>
           <span className="rounded-full bg-[var(--mc-color-bg-secondary)] px-2 py-0.5 text-xs font-medium text-[var(--mc-color-text-secondary)]">
@@ -406,7 +382,7 @@ export function Planificacion() {
       </section>
 
       {/* ── Logs de auditoría ────────────────────────────────────────────── */}
-      <section>
+      <section ref={refLogs}>
         {/* Cabecera con toggle pendientes / historial */}
         <div className="mc-section-header">
           <div className="flex items-center gap-3">

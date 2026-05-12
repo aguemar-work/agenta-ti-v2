@@ -5,7 +5,7 @@
  */
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -23,6 +23,17 @@ import type { Id, Tarea } from '@/types';
 
 export const Q_OT = 'ordenes-trabajo';
 export const Q_TIPOS_OT = 'tipos-trabajo-ot';
+
+const OT_NUEVA_DRAFT_PREFIX = 'mc_draft_ot-nueva-';
+
+function safeParseOTDraft(raw: string | null): Partial<Omit<CrearOTInput, 'enviar'>> | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Partial<Omit<CrearOTInput, 'enviar'>>;
+  } catch {
+    return null;
+  }
+}
 
 function formInicial(usuarioId: Id): Omit<CrearOTInput, 'enviar'> {
   return {
@@ -80,6 +91,21 @@ export function useOrdenesTrabajoPage() {
   const [filtroEstado, setFiltroEstado] = useState<EstadoOT | 'todos'>('todos');
   const [form, setForm] = useState<Omit<CrearOTInput, 'enviar'>>(() => formInicial(usuario?.id ?? ''));
 
+  /** Borrador local al crear nueva OT (sin segundo botón en UI). */
+  useEffect(() => {
+    if (!modalForm || editandoOT || !usuario?.id) return;
+    const key = OT_NUEVA_DRAFT_PREFIX + usuario.id;
+    const t = window.setTimeout(() => {
+      const base = formInicial(usuario.id);
+      const sameAsEmpty = JSON.stringify(form) === JSON.stringify(base);
+      try {
+        if (sameAsEmpty) localStorage.removeItem(key);
+        else localStorage.setItem(key, JSON.stringify(form));
+      } catch { /* quota */ }
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [form, modalForm, editandoOT, usuario?.id]);
+
   const [receptorNombre, setReceptorNombre] = useState('');
   const [receptorDni, setReceptorDni] = useState('');
   const [receptorCargo, setReceptorCargo] = useState('');
@@ -94,28 +120,29 @@ export function useOrdenesTrabajoPage() {
 
   // ── Mutaciones — OTs ──────────────────────────────────────────────────────
   const mutCrear = useMutation({
-    mutationFn: (enviar: boolean) => crearOrdenTrabajo({ ...form, enviar }),
+    mutationFn: () => crearOrdenTrabajo({ ...form, enviar: true }),
     onSuccess: async (ot) => {
       await invalidarOTs();
+      if (usuario?.id) {
+        try { localStorage.removeItem(OT_NUEVA_DRAFT_PREFIX + usuario.id); } catch { /* ignore */ }
+      }
       if (ot.estado === 'pendiente') {
         void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
       }
       setModalForm(false);
       setForm(formInicial(usuario?.id ?? ''));
-      toast.success(ot.estado === 'pendiente' ? `${ot.numero} enviada al jefe` : `${ot.numero} guardada como borrador`);
+      toast.success(`${ot.numero} enviada al jefe`);
     },
     onError: (err) => { console.error('[mutCrearOT]', err); toast.error('No se pudo crear la OT.'); },
   });
 
   const mutActualizar = useMutation({
-    mutationFn: (enviar: boolean) => actualizarOrdenTrabajo({ ...form, otId: editandoOT!.id, enviar }),
-    onSuccess: async (_, enviar) => {
+    mutationFn: () => actualizarOrdenTrabajo({ ...form, otId: editandoOT!.id, enviar: true }),
+    onSuccess: async () => {
       await invalidarOTs();
-      if (enviar) {
-        void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
-      }
+      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
       setModalForm(false); setEditandoOT(null);
-      toast.success(enviar ? 'OT enviada al jefe' : 'OT actualizada');
+      toast.success('OT enviada al jefe');
     },
     onError: (err) => { console.error('[mutActualizarOT]', err); toast.error('No se pudo actualizar la OT.'); },
   });
@@ -226,7 +253,16 @@ export function useOrdenesTrabajoPage() {
   // ── Helpers ───────────────────────────────────────────────────────────────
   function abrirNuevaOT() {
     setEditandoOT(null);
-    setForm(formInicial(usuario?.id ?? ''));
+    const uid = usuario?.id ?? '';
+    const base = formInicial(uid);
+    let next = base;
+    if (uid) {
+      try {
+        const partial = safeParseOTDraft(localStorage.getItem(OT_NUEVA_DRAFT_PREFIX + uid));
+        if (partial) next = { ...base, ...partial, creado_por: uid };
+      } catch { /* ignore */ }
+    }
+    setForm(next);
     setModalForm(true);
   }
 

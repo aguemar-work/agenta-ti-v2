@@ -1,9 +1,9 @@
 /**
  * components/layout/PageHeader.tsx
  *
- * Cabecera Apple: título 24px bold, subtítulo visible, sin border-bottom.
- * El espacio separa el header del contenido, no una línea.
- * API idéntica — cero breaking changes.
+ * Cabecera de módulo:
+ * - Fila 1: título (izquierda) · acciones (derecha: filtros, selector, CTA).
+ * - Fila 2: subtítulo (p. ej. rango de fechas) + controles secundarios (flechas, etc.).
  */
 
 import type { ReactNode } from 'react';
@@ -11,27 +11,29 @@ import type { ReactNode } from 'react';
 type Props = {
   title:     string;
   subtitle?: ReactNode;
-  /** Controles pegados al título (toggle Hoy/Semana, flechas nav) */
+  /** Controles bajo el subtítulo (flechas de semana, toggles). */
   left?:     ReactNode;
-  /** Controles del lado derecho: filtros, selector de miembro, CTA */
+  /** Lado derecho de la fila 1: filtros, selector de miembro, botón principal. */
   actions?:  ReactNode;
 };
 
 export function PageHeader({ title, subtitle, left, actions }: Props) {
+  const hasBottom = Boolean(subtitle) || Boolean(left);
+
   return (
     <header className="mc-page-header">
-      <div className="mc-page-header-left">
-        <div className="mc-page-header-titles">
-          <h1 className="mc-page-title">{title}</h1>
-          {subtitle && <p className="mc-page-subtitle">{subtitle}</p>}
-        </div>
-        {left && (
-          <div className="mc-page-header-controls">{left}</div>
-        )}
+      <div className="mc-page-header-top">
+        <h1 className="mc-page-title">{title}</h1>
+        {actions ? <div className="mc-page-header-actions">{actions}</div> : null}
       </div>
-      {actions && (
-        <div className="mc-page-header-actions">{actions}</div>
-      )}
+      {hasBottom ? (
+        <div className="mc-page-header-bottom">
+          <div className="mc-page-header-meta">
+            {subtitle ? <p className="mc-page-subtitle">{subtitle}</p> : null}
+            {left ? <div className="mc-page-header-controls">{left}</div> : null}
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

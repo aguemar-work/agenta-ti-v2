@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
 import { crearRecurrenciaEvento } from '@/api/recurrencia';
-import { Button, CancelButton } from '@/components/ui/Button';
+import { CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
 
@@ -157,28 +157,28 @@ export function ModalMiSemana({
       title={`Nuevo ítem · ${fechaDia ?? ''}`}
       size="md"
       hasUnsavedChanges={hasChanges}
+      bodyClassName="mc-modal-form"
+      footerClassName="mc-modal-footer--stack"
       footer={(
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {form.tab === 'tarea' ? (
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
+            <button
+              type="button"
+              className="mc-btn-modal-primary"
               disabled={busy || !form.titulo.trim()}
               onClick={() => void submitTarea()}
             >
               {busy ? 'Guardando…' : 'Crear tarea'}
-            </Button>
+            </button>
           ) : (
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
+            <button
+              type="button"
+              className="mc-btn-modal-primary"
               disabled={busy || !form.titulo.trim() || !fechaEvento}
               onClick={() => void submitEvento()}
             >
               {busy ? 'Guardando…' : 'Crear evento'}
-            </Button>
+            </button>
           )}
           <CancelButton onClick={cerrar} disabled={busy} />
         </div>
@@ -192,21 +192,17 @@ export function ModalMiSemana({
           </div>
         )}
 
-        <div className="flex gap-1 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] p-1">
+        <div className="mc-modal-form-tabs">
           <button
             type="button"
-            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-1.5 text-xs font-medium transition-all ${
-              form.tab === 'tarea' ? 'bg-[var(--mc-color-surface)] shadow-sm text-[var(--mc-color-text)]' : 'text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]'
-            }`}
+            className={form.tab === 'tarea' ? 'mc-modal-form-tabs__active' : ''}
             onClick={() => setForm((p) => ({ ...p, tab: 'tarea' }))}
           >
             Tarea
           </button>
           <button
             type="button"
-            className={`flex-1 rounded-[var(--mc-radius-sm)] px-3 py-1.5 text-xs font-medium transition-all ${
-              form.tab === 'evento' ? 'bg-[var(--mc-color-surface)] shadow-sm text-[var(--mc-color-text)]' : 'text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]'
-            }`}
+            className={form.tab === 'evento' ? 'mc-modal-form-tabs__active' : ''}
             onClick={() => setForm((p) => ({ ...p, tab: 'evento' }))}
             disabled={modoOrigen !== 'dia'}
             title={modoOrigen !== 'dia' ? 'Selecciona un día en la agenda para crear un evento' : undefined}

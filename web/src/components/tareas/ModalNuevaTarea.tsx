@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Button, CancelButton } from '@/components/ui/Button';
+import { CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
@@ -78,17 +78,18 @@ export function ModalNuevaTarea({
       title={TITULO_MODAL[modo](fechaDia)}
       size="md"
       hasUnsavedChanges={hasChanges}
+      bodyClassName="mc-modal-form"
+      footerClassName="mc-modal-footer--stack"
       footer={(
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
+          <button
+            type="button"
+            className="mc-btn-modal-primary"
             disabled={!canSubmit}
             onClick={() => void submit()}
           >
             {busy ? 'Guardando…' : modo === 'incidencia' ? 'Registrar incidencia' : 'Crear tarea'}
-          </Button>
+          </button>
           <CancelButton onClick={handleClose} disabled={busy} />
         </div>
       )}

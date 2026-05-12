@@ -30,6 +30,10 @@ interface ModalProps {
   size?: ModalSize;
   children: ReactNode;
   footer?: ReactNode;
+  /** Clases extra del pie (p. ej. `mc-modal-footer--stack` para CTA a ancho completo). */
+  footerClassName?: string;
+  /** Clases extra del cuerpo (p. ej. `mc-modal-form` para altura de inputs unificada). */
+  bodyClassName?: string;
   hasUnsavedChanges?: boolean;
   discardMessage?: string;
 }
@@ -47,6 +51,8 @@ export function Modal({
   size = 'md',
   children,
   footer,
+  footerClassName,
+  bodyClassName,
   hasUnsavedChanges = false,
   discardMessage = '¿Descartar los cambios? Se perderá la información ingresada.',
 }: ModalProps) {
@@ -178,9 +184,11 @@ export function Modal({
           </button>
         </div>
 
-        <div className="mc-modal-body">{children}</div>
+        <div className={['mc-modal-body', bodyClassName].filter(Boolean).join(' ')}>{children}</div>
 
-        {footer ? <div className="mc-modal-footer">{footer}</div> : null}
+        {footer ? (
+          <div className={['mc-modal-footer', footerClassName].filter(Boolean).join(' ')}>{footer}</div>
+        ) : null}
 
         {confirmingClose && (
           <div
