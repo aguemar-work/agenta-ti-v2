@@ -147,7 +147,7 @@ function PanelNotas({
   guardarNotaRapida: () => void;
 }) {
   return (
-    <aside className="hidden xl:flex w-52 flex-shrink-0 flex-col gap-2 border-l border-[var(--mc-color-border)] pl-4">
+    <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col gap-2 border-l border-[var(--mc-color-border)] pl-4">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
         Notas
       </p>
@@ -157,7 +157,7 @@ function PanelNotas({
             key={n.id}
             className="rounded border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
           >
-            {n.contenido.length > 60 ? n.contenido.slice(0, 60) + '…' : n.contenido}
+            {n.contenido.length > 80 ? n.contenido.slice(0, 80) + '…' : n.contenido}
           </div>
         ))}
       </div>

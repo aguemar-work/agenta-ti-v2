@@ -97,6 +97,9 @@ export function useOrdenesTrabajoPage() {
     mutationFn: (enviar: boolean) => crearOrdenTrabajo({ ...form, enviar }),
     onSuccess: async (ot) => {
       await invalidarOTs();
+      if (ot.estado === 'pendiente') {
+        void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+      }
       setModalForm(false);
       setForm(formInicial(usuario?.id ?? ''));
       toast.success(ot.estado === 'pendiente' ? `${ot.numero} enviada al jefe` : `${ot.numero} guardada como borrador`);
@@ -108,6 +111,9 @@ export function useOrdenesTrabajoPage() {
     mutationFn: (enviar: boolean) => actualizarOrdenTrabajo({ ...form, otId: editandoOT!.id, enviar }),
     onSuccess: async (_, enviar) => {
       await invalidarOTs();
+      if (enviar) {
+        void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+      }
       setModalForm(false); setEditandoOT(null);
       toast.success(enviar ? 'OT enviada al jefe' : 'OT actualizada');
     },
@@ -118,6 +124,7 @@ export function useOrdenesTrabajoPage() {
     mutationFn: (otId: Id) => aprobarOT(otId, usuario!.id),
     onSuccess: async (_data, otId) => {
       await invalidarOTs();
+      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
       toast.success('OT aprobada');
       // Notificar al creador de la OT
       const ot = ordenes.find((o) => o.id === otId);
@@ -137,6 +144,7 @@ export function useOrdenesTrabajoPage() {
     mutationFn: ({ otId, motivo }: { otId: Id; motivo: string }) => rechazarOT(otId, usuario!.id, motivo),
     onSuccess: async (_data, { otId, motivo }) => {
       await invalidarOTs();
+      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
       setModalRechazar(null); setMotivoRechazo('');
       toast.success('OT rechazada');
       // Notificar al creador de la OT

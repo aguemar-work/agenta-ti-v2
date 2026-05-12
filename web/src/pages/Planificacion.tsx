@@ -10,6 +10,7 @@ import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { TAREA_LABEL_PLURAL, TAREA_PILL } from '@/lib/estadoConfig';
 import { agregarDias } from '@/lib/semanas';
+import { type ElementType } from 'react';
 import { AlertTriangle, CheckCircle, Clock, History, XCircle } from 'lucide-react';
 import type { EstadoTarea, LogAccion, TipoAccionLog } from '@/types';
 import type { LogActividadItem } from '@/api/audit';
@@ -26,6 +27,68 @@ const LEYENDA_CARGA = [
   { color: 'color-mix(in srgb, var(--mc-color-accent-soft) 65%, var(--mc-color-surface))', label: '3–4 tareas' },
   { color: '#FCEBEB', label: '5+ tareas' },
 ];
+
+// ---------------------------------------------------------------------------
+// KPI card del resumen ejecutivo
+// ---------------------------------------------------------------------------
+type KpiVariant = 'neutral' | 'warning' | 'danger' | 'success';
+
+const KPI_STYLES: Record<KpiVariant, { num: string; bg: string; border: string }> = {
+  neutral: {
+    num:    'var(--mc-color-text)',
+    bg:     'var(--mc-color-bg-secondary)',
+    border: 'var(--mc-color-border)',
+  },
+  warning: {
+    num:    'var(--mc-color-warning)',
+    bg:     'color-mix(in srgb, var(--mc-color-warning) 8%, transparent)',
+    border: 'color-mix(in srgb, var(--mc-color-warning) 30%, transparent)',
+  },
+  danger: {
+    num:    'var(--mc-color-danger)',
+    bg:     'color-mix(in srgb, var(--mc-color-danger) 8%, transparent)',
+    border: 'color-mix(in srgb, var(--mc-color-danger) 30%, transparent)',
+  },
+  success: {
+    num:    'var(--mc-color-success)',
+    bg:     'color-mix(in srgb, var(--mc-color-success) 8%, transparent)',
+    border: 'color-mix(in srgb, var(--mc-color-success) 30%, transparent)',
+  },
+};
+
+function ResumenKpi({
+  valor, label, variant = 'neutral', icon: Icon,
+}: {
+  valor:    number;
+  label:    string;
+  variant?: KpiVariant;
+  icon:     ElementType;
+}) {
+  const s = KPI_STYLES[variant];
+  return (
+    <div style={{
+      display:       'flex',
+      alignItems:    'center',
+      gap:            12,
+      padding:       '12px 16px',
+      borderRadius:  'var(--mc-radius-lg)',
+      background:     s.bg,
+      border:        `0.5px solid ${s.border}`,
+      minWidth:       140,
+      flex:          '1 1 140px',
+    }}>
+      <Icon size={20} style={{ color: s.num, flexShrink: 0 }} aria-hidden />
+      <div>
+        <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: s.num, lineHeight: 1 }}>
+          {valor}
+        </p>
+        <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--mc-color-text-secondary)', lineHeight: 1.3 }}>
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function celdaClass(n: number): string {
   if (n === 0) return 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]';
@@ -79,7 +142,7 @@ export function Planificacion() {
     motivoDevolver,  setMotivoDevolver,
     motivoDevolverOk,
     busyDevolver,
-    cuenta, conteoEstadosDia,
+    cuenta, conteoEstadosDia, otsPendientes,
     confirmarDesbloqueo, confirmarDevolver,
     abrirDevolver, cerrarDevolver,
   } = usePlanificacionPage();
@@ -101,6 +164,34 @@ export function Planificacion() {
           </div>
         }
       />
+
+      {/* ── Resumen ejecutivo ──────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <ResumenKpi
+          valor={conteoSemana.atrasada ?? 0}
+          label="Tareas atrasadas del equipo"
+          variant={(conteoSemana.atrasada ?? 0) > 0 ? 'danger' : 'success'}
+          icon={AlertTriangle}
+        />
+        <ResumenKpi
+          valor={otsPendientes.length}
+          label="OTs pendientes de aprobación"
+          variant={otsPendientes.length > 0 ? 'warning' : 'success'}
+          icon={Clock}
+        />
+        <ResumenKpi
+          valor={incidencias.length}
+          label="Incidencias esta semana"
+          variant={incidencias.length > 3 ? 'warning' : 'neutral'}
+          icon={XCircle}
+        />
+        <ResumenKpi
+          valor={logsPend.length}
+          label="Justificaciones sin leer"
+          variant={logsPend.length > 0 ? 'warning' : 'neutral'}
+          icon={History}
+        />
+      </div>
 
       {/* ── Tabla de carga ─────────────────────────────────────────────── */}
       <section>

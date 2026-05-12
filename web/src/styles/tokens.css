@@ -1,30 +1,52 @@
 :root {
-  /* ── Colores base ──────────────────────────────────────────────── */
+  /* ── Superficies ────────────────────────────────────────────────── */
   --mc-color-bg:               #f5f6f7;
+  --mc-color-bg-secondary:     #eef0f3;
   --mc-color-surface:          #ffffff;
   --mc-color-surface-hover:    #f2f4f7;
+  --mc-color-surface-active:   #e8eaef;
+
+  /* ── Bordes ─────────────────────────────────────────────────────── */
   --mc-color-border:           #e4e6eb;
   --mc-color-border-strong:    #ced2d9;
+  --mc-color-border-hover:     #b0b5bf;
+
+  /* ── Texto ──────────────────────────────────────────────────────── */
   --mc-color-text:             #050505;
   --mc-color-text-secondary:   #65676b;
   --mc-color-text-placeholder: #8d949e;
+  --mc-color-text-disabled:    #bcc0c7;
   --mc-color-neutral:          #65676b;
+
+  /* ── Acento / Brand ─────────────────────────────────────────────── */
   --mc-color-on-accent:        #ffffff;
   --mc-color-accent:           #0064e0;
   --mc-color-accent-hover:     #0057c2;
+  --mc-color-accent-active:    #004ba3;
   --mc-color-accent-soft:      rgba(0, 100, 224, 0.08);
   --mc-color-accent-border:    color-mix(in srgb, var(--mc-color-accent) 38%, var(--mc-color-border));
-  --mc-color-success:          #31a24c;
-  --mc-color-warning:          #f7b928;
-  --mc-color-danger:           #fa3e3e;
 
-  /* ── Layout ────────────────────────────────────────────────────── */
+  /* ── Semánticos ─────────────────────────────────────────────────── */
+  --mc-color-success:          #31a24c;
+  --mc-color-success-soft:     rgba(49, 162, 76, 0.10);
+
+  --mc-color-warning:          #f7b928;
+  --mc-color-warning-soft:     rgba(247, 185, 40, 0.10);
+
+  --mc-color-danger:           #fa3e3e;
+  --mc-color-danger-hover:     #e02424;
+  --mc-color-danger-soft:      rgba(250, 62, 62, 0.10);
+
+  --mc-color-info:             #0288d1;
+  --mc-color-info-soft:        rgba(2, 136, 209, 0.10);
+
+  /* ── Layout ─────────────────────────────────────────────────────── */
   --mc-sidebar-w-collapsed: 52px;
   --mc-sidebar-w-expanded:  220px;
   --mc-bottom-nav-h:        60px;
   --mc-topbar-h:            56px;
 
-  /* ── Radios ────────────────────────────────────────────────────── */
+  /* ── Radios ─────────────────────────────────────────────────────── */
   --mc-radius-sm:   6px;
   --mc-radius-md:   8px;
   --mc-radius-lg:   12px;
@@ -52,6 +74,8 @@
   --mc-leading-tight:  1.2;
   --mc-leading-normal: 1.5;
   --mc-font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  /* Legacy — main.tsx y otros */
+  --mc-font: var(--mc-font-sans);
 
   /* ── Iconos ─────────────────────────────────────────────────────── */
   --mc-icon-xs: 14px;
@@ -60,19 +84,36 @@
   --mc-icon-lg: 24px;
 
   /* ── Transiciones ───────────────────────────────────────────────── */
-  --mc-transition:        150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-ease:             cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-duration-fast:    120ms;
+  --mc-duration-normal:  180ms;
+  --mc-duration-slow:    280ms;
+  --mc-transition:       var(--mc-duration-normal) var(--mc-ease);
+  --mc-transition-fast:  var(--mc-duration-fast) var(--mc-ease);
+  --mc-transition-slow:  var(--mc-duration-slow) var(--mc-ease);
+  /* Alias legacy — mantener para no romper usos existentes */
   --mc-transition-layout: 0.2s ease;
 
   /* ── Sombras ────────────────────────────────────────────────────── */
-  --mc-card-shadow:      0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --mc-card-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.12), var(--mc-card-shadow);
+  --mc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.04);
+  --mc-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --mc-shadow-md:   0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --mc-shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --mc-shadow-xl:   0 16px 48px rgba(0, 0, 0, 0.16), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --mc-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.12);
+  /* Aliases semánticos */
+  --mc-card-shadow:      var(--mc-shadow-sm);
+  --mc-card-shadow-drag: var(--mc-shadow-drag);
+  --mc-modal-shadow:     var(--mc-shadow-lg);
+  --mc-dropdown-shadow:  var(--mc-shadow-md);
+  /* Legacy — mantener para no romper usos existentes */
   --mc-card-border:      0.5px solid var(--mc-color-border);
 
   /* ── Estado de tarea ────────────────────────────────────────────── */
   /*
    * FUENTE ÚNICA de colores para todos los estados de tarea.
    * Consumir via STATE_TOKENS en lib/estadoConfig.ts.
-   * NUNCA usar hex sueltos en TaskItem, HoyPanel, Tablero, etc.
+   * NUNCA usar hex sueltos en componentes.
    */
 
   /* atrasada */
@@ -81,13 +122,29 @@
   --mc-state-atrasada-border:    #E24B4A;
   --mc-state-atrasada-meta:      #A32D2D;
 
+  /* OT */
+  --mc-ot-urgente-bg:     color-mix(in srgb, var(--mc-color-warning) 8%, transparent);
+  --mc-ot-urgente-border: var(--mc-color-warning);
+  --mc-ot-vencida-bg:     color-mix(in srgb, var(--mc-color-danger) 8%, transparent);
+  --mc-ot-vencida-border: var(--mc-color-danger);
+  --mc-ot-rechazo-bg:     color-mix(in srgb, var(--mc-color-danger) 6%, transparent);
+
   /* bloqueada */
-  --mc-state-bloqueada-bg:       transparent;
-  --mc-state-bloqueada-fg:       var(--mc-color-text);
-  --mc-state-bloqueada-border:   #EF9F27;
+  --mc-state-bloqueada-bg:       rgba(247, 185, 40, 0.08);
+  --mc-state-bloqueada-border:   var(--mc-color-warning);
+  --mc-state-bloqueada-fg:       #7A4F00;
   --mc-state-bloqueada-meta:     #854F0B;
 
-  /* urgencia horaria: urgente (5–6pm) */
+  /* Urgencia horaria — tokens adicionales (auditoría) */
+  --mc-urgencia-vencida-hoy-bg:     #FFF0F0;
+  --mc-urgencia-vencida-hoy-fg:     #C00;
+  --mc-urgencia-vencida-hoy-border: #E24B4A;
+  --mc-urgencia-urgente-bg:        #FFFBF0;
+  --mc-urgencia-urgente-fg:        #7A4F00;
+  --mc-urgencia-urgente-border:    var(--mc-color-warning);
+  --mc-urgencia-precaucion-border: var(--mc-color-warning);
+
+  /* urgencia horaria: urgente (5–6pm) — usado por URGENCIA_TOKENS */
   --mc-state-urgente-bg:         #FCEBEB;
   --mc-state-urgente-fg:         #791F1F;
   --mc-state-urgente-border:     #E24B4A;

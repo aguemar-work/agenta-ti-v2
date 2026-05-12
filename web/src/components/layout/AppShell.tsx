@@ -23,7 +23,7 @@ import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
 const NAV_ITEMS = [
   { to: '/semana',          label: 'Mi semana',     icon: Calendar,      roles: ['jefe', 'miembro'] },
   { to: '/objetivos',       label: 'Objetivos',     icon: Target,        roles: ['jefe', 'miembro'] },
-  { to: '/ordenes-trabajo', label: 'OT',            icon: FileText,      roles: ['jefe', 'miembro'] },
+  { to: '/ordenes-trabajo', label: 'Órdenes',       icon: FileText,      roles: ['jefe', 'miembro'] },
   { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] },
   { to: '/metricas',        label: 'Métricas',      icon: BarChart2,     roles: ['jefe'] },
 ] as const;
@@ -145,7 +145,8 @@ export function AppShell() {
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon size={18} aria-hidden style={{ flexShrink: 0 }} />
+                        <Icon size={16} aria-hidden style={{ flexShrink: 0 }} />
+                        <span className="mc-sidebar-nav-label">{label}</span>
                         {isActive && <span className="sr-only">(página actual)</span>}
                       </>
                     )}
@@ -232,7 +233,7 @@ export function AppShell() {
                 end
                 onClick={() => setMasDrawerOpen(false)}
                 className={({ isActive }) =>
-                  `mc-sidebar-link mc-mas-drawer-item${isActive ? ' mc-sidebar-link--active' : ''}`
+                  `mc-sidebar-link${isActive ? ' mc-sidebar-link--active' : ''}`
                 }
               >
                 {({ isActive }) => (

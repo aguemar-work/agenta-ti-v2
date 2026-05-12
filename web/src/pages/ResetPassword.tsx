@@ -1,18 +1,14 @@
 /**
  * pages/ResetPassword.tsx
  * Paso 3 del flujo de recuperación: ingresar nueva contraseña.
- *
- * Recibe el OTP desde VerifyResetCode vía navigation state.
- * Llama a resetPassword({ newPassword, otp }).
  */
 
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { AppLogo } from '@/components/brand/AppLogo';
 import { Button } from '@/components/ui/Button';
-import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { getInsforge } from '@/lib/insforge';
 
 const MIN_PASSWORD = 8;
@@ -43,123 +39,100 @@ export function ResetPassword() {
   const [showPwd, setShowPwd] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Sin OTP — acceso directo a la URL o flujo incompleto
   if (!otp) {
-    return (
-      <div className={APP_PAGE_CLASS}>
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 gap-4">
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">
-            El enlace no es válido o ya expiró. Por favor inicia el proceso de nuevo.
-          </p>
-          <Link to="/forgot-password" className="mc-text-link">
-            → Recuperar contraseña
-          </Link>
-        </div>
-      </div>
-    );
+    return <Navigate to="/forgot-password" replace />;
   }
 
   const pwdOk = newPassword.length >= MIN_PASSWORD;
   const match = newPassword === confirm;
   const canSubmit = pwdOk && match && !busy;
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     setBusy(true);
-
-    const { error } = await getInsforge().auth.resetPassword({
-      newPassword,
-      otp,
-    });
-
+    const { error } = await getInsforge().auth.resetPassword({ newPassword, otp });
     setBusy(false);
-
     if (error) {
       toast.error('No se pudo cambiar la contraseña. El código puede haber expirado.');
       return;
     }
-
     toast.success('Contraseña actualizada. Ya puedes iniciar sesión.');
     navigate('/login', { replace: true });
   }
 
   return (
-    <div className={APP_PAGE_CLASS}>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8">
-        <div className="mb-6 flex justify-center">
+    <div className="mc-auth-page">
+      <div className="mc-auth-container">
+        <div className="mc-auth-logo">
           <AppLogo height={40} />
         </div>
-        <h1 className="text-[var(--mc-text-lg)] font-semibold text-[var(--mc-color-text)]">
-          Nueva contraseña
-        </h1>
-        <h2 className="mt-2 text-sm font-medium text-[var(--mc-color-text-secondary)]">
-          Elige una contraseña de al menos {MIN_PASSWORD} caracteres
-        </h2>
 
-        <form
-          onSubmit={(e) => void onSubmit(e)}
-          className="mt-6 flex flex-col gap-4 rounded-[var(--mc-radius-lg)] border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)] p-6"
-          noValidate
-        >
-          {/* Nueva contraseña */}
-          <label className="flex flex-col gap-1 text-[var(--mc-text-sm)]">
-            <span className="text-[var(--mc-color-text-secondary)]">Nueva contraseña</span>
-            <div style={{ position: 'relative' }}>
+        <div className="mc-auth-card">
+          <div className="mc-auth-card-header">
+            <h1 className="mc-auth-title">Nueva contraseña</h1>
+            <p className="mc-auth-subtitle">
+              Elige una contraseña de al menos {MIN_PASSWORD} caracteres
+            </p>
+          </div>
+
+          <form onSubmit={(e) => void onSubmit(e)} className="mc-auth-form" noValidate>
+            <div className="mc-field">
+              <label htmlFor="rp-password" className="mc-field-label">
+                Nueva contraseña
+              </label>
+              <div className="mc-auth-pwd">
+                <input
+                  id="rp-password"
+                  type={showPwd ? 'text' : 'password'}
+                  className="mc-input"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoFocus
+                  required
+                />
+                <button
+                  type="button"
+                  className="mc-auth-pwd-toggle"
+                  onClick={() => setShowPwd((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  <IconEye off={showPwd} />
+                </button>
+              </div>
+              {newPassword.length > 0 && !pwdOk && (
+                <span className="mc-field-error">Mínimo {MIN_PASSWORD} caracteres</span>
+              )}
+            </div>
+
+            <div className="mc-field">
+              <label htmlFor="rp-confirm" className="mc-field-label">
+                Confirmar contraseña
+              </label>
               <input
+                id="rp-confirm"
                 type={showPwd ? 'text' : 'password'}
-                className="rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] px-3 py-2 w-full"
-                style={{ paddingRight: 40 }}
+                className="mc-input"
                 autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                autoFocus
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                tabIndex={-1}
-                aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                style={{
-                  position: 'absolute', right: 10, top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--mc-color-text-secondary)', display: 'flex',
-                  padding: 4, borderRadius: 4,
-                }}
-              >
-                <IconEye off={showPwd} />
-              </button>
+              {confirm.length > 0 && !match && (
+                <span className="mc-field-error">Las contraseñas no coinciden</span>
+              )}
             </div>
-            {newPassword.length > 0 && !pwdOk && (
-              <span className="text-xs text-red-600">Mínimo {MIN_PASSWORD} caracteres</span>
-            )}
-          </label>
 
-          {/* Confirmar contraseña */}
-          <label className="flex flex-col gap-1 text-[var(--mc-text-sm)]">
-            <span className="text-[var(--mc-color-text-secondary)]">Confirmar contraseña</span>
-            <input
-              type={showPwd ? 'text' : 'password'}
-              className="rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] px-3 py-2"
-              autoComplete="new-password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-            />
-            {confirm.length > 0 && !match && (
-              <span className="text-xs text-red-600">Las contraseñas no coinciden</span>
-            )}
-          </label>
+            <Button type="submit" variant="primary" fullWidth disabled={!canSubmit}>
+              {busy ? 'Guardando…' : 'Cambiar contraseña'}
+            </Button>
+          </form>
+        </div>
 
-          <Button type="submit" variant="primary" fullWidth disabled={!canSubmit}>
-            {busy ? 'Guardando…' : 'Cambiar contraseña'}
-          </Button>
-        </form>
-
-        <Link to="/login" className="mc-text-link-muted mt-4 block w-full text-center">
-          ← Volver al login
+        <Link to="/login" className="mc-auth-back-link">
+          ← Volver al inicio de sesión
         </Link>
       </div>
     </div>

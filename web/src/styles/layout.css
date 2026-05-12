@@ -234,44 +234,12 @@
       color: #fff;
     }
   
-    /* ── Drawer "Más" (móvil) ────────────────────────────────────────────── */
+    /* ── Topbar móvil: nombre de página ─────────────────────────────────── */
     .mc-topbar-page-name {
       font-size: 14px;
       font-weight: 500;
       margin-left: 10px;
       color: var(--mc-color-text);
     }
-  
-    .mc-mas-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      background: rgba(0, 0, 0, 0.4);
-    }
-  
-    .mc-mas-drawer {
-      position: fixed;
-      bottom: var(--mc-bottom-nav-h);
-      left: 0;
-      right: 0;
-      z-index: 51;
-      background: var(--mc-color-surface);
-      border-top: 1px solid var(--mc-color-border);
-      border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      transition: transform 0.22s ease;
-    }
-  
-    .mc-mas-drawer--closed { transform: translateY(110%); }
-    .mc-mas-drawer--open   { transform: translateY(0); }
-  
-    .mc-mas-drawer-item {
-      padding: 10px 12px;
-      border-radius: var(--mc-radius-md);
-      font-size: 14px;
-    }
-  
+
   }

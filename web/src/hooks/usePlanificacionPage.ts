@@ -30,6 +30,7 @@ import {
 } from '@/api/semana';
 import { getObjetivosActivos } from '@/api/objetivos';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { agregarDias, inicioSemanaIso, numeroSemanaDesdeLunes, semanaIsoDesdeFecha } from '@/lib/semanas';
@@ -79,6 +80,20 @@ export function usePlanificacionPage() {
   const { data: carga = [] } = useQuery({
     queryKey: ['planificacion', 'carga', semanaISO],
     queryFn: () => getCargaEquipoSemana(semanaISO),
+  });
+
+  // OTs pendientes de aprobación — dato para el resumen ejecutivo
+  const { data: otsPendientes = [] } = useQuery({
+    queryKey: ['planificacion', 'ots-pendientes'],
+    queryFn: async () => {
+      const { data, error } = await getInsforge().database
+        .from('orden_trabajo')
+        .select('id')
+        .eq('estado', 'pendiente');
+      if (error) throw error;
+      return (data ?? []) as { id: string }[];
+    },
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: incidencias = [], isLoading: loadInc } = useQuery({
@@ -267,6 +282,7 @@ export function usePlanificacionPage() {
     HIST_POR_PAGINA,
     resetHistFiltros,
     conteoSemana,
+    otsPendientes,
 
     // Mutaciones
     mutLeerLog,

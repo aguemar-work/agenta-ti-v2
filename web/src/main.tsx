@@ -6,12 +6,13 @@ import App from '@/App.tsx';
 import { getInsforgeEnv } from '@/lib/insforge';
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
-    // Captura el 100% de errores, 10% de trazas de rendimiento
-    tracesSampleRate: 0.1,
+    sendDefaultPii: true,
+    tracesSampleRate: import.meta.env.DEV ? 1 : 0.1,
   });
 }
 import { installInsforgeFetchInterceptor } from '@/lib/insforgeFetchInterceptor';

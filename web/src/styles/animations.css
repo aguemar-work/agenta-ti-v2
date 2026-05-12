@@ -4,10 +4,6 @@
  * mejoras mobile, accesibilidad.
  */
 
- :root {
-  --mc-bottom-nav-h: 60px;
-}
-
 /* ── Animaciones de Modal ──────────────────────────────────────────── */
 @keyframes mc-fade-in {
   from { opacity: 0; }
@@ -40,12 +36,6 @@
 .mc-skeleton--text   { height: 14px; width: 100%; border-radius: 4px; }
 .mc-skeleton--avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; }
 .mc-skeleton--title  { height: 18px; width: 60%; border-radius: 4px; }
-
-/* ── Badges ────────────────────────────────────────────────────────── */
-.mc-badge-info {
-  background: color-mix(in srgb, var(--mc-color-accent) 12%, transparent);
-  color: var(--mc-color-accent);
-}
 
 /* ── Alertas horarias de tarea ─────────────────────────────────────── */
 /*
@@ -92,13 +82,6 @@
   border-width: 0;
 }
 
-/* ── Focus visible global ──────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--mc-color-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
 /* ── Sidebar activo ────────────────────────────────────────────────── */
 .mc-sidebar-link[aria-current="page"] {
   background: color-mix(in srgb, var(--mc-color-accent) 10%, transparent);
@@ -115,30 +98,6 @@
   html {
     scroll-padding-bottom: calc(var(--mc-bottom-nav-h, 60px) + 8px);
   }
-}
-
-/* ── mc-empty mejorado ─────────────────────────────────────────────── */
-.mc-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  text-align: center;
-  gap: 4px;
-}
-
-.mc-empty-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--mc-color-text-secondary);
-  margin: 0;
-}
-
-.mc-empty-desc {
-  font-size: 12px;
-  color: var(--mc-color-text-placeholder);
-  margin: 0;
 }
 
 /* ── prefers-reduced-motion ────────────────────────────────────────── */

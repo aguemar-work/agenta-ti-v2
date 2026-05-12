@@ -3,7 +3,8 @@
  * Lista de OTs + panel de configuración de tipos (solo jefe).
  */
 
-import { AlertTriangle, ClipboardCheck, Plus, Settings2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { AlertTriangle, ChevronDown, ClipboardCheck, Plus, Settings2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
 import { Modal } from '@/components/ui/Modal';
@@ -32,7 +33,88 @@ const FILTROS: { value: EstadoOT | 'todos'; label: string }[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Sub-componentes del modal de detalle OT
+// ---------------------------------------------------------------------------
 
+function OTCampo({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, alignItems: 'start' }}>
+      <span style={{ color: 'var(--mc-color-text-secondary)', fontWeight: 500, fontSize: 12 }}>
+        {label}
+      </span>
+      <span style={{ color: 'var(--mc-color-text)', fontSize: 13 }}>{valor}</span>
+    </div>
+  );
+}
+
+function OTSeccion({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{
+        margin: 0, fontSize: 10, fontWeight: 600,
+        textTransform: 'uppercase', letterSpacing: '.06em',
+        color: 'var(--mc-color-text-secondary)',
+      }}>
+        {titulo}
+      </p>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 8,
+        padding: '10px 12px',
+        background: 'var(--mc-color-bg-secondary)',
+        borderRadius: 'var(--mc-radius-md)',
+        border: '0.5px solid var(--mc-color-border)',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function OTSeccionColapsable({ titulo, children }: { titulo: string; children: ReactNode }) {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <button
+        type="button"
+        aria-expanded={abierto}
+        onClick={() => setAbierto((v) => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '4px 0', textAlign: 'left',
+        }}
+      >
+        <span style={{
+          fontSize: 10, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '.06em',
+          color: 'var(--mc-color-text-secondary)',
+        }}>
+          {titulo}
+        </span>
+        <ChevronDown
+          size={12}
+          aria-hidden
+          style={{
+            color: 'var(--mc-color-text-secondary)',
+            transition: 'transform 0.15s',
+            transform: abierto ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+        />
+      </button>
+      {abierto && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 8,
+          padding: '10px 12px',
+          background: 'var(--mc-color-bg-secondary)',
+          borderRadius: 'var(--mc-radius-md)',
+          border: '0.5px solid var(--mc-color-border)',
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 
@@ -112,13 +194,13 @@ export function OrdenesTrabajo() {
         {/* Cabecera */}
         <div style={{
           display:             'grid',
-          gridTemplateColumns: '110px 1fr 90px 90px 100px 150px',
+          gridTemplateColumns: '110px 1fr 110px 160px',
           gap:                  12,
           padding:             '6px 16px',
           borderBottom:        '1px solid var(--mc-color-border)',
           background:          'var(--mc-color-bg)',
         }}>
-          {['Número', 'Descripción', 'Área', 'Modalidad', 'Fecha', 'Estado'].map((h) => (
+          {['Número', 'Descripción', 'Fecha', 'Estado'].map((h) => (
             <span key={h} style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--mc-color-text-secondary)' }}>
               {h}
             </span>
@@ -137,29 +219,30 @@ export function OrdenesTrabajo() {
           ordenes.map((ot) => {
             const esUrgente  = ot.prioridad === 'urgente';
             const esVencida  = otVencida(ot, hoy);
-            const bgRow      = esVencida  ? '#FFF5F5' :
-                               esUrgente  ? '#FFFBF0' : undefined;
-            const borderLeft = esVencida  ? '3px solid #E24B4A' :
-                               esUrgente  ? '3px solid #EF9F27' : undefined;
 
             return (
               <div
                 key={ot.id}
+                className="mc-ot-row"
                 style={{
                   display:             'grid',
-                  gridTemplateColumns: '110px 1fr 90px 90px 100px 150px',
+                  gridTemplateColumns: '110px 1fr 110px 160px',
                   gap:                  12,
                   padding:             '10px 16px',
                   borderBottom:        '1px solid var(--mc-color-border)',
                   alignItems:          'center',
-                  cursor:              'pointer',
-                  background:          bgRow,
-                  borderLeft:          borderLeft,
-                  paddingLeft:         borderLeft ? 13 : 16,
-                  transition:          'background 0.15s',
+                  background:          esVencida
+                    ? 'var(--mc-ot-vencida-bg)'
+                    : esUrgente
+                    ? 'var(--mc-ot-urgente-bg)'
+                    : undefined,
+                  borderLeft: esVencida
+                    ? '3px solid var(--mc-ot-vencida-border)'
+                    : esUrgente
+                    ? '3px solid var(--mc-ot-urgente-border)'
+                    : undefined,
+                  paddingLeft: (esVencida || esUrgente) ? 13 : 16,
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--mc-color-surface-hover)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = bgRow ?? ''; }}
                 onClick={() => setViendoOT(ot)}
               >
                 {/* Número */}
@@ -167,7 +250,7 @@ export function OrdenesTrabajo() {
                   {(esUrgente || esVencida) && (
                     <AlertTriangle
                       size={12}
-                      style={{ color: esVencida ? '#E24B4A' : '#EF9F27', flexShrink: 0 }}
+                      style={{ color: esVencida ? 'var(--mc-ot-vencida-border)' : 'var(--mc-ot-urgente-border)', flexShrink: 0 }}
                       aria-hidden
                     />
                   )}
@@ -183,15 +266,7 @@ export function OrdenesTrabajo() {
                       {ot.tipo_trabajo?.nombre ?? ot.descripcion}
                     </p>
                     {esUrgente && (
-                      <span style={{
-                        fontSize:    10,
-                        fontWeight:  600,
-                        padding:    '1px 6px',
-                        borderRadius: 10,
-                        background: '#FAEEDA',
-                        color:      '#854F0B',
-                        flexShrink:  0,
-                      }}>
+                      <span className="mc-badge mc-badge-warning" style={{ fontSize: 10, flexShrink: 0 }}>
                         Urgente
                       </span>
                     )}
@@ -206,25 +281,21 @@ export function OrdenesTrabajo() {
                   )}
                 </div>
 
-                {/* Área */}
-                <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ot.area_destino}
-                </span>
-
-                {/* Modalidad */}
-                <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)' }}>
-                  {MODALIDAD_OT_LABEL[ot.modalidad]}
-                </span>
-
-                {/* Fecha — rojo si vencida */}
-                <span style={{
-                  fontSize:   12,
-                  fontWeight: esVencida ? 600 : 400,
-                  color:      esVencida ? '#A32D2D' : 'var(--mc-color-text-secondary)',
-                }}>
-                  {ot.fecha_estimada}
-                  {esVencida && <span style={{ display: 'block', fontSize: 10, color: '#E24B4A' }}>Vencida</span>}
-                </span>
+                {/* Fecha */}
+                <div>
+                  <span style={{
+                    fontSize:   12,
+                    fontWeight: esVencida ? 600 : 400,
+                    color:      esVencida ? 'var(--mc-ot-vencida-border)' : 'var(--mc-color-text-secondary)',
+                  }}>
+                    {ot.fecha_estimada}
+                  </span>
+                  {esVencida && (
+                    <span style={{ display: 'block', fontSize: 10, color: 'var(--mc-ot-vencida-border)' }}>
+                      Vencida
+                    </span>
+                  )}
+                </div>
 
                 {/* Estado + acciones */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
@@ -369,67 +440,86 @@ export function OrdenesTrabajo() {
         }
       >
         {viendoOT && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 13 }}>
+
+            {/* Badges de estado + prioridad + modalidad */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className={`mc-badge ${ESTADO_OT_BADGE[viendoOT.estado]}`}>{ESTADO_OT_LABEL[viendoOT.estado]}</span>
+              <span className={`mc-badge ${ESTADO_OT_BADGE[viendoOT.estado]}`}>
+                {ESTADO_OT_LABEL[viendoOT.estado]}
+              </span>
               {viendoOT.prioridad === 'urgente' && (
                 <span className={`mc-badge ${PRIORIDAD_OT_BADGE[viendoOT.prioridad]}`}>
                   {PRIORIDAD_OT_LABEL[viendoOT.prioridad]}
                 </span>
               )}
-              <span style={{ color: 'var(--mc-color-text-secondary)' }}>{MODALIDAD_OT_LABEL[viendoOT.modalidad]}</span>
+              <span className="mc-badge mc-badge-neutral">
+                {MODALIDAD_OT_LABEL[viendoOT.modalidad]}
+              </span>
             </div>
 
             {/* Alerta de vencimiento */}
             {otVencida(viendoOT, hoy) && (
-              <div style={{ background: '#FCEBEB', borderLeft: '3px solid #E24B4A', padding: '8px 12px', borderRadius: '0 6px 6px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <AlertTriangle size={14} style={{ color: '#E24B4A', flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: 12, color: '#791F1F' }}>
+              <div style={{
+                background:   'var(--mc-ot-vencida-bg)',
+                borderLeft:   '3px solid var(--mc-ot-vencida-border)',
+                padding:      '8px 12px',
+                borderRadius: '0 6px 6px 0',
+                display:      'flex',
+                alignItems:   'center',
+                gap:           6,
+              }}>
+                <AlertTriangle size={14} style={{ color: 'var(--mc-ot-vencida-border)', flexShrink: 0 }} />
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--mc-color-danger)' }}>
                   Fecha estimada vencida — requiere atención
                 </p>
               </div>
             )}
 
-            {[
-              { label: 'Tipo de trabajo',    value: viendoOT.tipo_trabajo?.nombre ?? '—' },
-              { label: 'Tarea vinculada',    value: viendoOT.tarea?.titulo ?? '—' },
-              { label: 'Objetivo vinculado', value: viendoOT.objetivo?.titulo ?? '—' },
-              { label: 'Descripción',        value: viendoOT.descripcion },
-              { label: 'Área destino',       value: viendoOT.area_destino },
-              { label: 'Ubicación',          value: viendoOT.ubicacion ?? '—' },
-              { label: 'Fecha estimada',     value: viendoOT.fecha_estimada },
-              { label: 'Hora inicio',        value: viendoOT.hora_inicio_est ?? '—' },
-              { label: 'Duración estimada',  value: viendoOT.duracion_est_min ? `${viendoOT.duracion_est_min} min` : '—' },
-              { label: 'Equipos/materiales', value: viendoOT.equipos_materiales ?? '—' },
-              { label: 'Observaciones',      value: viendoOT.observaciones ?? '—' },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8 }}>
-                <span style={{ color: 'var(--mc-color-text-secondary)', fontWeight: 500 }}>{label}</span>
-                <span style={{ color: 'var(--mc-color-text)' }}>{value}</span>
-              </div>
-            ))}
-
+            {/* Motivo de rechazo */}
             {viendoOT.motivo_rechazo && (
-              <div style={{ background: 'var(--mc-color-bg)', borderLeft: '3px solid var(--mc-color-danger)', padding: '8px 12px', borderRadius: '0 6px 6px 0' }}>
-                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--mc-color-danger)' }}>Motivo de rechazo</p>
+              <div style={{
+                background:   'var(--mc-ot-rechazo-bg)',
+                borderLeft:   '3px solid var(--mc-color-danger)',
+                padding:      '8px 12px',
+                borderRadius: '0 6px 6px 0',
+              }}>
+                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--mc-color-danger)' }}>
+                  Motivo de rechazo
+                </p>
                 <p style={{ margin: 0 }}>{viendoOT.motivo_rechazo}</p>
               </div>
             )}
 
+            {/* ── Información general ──────────────────────────────────── */}
+            <OTSeccion titulo="Información general">
+              <OTCampo label="Tipo de trabajo"    valor={viendoOT.tipo_trabajo?.nombre ?? '—'} />
+              <OTCampo label="Descripción"        valor={viendoOT.descripcion} />
+              <OTCampo label="Área destino"       valor={viendoOT.area_destino} />
+              <OTCampo label="Fecha estimada"     valor={viendoOT.fecha_estimada} />
+              {viendoOT.tarea?.titulo && (
+                <OTCampo label="Tarea vinculada"    valor={viendoOT.tarea.titulo} />
+              )}
+              {viendoOT.objetivo?.titulo && (
+                <OTCampo label="Objetivo vinculado" valor={viendoOT.objetivo.titulo} />
+              )}
+            </OTSeccion>
+
+            {/* ── Detalles técnicos (colapsable) ───────────────────────── */}
+            <OTSeccionColapsable titulo="Detalles técnicos">
+              <OTCampo label="Ubicación"          valor={viendoOT.ubicacion ?? '—'} />
+              <OTCampo label="Hora inicio"        valor={viendoOT.hora_inicio_est ?? '—'} />
+              <OTCampo label="Duración estimada"  valor={viendoOT.duracion_est_min ? `${viendoOT.duracion_est_min} min` : '—'} />
+              <OTCampo label="Equipos/materiales" valor={viendoOT.equipos_materiales ?? '—'} />
+              <OTCampo label="Observaciones"      valor={viendoOT.observaciones ?? '—'} />
+            </OTSeccionColapsable>
+
+            {/* ── Datos del receptor (solo completada) ─────────────────── */}
             {viendoOT.estado === 'completada' && (
-              <div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12 }}>
-                <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Datos del receptor</p>
-                {[
-                  { label: 'Nombre', value: viendoOT.receptor_nombre ?? '—' },
-                  { label: 'DNI',    value: viendoOT.receptor_dni    ?? '—' },
-                  { label: 'Cargo',  value: viendoOT.receptor_cargo  ?? '—' },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, marginBottom: 4 }}>
-                    <span style={{ color: 'var(--mc-color-text-secondary)', fontWeight: 500 }}>{label}</span>
-                    <span>{value}</span>
-                  </div>
-                ))}
-              </div>
+              <OTSeccion titulo="Datos del receptor">
+                <OTCampo label="Nombre" valor={viendoOT.receptor_nombre ?? '—'} />
+                <OTCampo label="DNI"    valor={viendoOT.receptor_dni    ?? '—'} />
+                <OTCampo label="Cargo"  valor={viendoOT.receptor_cargo  ?? '—'} />
+              </OTSeccion>
             )}
           </div>
         )}
