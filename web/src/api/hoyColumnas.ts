@@ -24,6 +24,54 @@ export async function getIncidenciasAbiertas(usuarioId: string): Promise<Tarea[]
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
 }
 
+/** Incidencias de un usuario en un rango de fechas planificadas (inclusive). */
+export async function getIncidenciasRangoUsuario(
+  usuarioId: string,
+  desdeYmd: string,
+  hastaYmd: string,
+): Promise<Tarea[]> {
+  const insforge = getInsforge();
+  const { data, error } = await insforge.database
+    .from('tarea')
+    .select('*')
+    .eq('asignado_a', usuarioId)
+    .eq('es_imprevisto', true)
+    .gte('fecha_planificada', desdeYmd)
+    .lte('fecha_planificada', hastaYmd)
+    .order('fecha_planificada', { ascending: true })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
+}
+
+/** Incidencias del equipo (miembros activos) por fecha planificada en la semana. */
+export async function getIncidenciasEquipoPorFechaPlanificada(
+  desdeYmd: string,
+  hastaYmd: string,
+): Promise<Tarea[]> {
+  const insforge = getInsforge();
+  const { data: usuarios, error: e1 } = await insforge.database
+    .from('usuario')
+    .select('id')
+    .eq('activo', true)
+    .eq('rol', 'miembro');
+  if (e1) throw e1;
+  const ids = (usuarios ?? []).map((u: { id: string }) => u.id);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await insforge.database
+    .from('tarea')
+    .select('*')
+    .eq('es_imprevisto', true)
+    .in('asignado_a', ids)
+    .gte('fecha_planificada', desdeYmd)
+    .lte('fecha_planificada', hastaYmd)
+    .order('fecha_planificada', { ascending: true })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
+}
+
 /** Todas las incidencias del día (abiertas + cerradas). */
 export async function getIncidenciasDelDia(usuarioId: string, ymd: string): Promise<Tarea[]> {
   const insforge = getInsforge();

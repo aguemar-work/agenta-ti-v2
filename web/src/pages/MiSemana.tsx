@@ -1,85 +1,31 @@
-import {
-  closestCorners,
-  DndContext,
-  type CollisionDetection,
-  DragOverlay,
-  PointerSensor,
-  TouchSensor,
-  pointerWithin,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
-import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
-import { EventoCard } from '@/components/semana/EventoCard';
+import type { OrdenTrabajo } from '@/api/ordenTrabajo';
+import { MiSemanaResumenDia } from '@/components/semana/MiSemanaResumenDia';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
-import { SemanaDiaDrop } from '@/components/semana/SemanaDiaDrop';
+import { Modal } from '@/components/ui/Modal';
+import { ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
-import { TaskItem } from '@/components/tareas/TaskItem';
-import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { useMiSemanaPage } from '@/hooks/useMiSemanaPage';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
-import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { Calendar, StickyNote } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, EyeOff, StickyNote } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
-import type { Evento, Tarea } from '@/types';
+
+const MiSemanaGrillaDnD = lazy(() =>
+  import('@/components/semana/MiSemanaGrillaDnD').then((m) => ({ default: m.MiSemanaGrillaDnD })),
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-type NivelCarga = 'baja' | 'media' | 'alta';
-function nivelCarga(n: number): NivelCarga {
-  if (n <= 2) return 'baja';
-  if (n <= 4) return 'media';
-  return 'alta';
-}
-const CARGA_CONFIG: Record<NivelCarga, { color: string; label: string }> = {
-  baja:  { color: 'var(--mc-color-success)', label: 'Carga baja'  },
-  media: { color: 'var(--mc-color-warning)', label: 'Carga media' },
-  alta:  { color: 'var(--mc-color-danger)',  label: 'Carga alta'  },
-};
-
-function CargaIndicator({ n }: { n: number }) {
-  const nivel = nivelCarga(n);
-  const { color, label } = CARGA_CONFIG[nivel];
-  return (
-    <span
-      title={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
-      aria-label={`${label}: ${n} ${n === 1 ? 'tarea' : 'tareas'}`}
-      style={{
-        display:      'inline-block',
-        width:         8,
-        height:        8,
-        borderRadius: '50%',
-        background:    color,
-        flexShrink:    0,
-      }}
-    />
-  );
-}
-
-function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
-  return eventos.filter((e) => fechaLocalYmd(new Date(e.fecha_inicio)) === ymd);
-}
-
-const collisionSemana: CollisionDetection = (args) => {
-  const ptr     = pointerWithin(args);
-  const zonaPtr = ptr.find((c) => String(c.id).startsWith('day-'));
-  if (zonaPtr) return [zonaPtr];
-  const corners = closestCorners(args);
-  const zona    = corners.find((c) => String(c.id).startsWith('day-'));
-  if (zona) return [zona];
-  return corners;
-};
 
 const CONTEO_CONFIG = [
   { key: 'pendiente',    label: 'Pendientes'    },
@@ -92,54 +38,6 @@ const CONTEO_CONFIG = [
 type FiltroEstado = typeof CONTEO_CONFIG[number]['key'];
 
 // ---------------------------------------------------------------------------
-// Sub-componentes de columna
-// ---------------------------------------------------------------------------
-
-/** Zona de incidencias — solo visible en la columna del día actual */
-function ZonaIncidencias({
-  incidencias,
-  onRegistrar,
-}: {
-  incidencias: Tarea[];
-  onRegistrar: () => void;
-}) {
-  return (
-    <div className="border-t border-dashed border-[var(--mc-color-border)] mt-1 pt-1">
-      <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mc-color-info)]">
-          Incidencias
-        </span>
-        <button
-          type="button"
-          onClick={onRegistrar}
-          className="text-[10px] text-[var(--mc-color-info)] hover:underline"
-        >
-          + registrar
-        </button>
-      </div>
-      {incidencias.length === 0 ? (
-        <p className="px-2 pb-1 text-[10px] text-[var(--mc-color-text-secondary)]">
-          Sin incidencias hoy
-        </p>
-      ) : (
-        <div className="flex flex-col gap-1 px-2 pb-1">
-          {incidencias.map((inc) => (
-            <div
-              key={inc.id}
-              className="rounded border border-[var(--mc-state-incidencia-border)] bg-[var(--mc-state-incidencia-bg)] px-2 py-1 text-[10px] text-[var(--mc-color-text)]"
-            >
-              {inc.titulo}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Componente principal
-// ---------------------------------------------------------------------------
 export function MiSemana() {
   const {
     usuario, esJefe,
@@ -147,7 +45,9 @@ export function MiSemana() {
     uid, setSeleccionId, usuariosJefe,
     tareasPlan, eventos, isError, hoyYmd, conteos,
     esBannerViernes,
-    incidenciasHoy, notasHoy,
+    incidenciasSemana, notasHoy,
+    ordenesPorTarea, nombresPorId, resumenDia,
+    ocultarCompletadas, toggleOcultarCompletadas,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
     crearIncidenciaHoy, guardarNotaRapida,
@@ -167,13 +67,17 @@ export function MiSemana() {
     guardarDetalle, eliminarDesdeDetalle, iniciarDesdeDetalle,
   } = useMiSemanaPage();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
-  );
-
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado | null>(null);
   const [notasDrawerOpen, setNotasDrawerOpen] = useState(false);
+  const [otViendo, setOtViendo] = useState<OrdenTrabajo | null>(null);
+  /** Vista móvil: un día a la vez; al cambiar de semana se prioriza hoy si cae en la semana. */
+  const [diaMobileYmd, setDiaMobileYmd] = useState(hoyYmd);
+
+  useEffect(() => {
+    const ids = diasSemana.map((d) => fechaLocalYmd(d));
+    if (ids.includes(hoyYmd)) setDiaMobileYmd(hoyYmd);
+    else setDiaMobileYmd(ids[0] ?? hoyYmd);
+  }, [lunes, hoyYmd, diasSemana]);
 
   const tituloObjetivoPorId = useMemo(() => {
     const m = new Map<string, string>();
@@ -193,7 +97,93 @@ export function MiSemana() {
 
       {/* ── Cabecera módulo ─────────────────────────────────────────────── */}
       <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        {/* Móvil: título + CTA, fila de semana, pills de día */}
+        <div className="flex flex-col gap-3 md:hidden">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="m-0 text-[20px] font-medium leading-tight text-[var(--mc-color-text)]">
+              Mi semana
+            </h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="primary" size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
+                + Nueva tarea
+              </Button>
+              <button
+                type="button"
+                className="mc-btn-secondary mc-btn-sm inline-flex items-center gap-1.5"
+                onClick={toggleOcultarCompletadas}
+                aria-pressed={ocultarCompletadas}
+                title={ocultarCompletadas ? 'Mostrar completadas' : 'Ocultar completadas'}
+              >
+                <EyeOff size={14} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="mc-btn-secondary mc-btn-sm inline-flex items-center gap-1.5"
+                onClick={() => setNotasDrawerOpen(true)}
+                aria-expanded={notasDrawerOpen}
+                aria-controls="mc-misemana-notas-drawer"
+              >
+                <StickyNote size={14} aria-hidden />
+                Notas
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="mc-nav-arrow-btn inline-flex items-center justify-center"
+              onClick={() => setLunes((d) => agregarDias(d, -7))}
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+            </button>
+            <span className="min-w-0 flex-1 text-center text-sm text-[var(--mc-color-text-secondary)]">
+              {fechaLocalDdMmYyyy(lunes)} – {fechaLocalDdMmYyyy(sabado)}
+            </span>
+            <button
+              type="button"
+              className="mc-nav-arrow-btn inline-flex items-center justify-center"
+              onClick={() => setLunes((d) => agregarDias(d, 7))}
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+          <div
+            className="flex touch-pan-x gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Elegir día de la semana"
+          >
+            {diasSemana.map((d, i) => {
+              const ymd = fechaLocalYmd(d);
+              const esHoy = ymd === hoyYmd;
+              const esActivo = ymd === diaMobileYmd;
+              return (
+                <button
+                  key={ymd}
+                  type="button"
+                  aria-pressed={esActivo}
+                  onClick={() => setDiaMobileYmd(ymd)}
+                  className={[
+                    'shrink-0 rounded-[var(--mc-radius-md)] px-3 py-1.5 text-xs font-medium transition-colors',
+                    esActivo
+                      ? 'bg-[var(--mc-color-accent)] text-white'
+                      : 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]',
+                    esHoy && !esActivo
+                      ? 'ring-1 ring-[var(--mc-color-accent)] ring-offset-1 ring-offset-[var(--mc-color-bg)]'
+                      : '',
+                  ].join(' ')}
+                >
+                  {DIAS_CORTO[i]}
+                  {esHoy ? <span className="ml-1 text-[9px] opacity-80">· hoy</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop / tablet: cabecera en una franja */}
+        <div className="hidden flex-wrap items-start justify-between gap-4 md:flex">
           <h1 className="text-[20px] font-medium leading-tight text-[var(--mc-color-text)] m-0">
             Mi semana
           </h1>
@@ -205,9 +195,19 @@ export function MiSemana() {
             <span className="text-sm text-[var(--mc-color-text-secondary)] whitespace-nowrap">
               {fechaLocalDdMmYyyy(lunes)} – {fechaLocalDdMmYyyy(sabado)}
             </span>
-            <Button variant="secondary" size="sm" onClick={() => setModal({ fecha: hoyYmd })}>
+            <Button variant="primary" onClick={() => setModal({ fecha: hoyYmd })}>
               + Nueva tarea
             </Button>
+            <button
+              type="button"
+              className="mc-btn-secondary mc-btn-sm inline-flex items-center gap-1.5"
+              onClick={toggleOcultarCompletadas}
+              aria-pressed={ocultarCompletadas}
+              title={ocultarCompletadas ? 'Mostrar completadas' : 'Ocultar completadas'}
+            >
+              <EyeOff size={14} aria-hidden />
+              {ocultarCompletadas ? 'Mostrar completadas' : 'Ocultar completadas'}
+            </button>
             <button
               type="button"
               className="mc-btn-secondary mc-btn-sm inline-flex items-center gap-1.5"
@@ -236,6 +236,12 @@ export function MiSemana() {
           </div>
         )}
       </header>
+
+      <MiSemanaResumenDia
+        pendientesHoy={resumenDia.pendientesHoy}
+        atrasadas={resumenDia.atrasadas}
+        bloqueadas={resumenDia.bloqueadas}
+      />
 
       {/* Banner viernes */}
       {esBannerViernes && (
@@ -293,124 +299,39 @@ export function MiSemana() {
         </p>
       )}
 
-      {/* ── Grilla semanal ───────────────────────────────────────────────── */}
-      <div className="min-w-0">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={collisionSemana}
-          onDragStart={(e) => setActiveDragId(String(e.active.id))}
+      {/* ── Grilla semanal (chunk @dnd-kit) ─────────────────────────────── */}
+      <Suspense
+        fallback={
+          <div className="mc-page-loading min-h-[220px]" role="status">
+            Cargando agenda…
+          </div>
+        }
+      >
+        <MiSemanaGrillaDnD
+          diasSemana={diasSemana}
+          hoyYmd={hoyYmd}
+          diaMobileYmd={diaMobileYmd}
+          tareasPlan={tareasPlan}
+          eventos={eventos}
+          filtroEstado={filtroEstado}
+          tituloObjetivoPorId={tituloObjetivoPorId}
+          incidenciasSemana={incidenciasSemana}
+          nombresPorId={nombresPorId}
+          ordenesPorTarea={ordenesPorTarea}
+          ocultarCompletadas={ocultarCompletadas}
+          activeDragId={activeDragId}
+          setActiveDragId={setActiveDragId}
+          overId={overId}
           onDragOver={onDragOver}
-          onDragEnd={(e) => void onDragEnd(e)}
-          onDragCancel={() => { setActiveDragId(null); }}
-        >
-          <section className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-              Agenda semanal
-            </div>
-            <div className="mc-card !p-0 overflow-hidden">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-6 md:gap-0">
-                {diasSemana.map((d, idx) => {
-                  const ymd       = fechaLocalYmd(d);
-                  const delDia    = tareasPlan.filter((t) => t.fecha_planificada === ymd);
-                  const delDiaVis = (filtroEstado
-                    ? delDia.filter((t) => estadoEfectivoTablero(t, hoyYmd) === filtroEstado)
-                    : delDia
-                  ).slice().sort(
-                    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-                  );
-                  const esHoy     = ymd === hoyYmd;
-                  const ph        = Boolean(activeDragId && overId === `day-${ymd}`);
-
-                  return (
-                    <div
-                      key={ymd}
-                      className={[
-                        'flex min-h-[220px] min-w-0 flex-col border-b border-[var(--mc-color-border)]',
-                        'md:border-b-0 md:border-r md:last:border-r-0',
-                        esHoy ? 'bg-[var(--mc-color-accent-soft)]' : '',
-                      ].join(' ').trim()}
-                    >
-                      {/* Cabecera del día */}
-                      <div className="flex items-center justify-between gap-1 border-b border-[var(--mc-color-border)] px-2 py-2">
-                        <div className="flex items-baseline gap-1.5 text-[12px] text-[var(--mc-color-text)]">
-                          <span className="font-medium">{DIAS_CORTO[idx]}</span>
-                          <span className="inline-flex items-center gap-1 font-bold tabular-nums">
-                            {esHoy ? (
-                              <span
-                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mc-brand-violet)]"
-                                title="Hoy"
-                                aria-label="Hoy"
-                              />
-                            ) : null}
-                            {d.getDate()}
-                          </span>
-                        </div>
-                        <CargaIndicator n={delDia.length} />
-                      </div>
-
-                      {/* Botón añadir tarea */}
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="w-full justify-center border-b border-[var(--mc-color-border)] rounded-none !py-2"
-                        onClick={() => setModal({ fecha: ymd })}
-                      >
-                        + Tarea / evento
-                      </Button>
-
-                      {/* Tareas y eventos del día */}
-                      <SemanaDiaDrop
-                        id={`day-${ymd}`}
-                        className="flex min-h-[120px] flex-1 flex-col gap-2 p-2"
-                        showPlaceholder={ph}
-                      >
-                        {eventosEnDia(eventos, ymd).map((ev) => (
-                          <EventoCard key={ev.id} evento={ev} />
-                        ))}
-                        {delDiaVis.map((t) => (
-                          <DraggableTareaSemana
-                            key={t.id}
-                            tarea={t}
-                            hoyYmd={hoyYmd}
-                            objetivoTitulo={t.objetivo_id ? tituloObjetivoPorId.get(t.objetivo_id) ?? null : null}
-                            readOnly={!puedeGestionar(t)}
-                            onOpenDetalle={(x) => setDetalleTareaId(x.id)}
-                          />
-                        ))}
-                      </SemanaDiaDrop>
-
-                      {/* Zona de incidencias — solo en el día actual */}
-                      {esHoy && (
-                        <ZonaIncidencias
-                          incidencias={incidenciasHoy}
-                          onRegistrar={() => setModalInc(true)}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          <DragOverlay dropAnimation={{ duration: 180, easing: 'ease-out' }}>
-            {activeTareaDrag && (
-              <div
-                className="mc-drag-overlay-card pointer-events-none max-w-[320px]"
-                style={{ transform: 'rotate(2deg)', boxShadow: '0 18px 44px -8px rgba(0,0,0,0.28)' }}
-              >
-                <TaskItem
-                  variant="week"
-                  tarea={activeTareaDrag}
-                  readOnly
-                  estadoVisual={estadoEfectivoTablero(activeTareaDrag, hoyYmd)}
-                />
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
-      </div>
-
+          onDragEnd={onDragEnd}
+          activeTareaDrag={activeTareaDrag}
+          puedeGestionar={puedeGestionar}
+          onAbrirModalDia={(fecha) => setModal({ fecha })}
+          onAbrirDetalle={setDetalleTareaId}
+          onRegistrarIncidencia={() => setModalInc(true)}
+          onOtClick={setOtViendo}
+        />
+      </Suspense>
       {notasDrawerOpen && (
         <>
           <div
@@ -476,7 +397,7 @@ export function MiSemana() {
       <ModalMiSemana
         open={modal !== null}
         modoOrigen="dia"
-        fechaDia={modal?.fecha}
+        {...(modal?.fecha ? { fechaDia: modal.fecha } : {})}
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
         asignadoPorDefectoId={uid}
@@ -494,11 +415,12 @@ export function MiSemana() {
         onClose={() => setModalInc(false)}
         onSubmit={async (input) => {
           await crearIncidenciaHoy({
-            titulo:      input.titulo,
-            prioridad:   input.prioridad,
-            descripcion: input.descripcion || null,
-            asignado_a:  input.asignado_a,
-            ya_resuelta: true,
+            titulo:              input.titulo,
+            prioridad:           input.prioridad,
+            descripcion:         input.descripcion || null,
+            asignado_a:          input.asignado_a,
+            fecha_planificada:   input.fecha_planificada ?? hoyYmd,
+            ya_resuelta:         true,
           });
         }}
       />
@@ -515,7 +437,7 @@ export function MiSemana() {
       />
       <ModalReprogramar
         tarea={reprDragTarea?.tarea ?? null}
-        fechaFija={reprDragTarea?.fecha}
+        {...(reprDragTarea?.fecha ? { fechaFija: reprDragTarea.fecha } : {})}
         onClose={() => setReprDragTarea(null)}
         onConfirm={confirmarReprDrag}
       />
@@ -524,6 +446,23 @@ export function MiSemana() {
         onClose={() => setReprDetalleTarea(null)}
         onConfirm={confirmarReprDetalle}
       />
+      <Modal
+        open={otViendo !== null}
+        onClose={() => setOtViendo(null)}
+        title={otViendo ? `OT ${otViendo.numero}` : ''}
+        analyticsId="modal-ot-resumen-semana"
+        size="sm"
+        footer={(
+          <Button variant="ghost" onClick={() => setOtViendo(null)}>Cerrar</Button>
+        )}
+      >
+        {otViendo && (
+          <p className="text-sm text-[var(--mc-color-text)]">
+            Estado: <strong>{ESTADO_OT_LABEL[otViendo.estado]}</strong>
+          </p>
+        )}
+      </Modal>
+
       <ModalDetalleTareaSemana
         open={detalleTareaId !== null}
         tarea={tareaDetalle}

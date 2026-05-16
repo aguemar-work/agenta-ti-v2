@@ -7,8 +7,10 @@
  */
 
 import { useEffect } from 'react';
+
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { ESTADO_OT_LABEL, MODALIDAD_OT_LABEL } from '@/lib/otConfig';
+import '@/styles/ot-impresion.css';
 
 type Props = { ot: OrdenTrabajo; onClose: () => void };
 
@@ -24,84 +26,6 @@ export function OTImpresion({ ot, onClose }: Props) {
 
     return (
         <>
-            <style>{`
-        @media print {
-          body > *:not(#ot-print-root) { display: none !important; }
-          #ot-print-root { display: block !important; }
-          @page { size: A4; margin: 15mm; }
-          .ot-close-btn { display: none !important; }
-        }
-        @media screen {
-          #ot-print-root {
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.5);
-            display: flex; align-items: flex-start; justify-content: center;
-            overflow-y: auto; padding: 24px 16px;
-          }
-        }
-
-        .ot-close-btn {
-          position: fixed; top: 12px; right: 12px;
-          background: #fff; border: 1px solid #ccc;
-          border-radius: 8px; padding: 6px 14px;
-          cursor: pointer; font-size: 13px; font-weight: 500;
-          z-index: 10000; font-family: system-ui, sans-serif;
-        }
-
-        .ot-doc {
-          background: #fff;
-          width: 180mm;
-          padding: 12mm;
-          box-sizing: border-box;
-          font-family: 'Inter', Arial, sans-serif;
-          font-size: 9.5pt;
-          color: #050505;
-        }
-
-        /* Encabezado */
-        .ot-head {
-          display: flex; justify-content: space-between; align-items: flex-start;
-          border-bottom: 2px solid #050505; padding-bottom: 6px; margin-bottom: 8px;
-        }
-        .ot-head-left p { margin: 0; line-height: 1.4; }
-        .ot-area { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #65676B; }
-        .ot-title { font-size: 15pt; font-weight: 700; }
-        .ot-numero { font-size: 11pt; font-weight: 600; color: #0064E0; font-family: monospace; }
-        .ot-head-right { text-align: right; }
-        .ot-estado-badge {
-          display: inline-block; padding: 2px 8px;
-          border: 1.5px solid #050505; border-radius: 4px;
-          font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-        .ot-meta { font-size: 8pt; color: #65676B; margin-top: 4px; }
-
-        /* Grid de campos */
-        .ot-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-bottom: 6px; }
-        .ot-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 8px; margin-bottom: 6px; }
-        .ot-field { padding: 3px 0; }
-        .ot-label { font-size: 7.5pt; color: #65676B; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 1px; }
-        .ot-value { font-size: 9.5pt; border-bottom: 0.5px solid #CED2D9; padding-bottom: 1px; min-height: 4mm; }
-        .ot-value.tall { min-height: 10mm; }
-
-        /* Sección */
-        .ot-section { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #65676B; border-bottom: 0.5px solid #CED2D9; padding-bottom: 2px; margin: 8px 0 5px; }
-
-        /* Firmas */
-        .ot-firmas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8mm; margin-top: 8mm; }
-        .ot-firma {
-          border: 0.5px solid #CED2D9; border-radius: 4px;
-          padding: 4px 6px 6px;
-          display: flex; flex-direction: column; min-height: 28mm;
-        }
-        .ot-firma-role { font-size: 7.5pt; font-weight: 700; color: #65676B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
-        .ot-firma-name { font-size: 9pt; font-weight: 500; margin-bottom: 3px; }
-        .ot-firma-campo { font-size: 8pt; color: #65676B; margin-bottom: 1px; }
-        .ot-firma-linea { border-top: 0.8px solid #050505; margin-top: auto; padding-top: 3px; font-size: 7.5pt; color: #65676B; text-align: center; }
-
-        /* Pie */
-        .ot-footer { margin-top: 6mm; font-size: 7.5pt; color: #8D949E; text-align: center; border-top: 0.5px solid #E4E6EB; padding-top: 3px; }
-      `}</style>
 
             <div id="ot-print-root">
                 <button className="ot-close-btn" type="button" onClick={onClose}>✕ Cerrar</button>
@@ -137,9 +61,9 @@ export function OTImpresion({ ot, onClose }: Props) {
                     </div>
 
                     {/* Descripción */}
-                    <div className="ot-field" style={{ marginBottom: 6 }}>
+                    <div className="ot-field ot-field--spaced">
                         <span className="ot-label">Descripción del trabajo</span>
-                        <div className="ot-value tall" style={{ padding: '2px 0' }}>{ot.descripcion}</div>
+                        <div className="ot-value tall ot-value--padded">{ot.descripcion}</div>
                     </div>
 
                     {/* Destino y modalidad */}
@@ -176,7 +100,7 @@ export function OTImpresion({ ot, onClose }: Props) {
 
                     {/* Equipos/materiales (solo si hay) */}
                     {ot.equipos_materiales && (
-                        <div className="ot-field" style={{ marginBottom: 6 }}>
+                        <div className="ot-field ot-field--spaced">
                             <span className="ot-label">Equipos / Materiales</span>
                             <div className="ot-value">{ot.equipos_materiales}</div>
                         </div>

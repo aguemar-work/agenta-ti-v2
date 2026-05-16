@@ -18,6 +18,19 @@ export async function getJustificacionesPendientesJefe(): Promise<LogAccion[]> {
   return (data ?? []).map((r) => parseLog(r as Record<string, unknown>));
 }
 
+/** Historial de acciones de una tarea (más reciente primero). */
+export async function getLogsPorTarea(tareaId: string, limit = 40): Promise<LogAccion[]> {
+  const insforge = getInsforge();
+  const { data, error } = await insforge.database
+    .from('log_accion')
+    .select('*')
+    .eq('tarea_id', tareaId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((r) => parseLog(r as Record<string, unknown>));
+}
+
 export async function marcarLogLeidoPorJefe(logId: string): Promise<void> {
   const insforge = getInsforge();
   const { error } = await insforge.database.from('log_accion').update({ leido_por_jefe: true }).eq('id', logId);

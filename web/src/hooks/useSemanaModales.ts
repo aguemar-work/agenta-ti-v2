@@ -85,10 +85,12 @@ export function useSemanaModales({
       await mut.completarTareaConResumen({
         tareaId:       input.tareaId,
         usuarioId:     usuario.id,
-        usuarioNombre: usuario.nombre,
-        tareaTitulo:   tareaCompletar?.titulo,
-        jefeIds:       usuario.rol === 'jefe' ? undefined : jefesNotificacion.map((j) => j.id),
         resumen:       input.resumen,
+        usuarioNombre: usuario.nombre,
+        ...(tareaCompletar?.titulo ? { tareaTitulo: tareaCompletar.titulo } : {}),
+        ...(usuario.rol !== 'jefe' && jefesNotificacion.length > 0
+          ? { jefeIds: jefesNotificacion.map((j) => j.id) }
+          : {}),
       });
       setCompletarTareaId(null);
       toast.success('Tarea finalizada');

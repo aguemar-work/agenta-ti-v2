@@ -1,9 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useSemanaDnD } from '@/hooks/useSemanaDnD';
+import {
+  SEMANA_DND_POINTER_ACTIVATION,
+  SEMANA_DND_TOUCH_ACTIVATION,
+  useSemanaDnD,
+} from '@/hooks/useSemanaDnD';
 import { makeTarea, FECHAS } from '@/test/helpers';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -50,7 +54,26 @@ function makeDragEnd(activeId: string, overId: string): DragEndEvent {
   } as unknown as DragEndEvent;
 }
 
+function makeDragOver(over: DragOverEvent['over']): DragOverEvent {
+  return {
+    active: { id: 'tarea-x', data: { current: {} }, rect: { current: { initial: null, translated: null } } },
+    over,
+    collisions: [],
+    delta: { x: 0, y: 0 },
+  } as unknown as DragOverEvent;
+}
+
 // ---------------------------------------------------------------------------
+
+describe('configuración DnD táctil (M-01)', () => {
+  it('PointerSensor: distance 8px', () => {
+    expect(SEMANA_DND_POINTER_ACTIVATION).toEqual({ distance: 8 });
+  });
+
+  it('TouchSensor: delay 250ms y tolerance 5', () => {
+    expect(SEMANA_DND_TOUCH_ACTIVATION).toEqual({ delay: 250, tolerance: 5 });
+  });
+});
 
 describe('useSemanaDnD', () => {
 
@@ -164,9 +187,9 @@ describe('useSemanaDnD', () => {
       useSemanaDnD({ tareasPlan: [], hoyYmd: FECHAS.HOY, usuarioId: 'u1', onMoverDia: makeOnMoverDia() }),
     );
     act(() => {
-      result.current.onDragOver({
-        over: { id: `day-${FECHAS.MANANA}`, data: { current: {} }, rect: {} },
-      } as any);
+      result.current.onDragOver(
+        makeDragOver({ id: `day-${FECHAS.MANANA}`, data: { current: {} }, rect: {} } as DragOverEvent['over']),
+      );
     });
     expect(result.current.overId).toBe(`day-${FECHAS.MANANA}`);
   });
@@ -175,7 +198,9 @@ describe('useSemanaDnD', () => {
     const { result } = renderHook(() =>
       useSemanaDnD({ tareasPlan: [], hoyYmd: FECHAS.HOY, usuarioId: 'u1', onMoverDia: makeOnMoverDia() }),
     );
-    act(() => { result.current.onDragOver({ over: null } as any); });
+    act(() => {
+      result.current.onDragOver(makeDragOver(null));
+    });
     expect(result.current.overId).toBeNull();
   });
 });

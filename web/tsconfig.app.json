@@ -8,13 +8,13 @@
       "DOM.Iterable"
     ],
     "module": "esnext",
-    "baseUrl": ".",
     "types": [
       "vite/client"
     ],
     "skipLibCheck": true,
-    "ignoreDeprecations": "6.0",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
@@ -31,7 +31,8 @@
     "jsx": "react-jsx",
     /* Linting */
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true
   },
   "include": [
     "src"

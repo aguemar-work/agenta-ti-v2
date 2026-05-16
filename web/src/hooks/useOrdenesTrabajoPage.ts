@@ -1,314 +1,827 @@
 /**
+
  * hooks/useOrdenesTrabajoPage.ts
+
  * Fix: keepPreviousData en query de tipos para evitar que el panel desaparezca
+
  * al hacer toggle activo/inactivo.
+
+ * C-03: autoguardado de borrador OT en InsForge (debounce 2s).
+
  */
 
+
+
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { useSearchParams } from 'react-router-dom';
+
 import { toast } from 'sonner';
 
+
+
 import {
+
   aprobarOT, cancelarOrdenTrabajo, completarOT,
-  crearOrdenTrabajo, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
+
+  crearOrdenTrabajo, getBorradorOTUsuario, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
+
   getTiposTrabajoOT, iniciarEjecucionOT, rechazarOT, actualizarOrdenTrabajo,
+
   crearTipoTrabajoOT, toggleTipoTrabajoOT,
+
   type CrearOTInput, type EstadoOT, type OrdenTrabajo,
+
 } from '@/api/ordenTrabajo';
+
+import {
+
+  formatBorradorGuardadoHace,
+
+  formInicialOT,
+
+  formToActualizarInput,
+
+  normalizarFormOTParaGuardar,
+
+  ordenTrabajoToForm,
+
+  tieneContenidoBorrador,
+
+} from '@/lib/otFormDraft';
+
 import { useAuthStore } from '@/store/authStore';
+
 import { publicarEventoUsuario } from '@/lib/realtimePublish';
+
 import { getInsforge } from '@/lib/insforge';
+
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
+
 import type { Id, Tarea } from '@/types';
 
+
+
 export const Q_OT = 'ordenes-trabajo';
+
 export const Q_TIPOS_OT = 'tipos-trabajo-ot';
 
-const OT_NUEVA_DRAFT_PREFIX = 'mc_draft_ot-nueva-';
+export const Q_OT_BORRADOR = 'ot-borrador-usuario';
 
-function safeParseOTDraft(raw: string | null): Partial<Omit<CrearOTInput, 'enviar'>> | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as Partial<Omit<CrearOTInput, 'enviar'>>;
-  } catch {
-    return null;
-  }
-}
 
-function formInicial(usuarioId: Id): Omit<CrearOTInput, 'enviar'> {
-  return {
-    creado_por: usuarioId, tipo_trabajo_id: null, tarea_id: null,
-    descripcion: '', area_destino: '', ubicacion: '',
-    modalidad: 'presencial', fecha_estimada: '',
-    hora_inicio_est: '', duracion_est_min: null,
-    equipos_materiales: '', observaciones: '',
-  };
-}
+
+const FILTRO_ESTADO_OT_VALORES = [
+
+  'todos', 'activas', 'completadas',
+
+  'borrador', 'pendiente', 'aprobada', 'en_ejecucion', 'completada', 'rechazada', 'cancelada',
+
+] as const;
+
+export type FiltroEstadoOT = typeof FILTRO_ESTADO_OT_VALORES[number];
+
+
+
+export type DraftSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+
+
+const AUTOSAVE_MS = 2000;
+
+
 
 export function useOrdenesTrabajoPage() {
+
   const qc = useQueryClient();
+
   const usuario = useAuthStore((s) => s.usuario);
+
   const esJefe = usuario?.rol === 'jefe';
 
+
+
   // ── Queries ───────────────────────────────────────────────────────────────
+
   const { data: ordenes = [], isLoading, isError } = useQuery({
+
     queryKey: [Q_OT, usuario?.id, esJefe],
+
     enabled: Boolean(usuario?.id),
+
     queryFn: () => esJefe ? getOrdenesTrabajoTodas() : getOrdenesTrabajoMiembro(usuario!.id),
+
   });
+
+
 
   const { data: tiposTrabajo = [] } = useQuery({
+
     queryKey: [Q_TIPOS_OT],
+
     queryFn: () => getTiposTrabajoOT(),
-    // FIX: mantiene datos anteriores mientras refetch — evita que el panel desaparezca
+
     placeholderData: keepPreviousData,
+
   });
 
-  /** Tareas planificadas del miembro para vincular a la OT */
+
+
   const { data: tareasVinculables = [] } = useQuery({
+
     queryKey: ['ot-tareas-vinculables', usuario?.id],
+
     enabled: Boolean(usuario?.id),
+
     queryFn: async (): Promise<Pick<Tarea, 'id' | 'titulo' | 'estado'>[]> => {
+
       const { data, error } = await getInsforge().database
+
         .from('tarea')
+
         .select('id,titulo,estado')
+
         .eq('asignado_a', usuario!.id)
+
         .in('estado', ['pendiente', 'en_progreso', 'atrasada'])
+
         .order('fecha_planificada', { ascending: true });
+
       if (error) throw error;
+
       return (data ?? []) as Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
+
     },
+
   });
+
+
 
   // ── Estado UI — OTs ───────────────────────────────────────────────────────
-  const [modalForm, setModalForm] = useState(false);
-  const [editandoOT, setEditandoOT] = useState<OrdenTrabajo | null>(null);
-  const [viendoOT, setViendoOT] = useState<OrdenTrabajo | null>(null);
-  const [imprimiendoOT, setImprimiendoOT] = useState<OrdenTrabajo | null>(null);
-  const [modalCompletar, setModalCompletar] = useState<OrdenTrabajo | null>(null);
-  const [modalRechazar, setModalRechazar] = useState<OrdenTrabajo | null>(null);
-  const [motivoRechazo, setMotivoRechazo] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<EstadoOT | 'todos'>('todos');
-  const [form, setForm] = useState<Omit<CrearOTInput, 'enviar'>>(() => formInicial(usuario?.id ?? ''));
 
-  /** Borrador local al crear nueva OT (sin segundo botón en UI). */
+  const [modalForm, setModalForm] = useState(false);
+
+  const [editandoOT, setEditandoOT] = useState<OrdenTrabajo | null>(null);
+
+  const [viendoOT, setViendoOT] = useState<OrdenTrabajo | null>(null);
+
+  const [imprimiendoOT, setImprimiendoOT] = useState<OrdenTrabajo | null>(null);
+
+  const [modalCompletar, setModalCompletar] = useState<OrdenTrabajo | null>(null);
+
+  const [modalRechazar, setModalRechazar] = useState<OrdenTrabajo | null>(null);
+
+  const [motivoRechazo, setMotivoRechazo] = useState('');
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const filtroEstadoRaw = searchParams.get('estado') ?? 'todos';
+
+  const filtroEstado: FiltroEstadoOT =
+
+    (FILTRO_ESTADO_OT_VALORES as readonly string[]).includes(filtroEstadoRaw)
+
+      ? (filtroEstadoRaw as FiltroEstadoOT)
+
+      : 'todos';
+
+  const setFiltroEstado = (v: FiltroEstadoOT) => {
+
+    setSearchParams(
+
+      (prev) => {
+
+        const next = new URLSearchParams(prev);
+
+        if (v === 'todos') next.delete('estado');
+
+        else next.set('estado', v);
+
+        return next;
+
+      },
+
+      { replace: true },
+
+    );
+
+  };
+
+
+
+  const [form, setForm] = useState<Omit<CrearOTInput, 'enviar'>>(() => formInicialOT(usuario?.id ?? ''));
+
+  const [borradorOTId, setBorradorOTId] = useState<Id | null>(null);
+
+  const borradorOTIdRef = useRef<Id | null>(null);
+
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null);
+
+  const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>('idle');
+
+  const [draftTick, setDraftTick] = useState(0);
+
+  const borradorHidratadoRef = useRef(false);
+
+
+
+  const { data: borradorServidor, isLoading: borradorCargando } = useQuery({
+
+    queryKey: [Q_OT_BORRADOR, usuario?.id],
+
+    enabled: Boolean(modalForm && !editandoOT && usuario?.id),
+
+    queryFn: () => getBorradorOTUsuario(usuario!.id),
+
+  });
+
+
+
   useEffect(() => {
-    if (!modalForm || editandoOT || !usuario?.id) return;
-    const key = OT_NUEVA_DRAFT_PREFIX + usuario.id;
+
+    borradorOTIdRef.current = borradorOTId;
+
+  }, [borradorOTId]);
+
+
+
+  useEffect(() => {
+
+    if (!modalForm) {
+
+      borradorHidratadoRef.current = false;
+
+      return;
+
+    }
+
+    if (editandoOT || borradorCargando || borradorHidratadoRef.current) return;
+
+
+
+    borradorHidratadoRef.current = true;
+
+    if (borradorServidor) {
+
+      setBorradorOTId(borradorServidor.id);
+
+      borradorOTIdRef.current = borradorServidor.id;
+
+      setDraftUpdatedAt(borradorServidor.updated_at);
+
+      setForm(ordenTrabajoToForm(borradorServidor));
+
+      setDraftSaveStatus('saved');
+
+    }
+
+  }, [modalForm, editandoOT, borradorCargando, borradorServidor]);
+
+
+
+  useEffect(() => {
+
+    if (!modalForm || !draftUpdatedAt) return;
+
+    const id = window.setInterval(() => setDraftTick((t) => t + 1), 1000);
+
+    return () => window.clearInterval(id);
+
+  }, [modalForm, draftUpdatedAt]);
+
+
+
+  const draftSavedLabel = useMemo(
+
+    () => formatBorradorGuardadoHace(draftUpdatedAt),
+
+    [draftUpdatedAt, draftTick],
+
+  );
+
+
+
+  const formVacio = useMemo(
+
+    () => formInicialOT(usuario?.id ?? ''),
+
+    [usuario?.id],
+
+  );
+
+
+
+  const hasUnsavedChanges = modalForm && tieneContenidoBorrador(form, formVacio);
+
+
+
+  // Autoguardado en servidor (debounce 2s)
+
+  useEffect(() => {
+
+    if (!modalForm || !usuario?.id) return;
+
+    const vacio = formInicialOT(usuario.id);
+
+    if (!tieneContenidoBorrador(form, vacio)) return;
+
+
+
     const t = window.setTimeout(() => {
-      const base = formInicial(usuario.id);
-      const sameAsEmpty = JSON.stringify(form) === JSON.stringify(base);
-      try {
-        if (sameAsEmpty) localStorage.removeItem(key);
-        else localStorage.setItem(key, JSON.stringify(form));
-      } catch { /* quota */ }
-    }, 500);
+
+      void (async () => {
+
+        setDraftSaveStatus('saving');
+
+        try {
+
+          const payload = normalizarFormOTParaGuardar(form, usuario.id);
+
+          const otId = editandoOT?.id ?? borradorOTIdRef.current;
+
+
+
+          const ot = otId
+
+            ? await actualizarOrdenTrabajo(formToActualizarInput(form, otId, false))
+
+            : await crearOrdenTrabajo(payload);
+
+
+
+          if (!editandoOT) {
+
+            setBorradorOTId(ot.id);
+
+            borradorOTIdRef.current = ot.id;
+
+          }
+
+          setDraftUpdatedAt(ot.updated_at);
+
+          setDraftSaveStatus('saved');
+
+          void qc.invalidateQueries({ queryKey: [Q_OT] });
+
+          void qc.invalidateQueries({ queryKey: [Q_OT_BORRADOR, usuario.id] });
+
+        } catch (err) {
+
+          console.error('[autosaveOT]', err);
+
+          setDraftSaveStatus('error');
+
+        }
+
+      })();
+
+    }, AUTOSAVE_MS);
+
+
+
     return () => window.clearTimeout(t);
-  }, [form, modalForm, editandoOT, usuario?.id]);
+
+  }, [form, modalForm, editandoOT, usuario?.id, qc]);
+
+
 
   const [receptorNombre, setReceptorNombre] = useState('');
+
   const [receptorDni, setReceptorDni] = useState('');
+
   const [receptorCargo, setReceptorCargo] = useState('');
+
   const [obsCierre, setObsCierre] = useState('');
 
-  // ── Estado UI — Tipos de trabajo ──────────────────────────────────────────
+
+
   const [nuevoTipoNombre, setNuevoTipoNombre] = useState('');
 
-  // ── Invalidar ─────────────────────────────────────────────────────────────
+
+
   const invalidarOTs = () => invalidateRelatedQueries(qc, ['ot']);
+
   const invalidarTipos = () => qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TIPOS_OT] });
 
-  // ── Mutaciones — OTs ──────────────────────────────────────────────────────
+
+
+  const enviarOT = useCallback(async () => {
+    const otId = editandoOT?.id ?? borradorOTIdRef.current;
+    if (otId) {
+      return actualizarOrdenTrabajo(formToActualizarInput(form, otId, true));
+    }
+    return crearOrdenTrabajo({ ...form, creado_por: usuario!.id, enviar: true });
+  }, [form, editandoOT, usuario]);
+
+
+
+  const resetFormularioOT = useCallback(() => {
+
+    setBorradorOTId(null);
+
+    borradorOTIdRef.current = null;
+
+    setDraftUpdatedAt(null);
+
+    setDraftSaveStatus('idle');
+
+    setForm(formInicialOT(usuario?.id ?? ''));
+
+    void qc.removeQueries({ queryKey: [Q_OT_BORRADOR, usuario?.id] });
+
+  }, [qc, usuario?.id]);
+
+
+
   const mutCrear = useMutation({
-    mutationFn: () => crearOrdenTrabajo({ ...form, enviar: true }),
+
+    mutationFn: enviarOT,
+
     onSuccess: async (ot) => {
+
       await invalidarOTs();
-      if (usuario?.id) {
-        try { localStorage.removeItem(OT_NUEVA_DRAFT_PREFIX + usuario.id); } catch { /* ignore */ }
-      }
+
       if (ot.estado === 'pendiente') {
+
         void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+
       }
+
       setModalForm(false);
-      setForm(formInicial(usuario?.id ?? ''));
+
+      setEditandoOT(null);
+
+      resetFormularioOT();
+
       toast.success(`${ot.numero} enviada al jefe`);
+
     },
+
     onError: (err) => { console.error('[mutCrearOT]', err); toast.error('No se pudo crear la OT.'); },
+
   });
+
+
 
   const mutActualizar = useMutation({
-    mutationFn: () => actualizarOrdenTrabajo({ ...form, otId: editandoOT!.id, enviar: true }),
+
+    mutationFn: enviarOT,
+
     onSuccess: async () => {
+
       await invalidarOTs();
+
       void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
-      setModalForm(false); setEditandoOT(null);
+
+      setModalForm(false);
+
+      setEditandoOT(null);
+
+      resetFormularioOT();
+
       toast.success('OT enviada al jefe');
+
     },
+
     onError: (err) => { console.error('[mutActualizarOT]', err); toast.error('No se pudo actualizar la OT.'); },
+
   });
+
+
 
   const mutAprobar = useMutation({
+
     mutationFn: (otId: Id) => aprobarOT(otId, usuario!.id),
+
     onSuccess: async (_data, otId) => {
+
       await invalidarOTs();
+
       void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+
       toast.success('OT aprobada');
-      // Notificar al creador de la OT
+
       const ot = ordenes.find((o) => o.id === otId);
+
       if (ot) {
+
         void publicarEventoUsuario({
+
           tipo:      'ot_aprobada',
+
           usuarioId: ot.creado_por,
+
           otId:      ot.id,
+
           numero:    ot.numero,
+
         });
+
       }
+
     },
+
     onError: (err) => { console.error('[mutAprobarOT]', err); toast.error('No se pudo aprobar la OT.'); },
+
   });
+
+
 
   const mutRechazar = useMutation({
+
     mutationFn: ({ otId, motivo }: { otId: Id; motivo: string }) => rechazarOT(otId, usuario!.id, motivo),
+
     onSuccess: async (_data, { otId, motivo }) => {
+
       await invalidarOTs();
+
       void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+
       setModalRechazar(null); setMotivoRechazo('');
+
       toast.success('OT rechazada');
-      // Notificar al creador de la OT
+
       const ot = ordenes.find((o) => o.id === otId);
+
       if (ot) {
+
         void publicarEventoUsuario({
+
           tipo:      'ot_rechazada',
+
           usuarioId: ot.creado_por,
+
           otId:      ot.id,
+
           numero:    ot.numero,
+
           motivo,
+
         });
+
       }
+
     },
+
     onError: (err) => { console.error('[mutRechazarOT]', err); toast.error('No se pudo rechazar la OT.'); },
+
   });
+
+
 
   const mutIniciar = useMutation({
+
     mutationFn: (otId: Id) => iniciarEjecucionOT(otId, usuario!.id),
+
     onSuccess: async () => { await invalidarOTs(); toast.success('OT en ejecución'); },
+
     onError: (err) => { console.error('[mutIniciarOT]', err); toast.error('No se pudo iniciar la OT.'); },
+
   });
+
+
 
   const mutCompletar = useMutation({
+
     mutationFn: () => completarOT({
+
       otId: modalCompletar!.id,
+
       usuarioId: usuario!.id,
+
       receptorNombre,
+
       receptorDni,
+
       receptorCargo,
-      observacionesCierre: obsCierre || undefined,
+
+      ...(obsCierre.trim() ? { observacionesCierre: obsCierre.trim() } : {}),
+
     }),
+
     onSuccess: async () => {
+
       await invalidarOTs();
+
       setModalCompletar(null);
+
       setReceptorNombre(''); setReceptorDni(''); setReceptorCargo(''); setObsCierre('');
+
       toast.success('OT completada');
+
     },
+
     onError: (err) => { console.error('[mutCompletarOT]', err); toast.error('No se pudo completar la OT.'); },
+
   });
+
+
 
   const mutCancelar = useMutation({
+
     mutationFn: (otId: Id) => cancelarOrdenTrabajo(otId, usuario!.id),
+
     onSuccess: async () => { await invalidarOTs(); toast.success('OT cancelada'); },
+
     onError: (err) => { console.error('[mutCancelarOT]', err); toast.error('No se pudo cancelar la OT.'); },
+
   });
 
-  // ── Mutaciones — Tipos de trabajo ─────────────────────────────────────────
+
+
   const mutCrearTipo = useMutation({
+
     mutationFn: () => crearTipoTrabajoOT(nuevoTipoNombre),
+
     onSuccess: async () => {
+
       await invalidarTipos();
+
       setNuevoTipoNombre('');
+
       toast.success('Tipo de trabajo agregado');
+
     },
+
     onError: (err) => { console.error('[mutCrearTipo]', err); toast.error('No se pudo agregar el tipo.'); },
+
   });
+
+
 
   const mutToggleTipo = useMutation({
+
     mutationFn: ({ id, activo }: { id: Id; activo: boolean }) => toggleTipoTrabajoOT(id, activo),
-    // FIX: optimistic update — cambia el estado localmente antes del refetch
+
     onMutate: async ({ id, activo }) => {
+
       await qc.cancelQueries({ queryKey: [Q_TIPOS_OT] });
+
       const prev = qc.getQueryData([Q_TIPOS_OT]);
+
       qc.setQueryData([Q_TIPOS_OT], (old: typeof tiposTrabajo) =>
+
         old.map((t) => t.id === id ? { ...t, activo } : t),
+
       );
+
       return { prev };
+
     },
+
     onError: (err, _, ctx) => {
-      // Revertir si falla
+
       if (ctx?.prev) qc.setQueryData([Q_TIPOS_OT], ctx.prev);
+
       console.error('[mutToggleTipo]', err);
+
       toast.error('No se pudo actualizar el tipo.');
+
     },
+
     onSettled: () => { void invalidarTipos(); },
+
   });
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+
+
   function abrirNuevaOT() {
+
     setEditandoOT(null);
-    const uid = usuario?.id ?? '';
-    const base = formInicial(uid);
-    let next = base;
-    if (uid) {
-      try {
-        const partial = safeParseOTDraft(localStorage.getItem(OT_NUEVA_DRAFT_PREFIX + uid));
-        if (partial) next = { ...base, ...partial, creado_por: uid };
-      } catch { /* ignore */ }
-    }
-    setForm(next);
+
+    setBorradorOTId(null);
+
+    borradorOTIdRef.current = null;
+
+    setDraftUpdatedAt(null);
+
+    setDraftSaveStatus('idle');
+
+    borradorHidratadoRef.current = false;
+
+    setForm(formInicialOT(usuario?.id ?? ''));
+
     setModalForm(true);
+
   }
+
+
 
   function abrirEditarOT(ot: OrdenTrabajo) {
+
     setEditandoOT(ot);
-    setForm({
-      creado_por: ot.creado_por, tipo_trabajo_id: ot.tipo_trabajo_id,
-      tarea_id: ot.tarea_id, descripcion: ot.descripcion,
-      area_destino: ot.area_destino, ubicacion: ot.ubicacion ?? '',
-      modalidad: ot.modalidad, fecha_estimada: ot.fecha_estimada,
-      hora_inicio_est: ot.hora_inicio_est ?? '', duracion_est_min: ot.duracion_est_min,
-      equipos_materiales: ot.equipos_materiales ?? '', observaciones: ot.observaciones ?? '',
-    });
+
+    setBorradorOTId(ot.estado === 'borrador' ? ot.id : null);
+
+    borradorOTIdRef.current = ot.estado === 'borrador' ? ot.id : null;
+
+    setDraftUpdatedAt(ot.updated_at);
+
+    setDraftSaveStatus('saved');
+
+    borradorHidratadoRef.current = true;
+
+    setForm(ordenTrabajoToForm(ot));
+
     setModalForm(true);
+
   }
 
-  const ordenesFiltradas = filtroEstado === 'todos' ? ordenes : ordenes.filter((o) => o.estado === filtroEstado);
+
+
+  function cerrarFormularioOT() {
+
+    setModalForm(false);
+
+    setEditandoOT(null);
+
+  }
+
+
+
+  const ESTADOS_OT_ACTIVAS: EstadoOT[] = ['borrador', 'pendiente', 'aprobada', 'en_ejecucion'];
+
+  const ordenesFiltradas = (() => {
+
+    if (filtroEstado === 'todos') return ordenes;
+
+    if (filtroEstado === 'activas') return ordenes.filter((o) => ESTADOS_OT_ACTIVAS.includes(o.estado));
+
+    if (filtroEstado === 'completadas') return ordenes.filter((o) => o.estado === 'completada');
+
+    return ordenes.filter((o) => o.estado === filtroEstado);
+
+  })();
+
   const pendientesCount = ordenes.filter((o) => o.estado === 'pendiente').length;
-  const canCompletar = receptorNombre.trim().length > 0 && receptorDni.trim().length > 0 && receptorCargo.trim().length > 0;
+
+  const canCompletar = puedeCompletarOTReceptor(receptorNombre, receptorDni);
+
   const canCrearTipo = nuevoTipoNombre.trim().length > 0 && !mutCrearTipo.isPending;
+
   const tiposActivos = tiposTrabajo.filter((t) => t.activo);
+
   const tiposInactivos = tiposTrabajo.filter((t) => !t.activo);
 
+
+
   return {
+
     usuario, esJefe,
+
     ordenes: ordenesFiltradas, isLoading, isError,
+
     pendientesCount,
+
     tiposTrabajo, tiposActivos, tiposInactivos,
+
     tareasVinculables,
+
     filtroEstado, setFiltroEstado,
+
     form, setForm,
+
     modalForm, setModalForm, editandoOT,
+
+    borradorCargando,
+
+    draftSaveStatus, draftSavedLabel,
+
+    hasUnsavedChanges,
+
     viendoOT, setViendoOT,
+
     imprimiendoOT, setImprimiendoOT,
+
     modalCompletar, setModalCompletar,
+
     modalRechazar, setModalRechazar,
+
     motivoRechazo, setMotivoRechazo,
+
     receptorNombre, setReceptorNombre,
+
     receptorDni, setReceptorDni,
+
     receptorCargo, setReceptorCargo,
+
     obsCierre, setObsCierre,
+
     canCompletar,
+
     nuevoTipoNombre, setNuevoTipoNombre, canCrearTipo,
-    abrirNuevaOT, abrirEditarOT,
+
+    abrirNuevaOT, abrirEditarOT, cerrarFormularioOT,
+
     mutCrear, mutActualizar, mutAprobar, mutRechazar,
+
     mutIniciar, mutCompletar, mutCancelar,
+
     mutCrearTipo, mutToggleTipo,
+
   };
+
 }
+

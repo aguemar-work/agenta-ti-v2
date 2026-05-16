@@ -208,7 +208,7 @@
   display: none; position: fixed; bottom: 0; left: 0; right: 0;
   height: var(--mc-bottom-nav-h);
   background: var(--mc-color-surface);
-  border-top: 1px solid var(--mc-color-border); z-index: 40;
+  border-top: 1px solid var(--mc-color-border); z-index: var(--mc-z-bottom-nav, 40);
 }
 .mc-bottom-nav-inner {
   display: flex; align-items: stretch; height: 100%;
@@ -253,7 +253,7 @@
   border-radius: 16px 16px 0 0;
   z-index: 46; padding: 8px;
   display: flex; flex-direction: column; gap: 2px;
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
 }
 .mc-mas-drawer--open  { transform: translateY(0);    opacity: 1; }
 .mc-mas-drawer--closed{ transform: translateY(100%); opacity: 0; pointer-events: none; }
@@ -281,4 +281,13 @@
   .mc-bottom-nav    { display: block; }
   .mc-mobile-topbar { display: flex; }
   .mc-app-root .mc-main { padding-bottom: calc(var(--mc-bottom-nav-h) + 16px); }
+}
+
+/* Mi Semana (md+): sin topbar ni bottom nav — más alto útil para columnas */
+@media (min-width: 768px) {
+  :root {
+    --mc-semana-dia-col-max-height: calc(
+      100dvh - var(--mc-main-padding-block) - var(--mc-semana-page-chrome)
+    );
+  }
 }

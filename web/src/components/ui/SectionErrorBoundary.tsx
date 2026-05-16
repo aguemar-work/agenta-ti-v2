@@ -9,6 +9,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
+import { captureSentryException } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -35,18 +36,22 @@ export class SectionErrorBoundary extends Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     const label = this.props.label ?? 'Sección';
     console.error(`[SectionErrorBoundary:${label}]`, error, info.componentStack);
+    captureSentryException(error, {
+      label,
+      ...(info.componentStack ? { componentStack: info.componentStack } : {}),
+    });
   }
 
-  componentDidUpdate(prevProps: Props) {
+  override componentDidUpdate(prevProps: Props) {
     if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
       this.setState({ hasError: false, message: '' });
     }
   }
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children;
     if (this.props.fallback) return this.props.fallback;
 

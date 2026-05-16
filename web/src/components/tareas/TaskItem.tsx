@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 
 import { useMenuPosition } from '@/hooks/useMenuPosition';
-import { TAREA_BADGE, TAREA_LABEL, URGENCIA_LABEL, STATE_TOKENS, URGENCIA_TOKENS } from '@/lib/estadoConfig';
+import { URGENCIA_LABEL, STATE_TOKENS, URGENCIA_TOKENS } from '@/lib/estadoConfig';
+import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { urgenciaHoraria } from '@/lib/tareaUrgencia';
 import type { EstadoTarea, Tarea, UrgenciaHoraria } from '@/types';
 
@@ -145,7 +146,7 @@ export function TaskItem({
 
   const meta = (
     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs" style={textColorStyle}>
-      <span className={`mc-badge ${TAREA_BADGE[est]}`}>{TAREA_LABEL[est]}</span>
+      <TareaEstadoIndicator estado={est} />
       {urgenciaTag}
       {asignadoNombre && <span>{asignadoNombre}</span>}
       {objetivoTitulo && <span>· {objetivoTitulo}</span>}
@@ -295,7 +296,7 @@ export function TaskItem({
   // Meta reducido: solo estado + urgencia. Asignado/objetivo/fecha van al detalle.
   const metaWeek = (
     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs" style={textColorStyle}>
-      <span className={`mc-badge ${TAREA_BADGE[est]}`}>{TAREA_LABEL[est]}</span>
+      <TareaEstadoIndicator estado={est} />
       {urgenciaTag}
       {readOnly && <Lock className="inline" size={12} aria-label="Solo lectura" />}
     </div>

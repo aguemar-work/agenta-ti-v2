@@ -7,6 +7,7 @@
 
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type KeyboardEvent,
@@ -14,7 +15,11 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
+import { trackModalClose, trackModalOpen } from '@/lib/analytics';
+
 type ModalSize = 'sm' | 'md' | 'lg';
+/** 0 = base · 1 = sobre otro modal · 2 = confirmaciones críticas encima de todo */
+export type ModalStackLevel = 0 | 1 | 2;
 
 const SIZE_CLASS: Record<ModalSize, string> = {
   sm: 'max-w-sm',
@@ -36,7 +41,23 @@ interface ModalProps {
   bodyClassName?: string;
   hasUnsavedChanges?: boolean;
   discardMessage?: string;
+  /** Capa z-index cuando conviven varios overlays (p. ej. completar tras detalle). */
+  stackLevel?: ModalStackLevel;
+  /** Texto descriptivo enlazado con aria-describedby (recomendado en acciones destructivas). */
+  description?: string;
+  /** Si el cuerpo ya incluye la descripción visible, su id (evita párrafo duplicado). */
+  descriptionElementId?: string;
+  /** Id estable para analytics (modal_open / modal_close + abandono). */
+  analyticsId?: string;
 }
+
+export { markModalCompleted } from '@/lib/analytics';
+
+const STACK_OVERLAY_CLASS: Record<ModalStackLevel, string> = {
+  0: '',
+  1: 'mc-modal-overlay--stack',
+  2: 'mc-modal-overlay--top',
+};
 
 const FOCUSABLE =
   'a[href], area[href], input:not([disabled]), select:not([disabled]), ' +
@@ -55,27 +76,43 @@ export function Modal({
   bodyClassName,
   hasUnsavedChanges = false,
   discardMessage = '¿Descartar los cambios? Se perderá la información ingresada.',
+  stackLevel = 0,
+  description,
+  descriptionElementId,
+  analyticsId,
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2)}`).current;
+  const titleId = useId();
+  const generatedDescId = useId();
+  const describedById = descriptionElementId ?? (description ? generatedDescId : undefined);
 
   const [confirmingClose, setConfirmingClose] = useState(false);
 
+  function emitClose() {
+    if (analyticsId) trackModalClose(analyticsId);
+    onClose();
+  }
+
   function tryClose() {
     if (hasUnsavedChanges) setConfirmingClose(true);
-    else onClose();
+    else emitClose();
   }
 
   function confirmDiscard() {
     setConfirmingClose(false);
-    onClose();
+    emitClose();
   }
 
   function cancelDiscard() {
     setConfirmingClose(false);
     dialogRef.current?.focus();
   }
+
+  useEffect(() => {
+    if (!open || !analyticsId) return;
+    trackModalOpen(analyticsId);
+  }, [open, analyticsId]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,11 +154,11 @@ export function Modal({
     if (e.shiftKey) {
       if (document.activeElement === first) {
         e.preventDefault();
-        last.focus();
+        last?.focus();
       }
     } else if (document.activeElement === last) {
       e.preventDefault();
-      first.focus();
+      first?.focus();
     }
   }
 
@@ -130,7 +167,7 @@ export function Modal({
   return createPortal(
     <div
       ref={overlayRef}
-      className="mc-modal-overlay"
+      className={['mc-modal-overlay', STACK_OVERLAY_CLASS[stackLevel]].filter(Boolean).join(' ')}
       role="presentation"
       onClick={(e) => {
         if (e.target === overlayRef.current) tryClose();
@@ -141,6 +178,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        {...(describedById ? { 'aria-describedby': describedById } : {})}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={`mc-modal-dialog ${SIZE_CLASS[size]}`}
@@ -184,7 +222,14 @@ export function Modal({
           </button>
         </div>
 
-        <div className={['mc-modal-body', bodyClassName].filter(Boolean).join(' ')}>{children}</div>
+        <div className={['mc-modal-body', bodyClassName].filter(Boolean).join(' ')}>
+          {description && !descriptionElementId ? (
+            <p id={generatedDescId} className="mc-modal-description">
+              {description}
+            </p>
+          ) : null}
+          {children}
+        </div>
 
         {footer ? (
           <div className={['mc-modal-footer', footerClassName].filter(Boolean).join(' ')}>{footer}</div>
@@ -196,13 +241,14 @@ export function Modal({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="confirm-discard-title"
+            aria-describedby="confirm-discard-desc"
           >
             <div className="mc-modal-confirm-card">
               <div>
                 <p id="confirm-discard-title" className="mc-modal-confirm-title">
                   ¿Descartar cambios?
                 </p>
-                <p className="mc-modal-confirm-desc">{discardMessage}</p>
+                <p id="confirm-discard-desc" className="mc-modal-confirm-desc">{discardMessage}</p>
               </div>
               <div className="mc-modal-confirm-actions">
                 <button

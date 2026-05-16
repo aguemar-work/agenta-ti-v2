@@ -5,7 +5,14 @@
  * Extraído de useMiSemanaPage para separar responsabilidades.
  */
 
-import { type DragEndEvent, type DragOverEvent } from '@dnd-kit/core';
+import {
+  type DragEndEvent,
+  type DragOverEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -13,6 +20,23 @@ import { reprogramarTareaConLog } from '@/hooks/useTareas';
 import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Tarea } from '@/types';
+
+/** Mouse: evita activar drag en clics accidentales. */
+export const SEMANA_DND_POINTER_ACTIVATION = { distance: 8 } as const;
+
+/**
+ * Touch: delay distingue scroll vertical de intención de drag (M-01).
+ * Sin delay, el scroll de la columna del día queda bloqueado.
+ */
+export const SEMANA_DND_TOUCH_ACTIVATION = { delay: 250, tolerance: 5 } as const;
+
+/** Sensores DnD Mi Semana — usar en `DndContext` de la grilla semanal. */
+export function useSemanaDnDSensors() {
+  return useSensors(
+    useSensor(PointerSensor, { activationConstraint: SEMANA_DND_POINTER_ACTIVATION }),
+    useSensor(TouchSensor,   { activationConstraint: SEMANA_DND_TOUCH_ACTIVATION }),
+  );
+}
 
 export function useSemanaDnD({
   tareasPlan,
@@ -66,6 +90,7 @@ export function useSemanaDnD({
     const tid = String(active.id).replace('tarea-', '');
     const t   = tareaPorId.get(tid);
     if (!t) return;
+    if (t.estado === 'completada' || t.estado === 'cancelada') return;
 
     const oid = String(over.id);
     if (!oid.startsWith('day-')) return;

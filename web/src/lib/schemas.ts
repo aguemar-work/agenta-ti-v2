@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { Evento, NotaBitacora, Tarea, Usuario } from '@/types';
+import { OT_MIGRATION_028_APLICADA, ordenTrabajoCompletadaTieneReceptor } from '@/lib/otComplecion';
 
 const id      = z.string().uuid();
 const idNul   = z.string().uuid().nullable();
@@ -170,6 +171,23 @@ export const OrdenTrabajoSchema = z.object({
   aprobador:    z.object({ nombre: z.string() }).nullable().optional(),
   tarea:        z.object({ titulo: z.string() }).nullable().optional(),
   objetivo:     z.object({ titulo: z.string() }).nullable().optional(),
+}).superRefine((ot, ctx) => {
+  if (!OT_MIGRATION_028_APLICADA) return;
+  if (ordenTrabajoCompletadaTieneReceptor(ot)) return;
+  if (!ot.receptor_nombre?.trim()) {
+    ctx.addIssue({
+      code:     'custom',
+      path:     ['receptor_nombre'],
+      message:  'OT completada sin nombre de receptor (migración 028)',
+    });
+  }
+  if (!ot.receptor_dni?.trim()) {
+    ctx.addIssue({
+      code:     'custom',
+      path:     ['receptor_dni'],
+      message:  'OT completada sin DNI de receptor (migración 028)',
+    });
+  }
 });
 
 export function parseTipoTrabajoOT(row: Record<string, unknown>) {

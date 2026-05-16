@@ -22,34 +22,6 @@
       padding: var(--mc-space-5);
     }
   
-    /* ── KPI ─────────────────────────────────────────────────────────────── */
-    .mc-kpi-grid {
-      display: grid;
-      gap: var(--mc-space-4);
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    }
-  
-    .mc-kpi-card {
-      border: 1px solid var(--mc-color-border);
-      border-radius: var(--mc-radius-lg);
-      box-shadow: var(--mc-card-shadow);
-      background: var(--mc-color-surface);
-      padding: var(--mc-space-4);
-    }
-  
-    .mc-kpi-value {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--mc-color-text);
-      line-height: 1.2;
-    }
-  
-    .mc-kpi-label {
-      margin-top: var(--mc-space-2);
-      font-size: 12px;
-      color: var(--mc-color-text-secondary);
-    }
-  
     /* ── Table ───────────────────────────────────────────────────────────── */
     .mc-table {
       width: 100%;
@@ -133,6 +105,87 @@
       background: color-mix(in srgb, var(--mc-color-neutral) 12%, transparent);
       color: var(--mc-color-neutral);
     }
+
+    /* Pills de estado (Planificación) — solo tokens --mc-state-* */
+    .mc-tarea-estado-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      vertical-align: middle;
+    }
+
+    .mc-tarea-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: var(--mc-radius-sm);
+      padding: 2px 6px;
+      border: 1px solid transparent;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .mc-tarea-pill--pendiente {
+      background: var(--mc-state-pendiente-bg);
+      color:      var(--mc-state-pendiente-fg);
+      border-style: dotted;
+      border-color: var(--mc-state-pendiente-fg);
+    }
+
+    .mc-tarea-pill--en_progreso {
+      background: var(--mc-state-progreso-bg);
+      color:      var(--mc-state-progreso-border);
+    }
+
+    .mc-tarea-pill--completada {
+      background: var(--mc-state-completada-bg);
+      color:      var(--mc-state-completada-fg);
+    }
+
+    .mc-tarea-pill--bloqueada {
+      background: var(--mc-state-precaucion-bg-soft);
+      color:      var(--mc-state-bloqueada-meta);
+      border-style: dashed;
+      border-color: var(--mc-state-bloqueada-border);
+    }
+
+    .mc-tarea-pill--atrasada {
+      background: var(--mc-state-atrasada-bg);
+      color:      var(--mc-state-atrasada-meta);
+      border-left-width: 3px;
+      border-left-style: solid;
+      border-left-color: var(--mc-state-atrasada-border);
+    }
+
+    .mc-tarea-pill--reprogramada {
+      background: var(--mc-state-reprogramada-bg);
+      color:      var(--mc-state-reprogramada-fg);
+    }
+
+    .mc-tarea-pill--cancelada {
+      background: var(--mc-state-cancelada-bg);
+      color:      var(--mc-state-cancelada-fg);
+      text-decoration: line-through;
+      border-style: double;
+      border-color: var(--mc-state-cancelada-fg);
+    }
+
+    .mc-modal-description {
+      margin: 0 0 var(--mc-space-4);
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text-secondary);
+      line-height: 1.55;
+    }
+
+    /* Fallback de carga entre rutas lazy */
+    .mc-page-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      color: var(--mc-color-text-secondary);
+      font-size: var(--mc-text-base);
+    }
   
     /* ── Empty state ─────────────────────────────────────────────────────── */
     .mc-empty {
@@ -185,6 +238,17 @@
     }
   
     /* ── Dropdown ────────────────────────────────────────────────────────── */
+    .mc-dropdown-menu--portal {
+      position: fixed;
+      bottom: auto;
+      right: auto;
+      z-index: var(--mc-z-popover);
+      min-width: 170px;
+      border-radius: var(--mc-radius-lg);
+      padding: 4px 0;
+      transform-origin: top right;
+    }
+
     .mc-dropdown-menu {
       position: absolute;
       bottom: calc(100% + 6px);
@@ -423,9 +487,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 50;
+      z-index: var(--mc-z-modal, 70);
       padding: var(--mc-space-4);
       animation: mc-fade-in var(--mc-duration-fast) var(--mc-ease);
+    }
+
+    .mc-modal-overlay--stack {
+      z-index: var(--mc-z-modal-stack, 80);
+    }
+
+    .mc-modal-overlay--top {
+      z-index: var(--mc-z-modal-top, 90);
     }
 
     .mc-modal-dialog {
@@ -591,6 +663,80 @@
     .mc-modal-form-tabs button:disabled {
       opacity: 0.45;
       cursor: not-allowed;
+    }
+
+    /* Modal: bottom sheet en viewport estrecho (mejor uso táctil y altura) */
+    @media (max-width: 767px) {
+      .mc-modal-overlay {
+        align-items: flex-end;
+        justify-content: stretch;
+        padding: 0;
+        padding-left: env(safe-area-inset-left, 0);
+        padding-right: env(safe-area-inset-right, 0);
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--mc-space-2));
+      }
+
+      .mc-modal-overlay .mc-modal-dialog {
+        width: 100%;
+        max-width: none;
+        max-height: min(90dvh, 100dvh - env(safe-area-inset-bottom, 0px));
+        border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
+        margin: 0;
+      }
+    }
+
+    /* Planificación: tabla con scroll horizontal y columna miembro sticky */
+    .planificacion-carga-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .planificacion-carga-table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    .planificacion-carga-table .planificacion-celda-miembro {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      background: var(--mc-color-surface);
+      box-shadow: 4px 0 10px -6px color-mix(in srgb, var(--mc-color-text) 14%, transparent);
+    }
+
+    .planificacion-carga-table thead .planificacion-celda-miembro {
+      z-index: 11;
+    }
+
+    .planificacion-carga-table tr.planificacion-fila-resumen .planificacion-celda-miembro {
+      background: var(--mc-color-bg-secondary);
+    }
+
+    /* Mi Semana: scroll vertical por columna de día (C-05) */
+    .mc-semana-dia-col {
+      max-height: var(--mc-semana-dia-col-max-height);
+    }
+
+    .mc-semana-dia-drop {
+      overflow-y: auto;
+      min-height: 0;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Planificación: celdas más compactas en tablet */
+    @media (max-width: 1023px) {
+      .planificacion-carga-table th,
+      .planificacion-carga-table td {
+        padding: 6px var(--mc-space-2);
+        font-size: var(--mc-text-xs);
+      }
+
+      .planificacion-carga-table .planificacion-celda-btn {
+        font-size: 10px;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+      }
     }
 
     /* Confirmación de descarte — overlay interno */
@@ -818,7 +964,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.25);
-      z-index: 60;
+      z-index: var(--mc-z-drawer, 60);
       animation: mc-fade-in var(--mc-duration-fast) var(--mc-ease);
     }
     .mc-drawer-panel {
@@ -829,7 +975,7 @@
       width: min(360px, 100vw - 40px);
       background: var(--mc-color-surface);
       border-left: 0.5px solid var(--mc-color-border);
-      z-index: 61;
+      z-index: calc(var(--mc-z-drawer, 60) + 1);
       display: flex;
       flex-direction: column;
       box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
@@ -960,6 +1106,33 @@
       justify-content: center;
     }
 
+    /* ── Progress / charts (Métricas) ───────────────────────────────── */
+    .mc-progress-track {
+      height: 8px;
+      border-radius: var(--mc-radius-md);
+      background: color-mix(in srgb, var(--mc-color-text) 8%, transparent);
+      overflow: hidden;
+    }
+
+    .mc-progress-fill {
+      height: 100%;
+      border-radius: var(--mc-radius-md);
+      transition: width 0.4s ease;
+    }
+
+    .mc-chart-segment-value {
+      font-size: 9px;
+      font-weight: 700;
+      color: color-mix(in srgb, var(--mc-color-on-accent) 90%, transparent);
+      user-select: none;
+    }
+
+    /* ── DnD overlay (Mi Semana) ─────────────────────────────────────── */
+    .mc-drag-overlay-card {
+      box-shadow: var(--mc-card-shadow-drag);
+      transform: rotate(2deg);
+    }
+
     /* ── List-grid (alternativa a mc-table para layouts con grid) ────── */
     .mc-list-header {
       display: grid;
@@ -1003,82 +1176,372 @@
       padding: 0;
     }
 
-    /* ── StatusBadge (design-tokens --ds-*) ───────────────────────────────
-       Pill 11px, dot 5px, fondo suave + texto rampa; sin borde. */
-    .ds-status-badge {
-      display:         inline-flex;
-      align-items:     center;
-      gap:             6px;
-      padding:         3px 10px;
-      border-radius:   var(--ds-radius-pill);
-      font-family:     var(--ds-font-family);
-      font-size:       var(--ds-font-meta-size);
-      font-weight:     var(--ds-font-meta-weight);
-      line-height:     var(--ds-font-meta-leading);
-      box-sizing:      border-box;
-      white-space:     nowrap;
-      max-width:       100%;
+    /* ── Carga día (Mi semana) ─────────────────────────────────────── */
+    .mc-carga-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--mc-space-1);
+      flex-shrink: 0;
     }
-
-    .ds-status-badge__dot {
-      width:         5px;
-      height:        5px;
+    .mc-carga-indicator__dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      flex-shrink:   0;
+      flex-shrink: 0;
+    }
+    .mc-carga-indicator__label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--mc-color-text-secondary);
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .mc-carga-indicator__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     }
 
-    .ds-status-badge__label {
-      overflow:     hidden;
-      text-overflow: ellipsis;
-      min-width:    0;
+    /* ── Planificación: secciones colapsables en móvil ─────────────── */
+    .mc-planificacion-kpis {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    @media (max-width: 767px) {
+      .mc-planificacion-kpis {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .mc-planificacion-kpis .mc-kpi-card {
+        min-width: 0;
+      }
+    }
+    .mc-planificacion-details {
+      border: 0.5px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg);
+      background: var(--mc-color-surface);
+      overflow: hidden;
+    }
+    .mc-planificacion-details__summary {
+      list-style: none;
+      cursor: pointer;
+      padding: var(--mc-space-3) var(--mc-space-4);
+      font-size: var(--mc-text-sm);
+      font-weight: 600;
+      color: var(--mc-color-text);
+      border-bottom: 0.5px solid transparent;
+    }
+    .mc-planificacion-details__summary::-webkit-details-marker {
+      display: none;
+    }
+    .mc-planificacion-details[open] .mc-planificacion-details__summary {
+      border-bottom-color: var(--mc-color-border);
+    }
+    .mc-planificacion-details__body {
+      padding: var(--mc-space-4);
+    }
+    @media (max-width: 767px) {
+      .mc-planificacion-details__body > section > .mc-section-header:first-child {
+        display: none;
+      }
     }
 
-    .ds-status-badge--pendiente {
-      background: var(--ds-color-neutral-bg);
-      color:      var(--ds-color-text);
+    /* ── Onboarding y propuesta de valor ─────────────────────────────────── */
+    .mc-onboarding-step {
+      display: flex;
+      flex-direction: column;
+      gap: var(--mc-space-3);
     }
-    .ds-status-badge--pendiente .ds-status-badge__dot {
-      background: var(--ds-color-neutral);
+    .mc-onboarding-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--mc-radius-md);
+      background: var(--mc-color-accent-soft, color-mix(in srgb, var(--mc-color-accent) 12%, transparent));
+      color: var(--mc-color-accent);
+    }
+    .mc-onboarding-step-label {
+      margin: 0;
+      font-size: var(--mc-text-xs);
+      color: var(--mc-color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .mc-onboarding-step-title {
+      margin: 0;
+      font-size: var(--mc-text-md);
+      font-weight: 600;
+      color: var(--mc-color-text);
+    }
+    .mc-onboarding-step-body {
+      margin: 0;
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text-secondary);
+      line-height: 1.5;
+    }
+    .mc-onboarding-cta-link {
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      color: var(--mc-color-accent);
+      text-decoration: none;
+    }
+    .mc-onboarding-cta-link:hover {
+      text-decoration: underline;
     }
 
-    .ds-status-badge--en_progreso {
-      background: var(--ds-color-brand-bg);
-      color:      var(--ds-color-brand-fg-on-bg);
+    .mc-value-prop-banner {
+      border: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg);
+      background: var(--mc-color-bg-secondary);
+      padding: var(--mc-space-4);
     }
-    .ds-status-badge--en_progreso .ds-status-badge__dot {
-      background: var(--ds-color-brand);
+    .mc-value-prop-banner-inner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--mc-space-3);
+    }
+    .mc-value-prop-banner-title {
+      margin: 0 0 var(--mc-space-1);
+      font-size: var(--mc-text-sm);
+      font-weight: 600;
+      color: var(--mc-color-text);
+    }
+    .mc-value-prop-banner-desc {
+      margin: 0;
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text-secondary);
+      line-height: 1.45;
+    }
+    .mc-value-prop-banner-close {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: var(--mc-radius-md);
+      background: transparent;
+      color: var(--mc-color-text-secondary);
+      cursor: pointer;
+    }
+    .mc-value-prop-banner-close:hover {
+      background: var(--mc-color-surface);
+      color: var(--mc-color-text);
     }
 
-    .ds-status-badge--completada {
-      background: var(--ds-color-success-bg);
-      color:      var(--ds-color-success-fg);
+    .mc-notif-prefs-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--mc-space-3);
     }
-    .ds-status-badge--completada .ds-status-badge__dot {
-      background: var(--ds-color-success);
+    .mc-notif-prefs-item {
+      margin: 0;
     }
-
-    .ds-status-badge--atrasada {
-      background: var(--ds-color-danger-bg);
-      color:      var(--ds-color-danger-fg);
-    }
-    .ds-status-badge--atrasada .ds-status-badge__dot {
-      background: var(--ds-color-danger);
-    }
-
-    .ds-status-badge--reprogramada {
-      background: var(--ds-color-info-bg);
-      color:      var(--ds-color-info-fg);
-    }
-    .ds-status-badge--reprogramada .ds-status-badge__dot {
-      background: var(--ds-color-info);
+    .mc-notif-prefs-label {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-space-3);
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text);
+      cursor: pointer;
     }
 
-    .ds-status-badge--reunion {
-      background: var(--ds-color-warning-bg);
-      color:      var(--ds-color-warning-fg);
+    /* ── Mi Semana UX ─────────────────────────────────────────────────── */
+    .mc-misemana-resumen {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--mc-space-3);
+      padding: var(--mc-space-3) var(--mc-space-4);
+      border: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg);
+      background: var(--mc-color-bg-secondary);
     }
-    .ds-status-badge--reunion .ds-status-badge__dot {
-      background: var(--ds-color-warning);
+    .mc-misemana-resumen__items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--mc-space-3);
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-misemana-resumen__item {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--mc-space-1);
+    }
+    .mc-misemana-resumen__item--alert {
+      color: var(--mc-color-warning);
+    }
+    .mc-misemana-resumen__close {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--mc-space-1);
+      border: none;
+      border-radius: var(--mc-radius-md);
+      background: transparent;
+      color: var(--mc-color-text-secondary);
+      cursor: pointer;
+    }
+    .mc-misemana-resumen__close:hover {
+      background: var(--mc-color-surface);
+      color: var(--mc-color-text);
+    }
+
+    .mc-incidencia-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: var(--mc-space-1);
+      padding-top: var(--mc-space-1);
+      border-top: 1px dashed var(--mc-color-border);
+    }
+    .mc-incidencia-row {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-space-2);
+      width: 100%;
+      padding: 4px var(--mc-space-2);
+      border: none;
+      border-radius: var(--mc-radius-sm);
+      background: var(--mc-state-incidencia-bg);
+      cursor: pointer;
+      font: inherit;
+    }
+    .mc-incidencia-row:hover:not(:disabled) {
+      background: var(--mc-state-incidencia-border);
+    }
+    .mc-incidencia-row:disabled {
+      cursor: default;
+      opacity: 0.8;
+    }
+    .mc-incidencia-row__icon {
+      color: var(--mc-color-info);
+    }
+    .mc-incidencia-row__titulo {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--mc-color-text);
+    }
+    .mc-incidencia-row__meta {
+      font-size: 10px;
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-incidencia-row__ocultas {
+      margin: 0;
+      padding: 2px var(--mc-space-2);
+      font-size: 10px;
+      color: var(--mc-color-text-secondary);
+      text-align: center;
+    }
+
+    .mc-chip {
+      display: inline-flex;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: var(--mc-radius-sm);
+      border: none;
+      line-height: 1.4;
+    }
+    .mc-chip--vence-hoy {
+      background: var(--mc-color-warning-soft);
+      color: var(--mc-color-warning);
+    }
+    .mc-chip--ot {
+      background: var(--mc-color-accent-soft);
+      color: var(--mc-color-accent);
+      cursor: pointer;
+    }
+    .mc-chip--ot:hover {
+      text-decoration: underline;
+    }
+
+    .mc-semana-task-card--compact {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-space-2);
+      padding: var(--mc-space-2) var(--mc-space-3);
+    }
+    .mc-semana-task-card--compact .mc-semana-task-card__title {
+      margin: 0;
+      font-size: var(--mc-text-xs);
+    }
+
+    .mc-tarea-historial {
+      border-top: 1px solid var(--mc-color-border);
+      padding-top: var(--mc-space-3);
+    }
+    .mc-tarea-historial__summary {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-space-2);
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      color: var(--mc-color-text);
+      cursor: pointer;
+      list-style: none;
+    }
+    .mc-tarea-historial__summary::-webkit-details-marker { display: none; }
+    .mc-tarea-historial[open] .mc-tarea-historial__chevron { transform: rotate(180deg); }
+    .mc-tarea-historial__chevron { transition: transform 0.15s ease; }
+    .mc-tarea-historial__count {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--mc-color-bg-secondary);
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-tarea-historial__body {
+      padding-top: var(--mc-space-3);
+    }
+    .mc-tarea-historial__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--mc-space-2);
+    }
+    .mc-tarea-historial__item {
+      font-size: var(--mc-text-xs);
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-tarea-historial__time {
+      display: block;
+      font-weight: 500;
+      color: var(--mc-color-text);
+    }
+    .mc-tarea-historial__tipo {
+      font-weight: 600;
+      color: var(--mc-color-text);
+    }
+    .mc-tarea-historial__just {
+      margin: var(--mc-space-1) 0 0;
+      font-style: italic;
     }
 
   }

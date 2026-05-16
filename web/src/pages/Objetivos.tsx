@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -8,11 +8,14 @@ import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { OBJETIVO_BADGE, OBJETIVO_LABEL, TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
+import { OBJETIVO_BADGE, OBJETIVO_LABEL } from '@/lib/estadoConfig';
+import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
 import type { EstadoObjetivo, EstadoTarea, Tarea, Usuario } from '@/types';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ValuePropositionBanner } from '@/components/ui/ValuePropositionBanner';
 
 function BarraProgreso({ pct, fechaLimite, size = 'sm', totalTareas }: { pct: number; fechaLimite: string | null; size?: 'sm' | 'md'; totalTareas?: number }) {
   const nivel  = nivelRiesgoObjetivo(pct, fechaLimite, totalTareas);
@@ -93,10 +96,19 @@ export function Objetivos() {
     return () => document.removeEventListener('mousedown', handler);
   }, [menuObjId, menuRef, setMenuObjId, setMenuPos]);
 
+  const nombreResponsablePorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const u of usuariosActivos) m.set(u.id, u.nombre);
+    if (usuario) m.set(usuario.id, usuario.nombre);
+    return m;
+  }, [usuariosActivos, usuario]);
+
   if (!usuario) return null;
 
   const canSubmitNuevo = !creandoObj && nuevoObjetivoForm.titulo.trim().length > 0 && nuevoObjetivoForm.responsableId.trim().length > 0;
   const criticos = objetivos.filter((o) => nivelRiesgoObjetivo(o.pct, o.fecha_limite, o.total_tareas) === 'critico').length;
+
+  const gridCols = '1fr 100px 80px 180px 90px 32px';
 
   return (
     <div className={APP_PAGE_CLASS}>
@@ -106,6 +118,13 @@ export function Objetivos() {
         actions={esJefe ? <Button variant="primary" onClick={abrirModalNuevo} size="sm">+ Nuevo objetivo</Button> : null}
       />
 
+      <ValuePropositionBanner
+        userId={usuario.id}
+        feature="objetivos"
+        title="Operación alineada a estrategia"
+        description="Vincula tareas de Mi semana y órdenes de trabajo a objetivos. El progreso se calcula solo — sin tableros desconectados como en herramientas genéricas."
+      />
+
       {isError && <p style={{ fontSize: 13, color: 'var(--mc-color-danger)', margin: '0 0 12px' }}>No se pudieron cargar los objetivos.</p>}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -113,8 +132,8 @@ export function Objetivos() {
         {/* ── Tabla ── */}
         <div className="mc-card !p-0 overflow-hidden">
           <div className="mc-section-header"><span>Lista de objetivos</span></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 180px 90px 32px', gap: 12, borderBottom: '1px solid var(--mc-color-border)', background: 'var(--mc-color-bg)', padding: '6px 16px' }}>
-            {['Objetivo', 'Estado', 'Progreso', 'Límite', ''].map((h) => (
+          <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 12, borderBottom: '1px solid var(--mc-color-border)', background: 'var(--mc-color-bg)', padding: '6px 16px' }}>
+            {['Objetivo', 'Responsable', 'Estado', 'Progreso', 'Límite', ''].map((h) => (
               <span key={h} style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--mc-color-text-secondary)' }}>{h}</span>
             ))}
           </div>
@@ -122,10 +141,10 @@ export function Objetivos() {
           {loadO ? (
             <p style={{ padding: 16, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
           ) : objetivos.length === 0 ? (
-            <div className="mc-empty">
-              <p className="mc-empty-title">Sin objetivos</p>
-              <p className="mc-empty-desc">{esJefe ? 'Crea el primer objetivo estratégico del equipo.' : 'Tu jefe aún no ha creado objetivos para el equipo.'}</p>
-            </div>
+            <EmptyState
+              title="Sin objetivos"
+              desc={esJefe ? 'Crea el primer objetivo estratégico del equipo.' : 'Tu jefe aún no ha creado objetivos para el equipo.'}
+            />
           ) : objetivos.map((o) => {
             const nivel   = nivelRiesgoObjetivo(o.pct, o.fecha_limite, o.total_tareas);
             const config  = RIESGO_CONFIG[nivel];
@@ -141,7 +160,7 @@ export function Objetivos() {
                   seleccionId === o.id ? 'mc-list-row--selected' : '',
                   seleccionId !== o.id && esCrit ? 'mc-list-row--atrasada' : '',
                 ].filter(Boolean).join(' ')}
-                style={{ gridTemplateColumns: '1fr 80px 180px 90px 32px' }}
+                style={{ gridTemplateColumns: gridCols }}
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -151,6 +170,10 @@ export function Objetivos() {
                   </div>
                   {o.descripcion && <p style={{ fontSize: 11, color: 'var(--mc-color-text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.descripcion}</p>}
                 </div>
+
+                <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {o.responsable_id ? (nombreResponsablePorId.get(o.responsable_id) ?? '—') : '—'}
+                </span>
 
                 <span className={`mc-badge ${OBJETIVO_BADGE[o.estado as EstadoObjetivo]}`} style={{ fontSize: 10 }}>{OBJETIVO_LABEL[o.estado as EstadoObjetivo]}</span>
 
@@ -189,10 +212,10 @@ export function Objetivos() {
         {/* ── Panel lateral ── */}
         <div className="mc-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!objetivoSel ? (
-            <div className="mc-empty">
-              <p className="mc-empty-title">Selecciona un objetivo</p>
-              <p className="mc-empty-desc">Ver tareas, OTs y progreso detallado</p>
-            </div>
+            <EmptyState
+              title="Selecciona un objetivo"
+              desc="Ver tareas, OTs y progreso detallado"
+            />
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -220,17 +243,17 @@ export function Objetivos() {
               </div>
 
               {/* Tareas */}
-              <div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12 }}>
+              <div className="flex flex-col gap-3 border-t border-[var(--mc-color-border)] pt-3">
                 <div className="mc-section-header mc-section-header--plain">
                   <span>Tareas vinculadas</span>
                   {esJefe && <Button variant="secondary" size="xs" onClick={() => setModalTarea(true)}>+ Añadir</Button>}
                 </div>
                 {loadTareas ? (
-                  <p style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)', padding: '8px 0' }}>Cargando…</p>
+                  <p className="py-2 text-[var(--mc-text-sm)] text-[var(--mc-color-text-secondary)]">Cargando…</p>
                 ) : tareasVinc.length === 0 ? (
-                  <div className="mc-empty !p-6"><p className="mc-empty-title">Sin tareas vinculadas</p></div>
+                  <EmptyState compact title="Sin tareas vinculadas" />
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto', marginTop: 8 }}>
+                  <div className="flex flex-col gap-1.5">
                     {tareasVinc.map((t) => (
                       <div key={t.id}
                         onClick={() => setTareaDetalle(t)}
@@ -242,7 +265,7 @@ export function Objetivos() {
                         }}
                       >
                         <p style={{ fontSize: 12, color: t.estado === 'atrasada' ? 'var(--mc-state-atrasada-fg)' : 'var(--mc-color-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{t.titulo}</p>
-                        <span className={`mc-badge ${TAREA_BADGE[t.estado as EstadoTarea] ?? 'mc-badge-neutral'} shrink-0`} style={{ fontSize: 9 }}>{TAREA_LABEL[t.estado as EstadoTarea] ?? t.estado}</span>
+                        <TareaEstadoIndicator estado={t.estado as EstadoTarea} className="shrink-0" style={{ fontSize: 9 }} />
                       </div>
                     ))}
                   </div>
@@ -279,7 +302,7 @@ export function Objetivos() {
       </div>
 
       {/* Modal: nuevo objetivo */}
-      <Modal open={modalNuevo} onClose={cerrarModalNuevoObjetivo} title="Nuevo objetivo" size="sm" hasUnsavedChanges={nuevoObjetivoHasChanges}
+      <Modal open={modalNuevo} onClose={cerrarModalNuevoObjetivo} title="Nuevo objetivo" analyticsId="modal-nuevo-objetivo" size="sm" hasUnsavedChanges={nuevoObjetivoHasChanges}
         bodyClassName="mc-modal-form"
         footerClassName="mc-modal-footer--stack"
         footer={(
@@ -314,9 +337,9 @@ export function Objetivos() {
       </Modal>
 
       {/* Modal: completar objetivo */}
-      <Modal open={modalCompletar} onClose={cerrarCompletar} title={esJefe ? 'Cerrar objetivo' : 'Marcar como completado'} size="sm"
+      <Modal open={modalCompletar} onClose={cerrarCompletar} title={esJefe ? 'Cerrar objetivo' : 'Marcar como completado'} analyticsId="modal-completar-objetivo" descriptionElementId="modal-completar-objetivo-desc" size="sm"
         footer={<><Button variant="primary" size="lg" fullWidth onClick={() => void confirmarCompletar()} disabled={completandoObj}>{completandoObj ? 'Guardando…' : esJefe ? 'Cerrar objetivo' : 'Confirmar'}</Button><CancelButton onClick={cerrarCompletar} disabled={completandoObj} /></>}>
-        <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', margin: 0 }}>
+        <p id="modal-completar-objetivo-desc" style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', margin: 0 }}>
           {esJefe
             ? 'El objetivo se marcará como completado independientemente del progreso actual.'
             : 'Todas las tareas están completadas. ¿Confirmas que el objetivo ha sido cumplido?'}
@@ -339,10 +362,10 @@ export function Objetivos() {
       />
 
       {/* Modal: eliminar objetivo */}
-      <Modal open={Boolean(eliminarObjId)} onClose={cerrarEliminar} title="Eliminar objetivo" size="sm"
+      <Modal open={Boolean(eliminarObjId)} onClose={cerrarEliminar} title="Eliminar objetivo" analyticsId="modal-eliminar-objetivo" descriptionElementId="modal-eliminar-objetivo-desc" size="sm"
         footer={<><Button variant="danger" size="lg" fullWidth onClick={() => void confirmarEliminar()} disabled={eliminandoObj || !motivoOk}>{eliminandoObj ? 'Eliminando…' : 'Eliminar objetivo'}</Button><CancelButton onClick={cerrarEliminar} disabled={eliminandoObj} /></>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {objetivoEliminar && <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', margin: 0 }}><strong>{objetivoEliminar.titulo}</strong> · Esta acción no se puede deshacer.</p>}
+          {objetivoEliminar && <p id="modal-eliminar-objetivo-desc" style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', margin: 0 }}><strong>{objetivoEliminar.titulo}</strong> · Esta acción no se puede deshacer.</p>}
           <JustificacionField label="Motivo de eliminación" value={motivoEliminar} onChange={setMotivoEliminar} placeholder="Indica el motivo de la eliminación…" disabled={eliminandoObj} autoFocus />
         </div>
       </Modal>
@@ -368,13 +391,8 @@ export function Objetivos() {
         <div
           ref={menuRef}
           role="menu"
-          style={{
-            position: 'fixed', top: menuPos.top, left: menuPos.left,
-            zIndex: 9999, minWidth: 170, borderRadius: 10,
-            border: '1px solid var(--mc-color-border)',
-            background: 'var(--mc-color-bg)', padding: '4px 0',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-          }}
+          className="mc-dropdown-menu mc-dropdown-menu--portal"
+          style={{ top: menuPos.top, left: menuPos.left }}
         >
           {puedeCompletar(menuObjId) && (
             <Button variant="ghost" size="xs" role="menuitem"

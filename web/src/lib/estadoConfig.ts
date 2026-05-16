@@ -69,14 +69,14 @@ export const STATE_TOKENS: Record<EstadoTarea, EstadoTokens> = {
     meta:   'var(--mc-color-text-secondary)',
   },
   pendiente: {
-    bg:     'transparent',
-    fg:     'var(--mc-color-text)',
+    bg:     'var(--mc-state-pendiente-bg)',
+    fg:     'var(--mc-state-pendiente-fg)',
     border: 'transparent',
     meta:   'var(--mc-color-text-secondary)',
   },
   cancelada: {
-    bg:     'transparent',
-    fg:     'var(--mc-color-text-secondary)',
+    bg:     'var(--mc-state-cancelada-bg)',
+    fg:     'var(--mc-state-cancelada-fg)',
     border: 'transparent',
     meta:   'var(--mc-color-text-placeholder)',
   },
@@ -157,18 +157,16 @@ export const TAREA_LABEL_PLURAL: Record<EstadoTarea, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Tarea — pill con color inline (tablas, Planificación)
-// Estas clases Tailwind son necesarias porque el componente pill se renderiza
-// en contextos sin acceso directo a style={{}}. Mantener en sync con tokens.
+// Tarea — pill (tablas, Planificación) — clases en components.css
 // ---------------------------------------------------------------------------
 export const TAREA_PILL: Record<EstadoTarea, string> = {
-  pendiente:    'bg-[#F1EFE8] text-[#5F5E5A]',
-  en_progreso:  'bg-[#E6F1FB] text-[#185FA5]',
-  completada:   'bg-[#EAF3DE] text-[#27500A]',
-  bloqueada:    'bg-[#FAEEDA] text-[#854F0B]',
-  atrasada:     'bg-[#FCEBEB] text-[#A32D2D]',
-  reprogramada: 'bg-[#EEEDFE] text-[#3C3489]',
-  cancelada:    'bg-[#F1F1F1] text-[#6B6B6B]',
+  pendiente:    'mc-tarea-pill mc-tarea-pill--pendiente',
+  en_progreso:  'mc-tarea-pill mc-tarea-pill--en_progreso',
+  completada:   'mc-tarea-pill mc-tarea-pill--completada',
+  bloqueada:    'mc-tarea-pill mc-tarea-pill--bloqueada',
+  atrasada:     'mc-tarea-pill mc-tarea-pill--atrasada',
+  reprogramada: 'mc-tarea-pill mc-tarea-pill--reprogramada',
+  cancelada:    'mc-tarea-pill mc-tarea-pill--cancelada',
 };
 
 // ---------------------------------------------------------------------------

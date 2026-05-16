@@ -13,6 +13,7 @@ import { crearTareaPlanificada } from '@/api/semana';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { Q_KPIS, Q_OBJ_PROG, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
 import { useDraftForm } from '@/hooks/useDraftForm';
+import { markModalCompleted } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import type { Tarea } from '@/types';
 
@@ -39,7 +40,7 @@ export function useObjetivosPage() {
   const esJefe  = usuario?.rol === 'jefe';
 
   const { data: objetivos = [], isLoading: loadO, isError } = useObjetivosProgreso();
-  const { data: usuariosActivos = [] } = useUsuariosActivos({ enabled: esJefe });
+  const { data: usuariosActivos = [] } = useUsuariosActivos({ enabled: Boolean(usuario) });
 
   const [seleccionId, setSeleccionId] = useState<string | null>(null);
   const objetivoSel = objetivos.find((o) => o.id === seleccionId) ?? null;
@@ -86,7 +87,7 @@ export function useObjetivosPage() {
   } = useDraftForm('objetivo-nuevo', nuevoObjInitial, { enabled: modalNuevo });
 
   const [modalTarea, setModalTarea] = useState(false);
-  const mananaYmd = fechaLocalYmd(new Date(Date.now() + 86_400_000));
+  const [mananaYmd] = useState(() => fechaLocalYmd(new Date(Date.now() + 86_400_000)));
   const tareaObjetivoInitial = useMemo<ObjetivoTareaNuevaDraft>(
     () => ({ titulo: '', prioridad: 'media', asignadoId: usuario?.id ?? '', fecha: mananaYmd }),
     [usuario?.id, mananaYmd],
@@ -117,6 +118,7 @@ export function useObjetivosPage() {
     mutationFn: crearObjetivo,
     onSuccess: async () => {
       await invalidarObjetivos();
+      markModalCompleted('modal-nuevo-objetivo');
       clearNuevoObjetivoDraft();
       setModalNuevo(false);
       toast.success('Objetivo creado');
@@ -128,6 +130,7 @@ export function useObjetivosPage() {
     mutationFn: completarObjetivo,
     onSuccess: async () => {
       await invalidarObjetivos();
+      markModalCompleted('modal-completar-objetivo');
       setModalCompletar(false);
       setCompletarObjId(null);
       toast.success('Objetivo completado');
@@ -143,6 +146,7 @@ export function useObjetivosPage() {
     mutationFn: (input: { objetivoId: string; usuarioId: string; motivo: string }) => eliminarObjetivo(input),
     onSuccess: async () => {
       await invalidarObjetivos();
+      markModalCompleted('modal-eliminar-objetivo');
       if (seleccionId === eliminarObjId) setSeleccionId(null);
       setEliminarObjId(null);
       setMotivoEliminar('');

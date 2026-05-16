@@ -1,23 +1,35 @@
 /**
  * lib/tableroEstado.ts
  *
- * Con el trigger de BD (migración 009), el estado 'atrasada' ya llega
- * correcto desde Postgres. Esta función ya no necesita calcularlo —
- * simplemente devuelve el estado real de la tarea.
- *
- * Se mantiene el nombre para no romper los imports existentes.
+ * Estado efectivo para filtros y visualización (Mi Semana, Planificación).
+ * Complementa el trigger `sgtd_fn_marcar_atrasada` en escrituras y cubre
+ * filas aún no re-sincronizadas en lectura.
  */
 
 import type { EstadoTarea, Tarea } from '@/types';
 
+const ESTADOS_EVALUABLES_ATRASO: ReadonlySet<EstadoTarea> = new Set([
+  'pendiente',
+  'reprogramada',
+]);
+
+function esPlanificadaVencida(tarea: Tarea, hoyYmd: string): boolean {
+  return (
+    tarea.tipo === 'planificada' &&
+    Boolean(tarea.fecha_planificada) &&
+    tarea.fecha_planificada! < hoyYmd
+  );
+}
+
 /**
- * Devuelve el estado efectivo de la tarea para el Tablero.
- *
- * Antes calculaba 'atrasada' en el cliente. Ahora el trigger en BD
- * ya lo hace, así que simplemente retornamos tarea.estado.
- *
- * La firma se mantiene igual para compatibilidad con código existente.
+ * Devuelve el estado efectivo de la tarea para agrupación/filtros en UI.
  */
-export function estadoEfectivoTablero(tarea: Tarea, _hoyYmd: string): EstadoTarea {
+export function estadoEfectivoTablero(tarea: Tarea, hoyYmd: string): EstadoTarea {
+  if (
+    esPlanificadaVencida(tarea, hoyYmd) &&
+    ESTADOS_EVALUABLES_ATRASO.has(tarea.estado)
+  ) {
+    return 'atrasada';
+  }
   return tarea.estado;
 }

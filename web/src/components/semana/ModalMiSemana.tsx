@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
 import { crearRecurrenciaEvento } from '@/api/recurrencia';
 import { CancelButton } from '@/components/ui/Button';
@@ -101,6 +101,7 @@ export function ModalMiSemana({
         objetivo_id: form.objetivoId || null,
         asignado_a: form.asignadoId.trim() || asignadoPorDefectoId,
       });
+      markModalCompleted('modal-mi-semana-nuevo');
       clearDraft();
       onClose();
     } finally {
@@ -123,9 +124,10 @@ export function ModalMiSemana({
           usuario_id:   asignadoPorDefectoId,
           dias_semana:  recConfig.dias_semana,
           fecha_inicio: fechaEvento,
-          fecha_fin:    recConfig.fecha_fin || undefined,
           meses:        recConfig.meses,
+          ...(recConfig.fecha_fin ? { fecha_fin: recConfig.fecha_fin } : {}),
         });
+        markModalCompleted('modal-mi-semana-nuevo');
         clearDraft();
         onClose();
       } finally {
@@ -143,6 +145,7 @@ export function ModalMiSemana({
         hora_fin:     form.horaFin,
         es_recurrente: false,
       });
+      markModalCompleted('modal-mi-semana-nuevo');
       clearDraft();
       onClose();
     } finally {
@@ -156,6 +159,7 @@ export function ModalMiSemana({
       onClose={cerrar}
       title={`Nuevo ítem · ${fechaDia ?? ''}`}
       size="md"
+      analyticsId="modal-mi-semana-nuevo"
       hasUnsavedChanges={hasChanges}
       bodyClassName="mc-modal-form"
       footerClassName="mc-modal-footer--stack"
@@ -188,7 +192,19 @@ export function ModalMiSemana({
         {modoOrigen === 'dia' && fechaDia && (
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
-            <input id="new-fecha" type="date" className="mc-input" readOnly value={fechaDia} aria-readonly />
+            <input
+              id="new-fecha"
+              type="date"
+              className="mc-input"
+              readOnly
+              disabled
+              value={fechaDia}
+              aria-readonly
+              title="Fecha fijada al día seleccionado"
+            />
+            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">
+              Fecha fijada al día seleccionado
+            </p>
           </div>
         )}
 

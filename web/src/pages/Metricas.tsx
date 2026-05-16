@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { useKpisComparativa, useKpisPorSemana, useKpisRango } from '@/hooks/useObjetivosMetricas';
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { ValuePropositionBanner } from '@/components/ui/ValuePropositionBanner';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { useAuthStore } from '@/store/authStore';
+import { useFilterSearchParams } from '@/lib/useFilterSearchParams';
 
 // ---------------------------------------------------------------------------
 // Paleta de colores por estado — vía tokens (lib/estadoConfig + tokens.css)
@@ -60,8 +62,9 @@ function bgCumplimiento(p: number) {
 // ---------------------------------------------------------------------------
 function Tendencia({ porSemana }: { porSemana: { completadas: number; total: number }[] }) {
   if (porSemana.length < 2) return null;
-  const ultima   = porSemana[porSemana.length - 1];
-  const anterior = porSemana[porSemana.length - 2];
+  const ultima   = porSemana.at(-1);
+  const anterior = porSemana.at(-2);
+  if (!ultima || !anterior) return null;
   const diff = pct(ultima.completadas, ultima.total) - pct(anterior.completadas, anterior.total);
   if (diff === 0) return null;
   const sube = diff > 0;
@@ -79,13 +82,22 @@ function Tendencia({ porSemana }: { porSemana: { completadas: number; total: num
 // ---------------------------------------------------------------------------
 // Página principal
 // ---------------------------------------------------------------------------
+const METRICAS_FILTER_DEFAULT = {
+  desde: defaultDesde(),
+  hasta: fechaLocalYmd(new Date()),
+  m:     '',
+} as const;
+
 export function Metricas() {
   const usuario = useAuthStore((s) => s.usuario);
   const esJefe  = usuario?.rol === 'jefe';
 
-  const [desde,         setDesde]         = useState(defaultDesde);
-  const [hasta,         setHasta]         = useState(() => fechaLocalYmd(new Date()));
-  const [miembroFiltro, setMiembroFiltro] = useState<string | undefined>(esJefe ? undefined : usuario?.id);
+  const [filtros, setFiltro] = useFilterSearchParams(METRICAS_FILTER_DEFAULT);
+  const desde = filtros.desde;
+  const hasta = filtros.hasta;
+  const miembroFiltro = esJefe
+    ? (filtros.m ? filtros.m : undefined)
+    : usuario?.id;
 
   const { data: usuariosLista = [] } = useUsuariosActivos();
   const nombres = Object.fromEntries(usuariosLista.map((u) => [u.id, u.nombre]));
@@ -119,16 +131,23 @@ export function Metricas() {
         }
       />
 
+      <ValuePropositionBanner
+        userId={usuario.id}
+        feature="metricas"
+        title="Del día a día a decisiones de equipo"
+        description="Compara cumplimiento ponderado, atrasos y objetivos activos por miembro. Cruza con Objetivos para ver si el esfuerzo operativo avanza las metas estratégicas."
+      />
+
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       <FilterBar>
-        <FilterBar.Date id="metricas-desde" label="Desde" value={desde} onChange={setDesde} />
-        <FilterBar.Date id="metricas-hasta" label="Hasta" value={hasta} onChange={setHasta} />
+        <FilterBar.Date id="metricas-desde" label="Desde" value={desde} onChange={(v) => setFiltro('desde', v)} />
+        <FilterBar.Date id="metricas-hasta" label="Hasta" value={hasta} onChange={(v) => setFiltro('hasta', v)} />
         {esJefe && (
           <FilterBar.Select
             id="metricas-miembro"
             label="Miembro"
             value={miembroFiltro ?? ''}
-            onChange={(v) => setMiembroFiltro(v || undefined)}
+            onChange={(v) => setFiltro('m', v)}
             options={[
               { value: '', label: 'Todos' },
               ...Object.entries(nombres).map(([id, nombre]) => ({ value: id, label: nombre })),
@@ -169,14 +188,14 @@ export function Metricas() {
         {/* Barra de progreso principal */}
         {!loadK && kpis && (
           <div style={{ flex: 1, minWidth: 120 }}>
-            <div style={{ height: 8, borderRadius: 8, background: 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-              <div style={{
-                height:     '100%',
-                width:      `${cumplimiento ?? 0}%`,
-                borderRadius: 8,
-                background: colorCumplimiento(cumplimiento ?? 0),
-                transition: 'width 0.4s ease',
-              }} />
+            <div className="mc-progress-track">
+              <div
+                className="mc-progress-fill"
+                style={{
+                  width:      `${cumplimiento ?? 0}%`,
+                  background: colorCumplimiento(cumplimiento ?? 0),
+                }}
+              />
             </div>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
               {kpis.completadas} de {kpis.total} tareas completadas en el período
@@ -245,7 +264,7 @@ export function Metricas() {
                           title={`${val} ${key}`}
                         >
                           {w > 8 && (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.9)', userSelect: 'none' }}>
+                            <span className="mc-chart-segment-value">
                               {val}
                             </span>
                           )}

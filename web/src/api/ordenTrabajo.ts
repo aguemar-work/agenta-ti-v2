@@ -121,6 +121,23 @@ export async function toggleTipoTrabajoOT(id: Id, activo: boolean): Promise<void
   if (error) throw error;
 }
 
+/** OTs vinculadas a tareas (última por tarea_id si hay varias). */
+export async function getOrdenesPorTareaIds(tareaIds: string[]): Promise<Map<string, OrdenTrabajo>> {
+  const map = new Map<string, OrdenTrabajo>();
+  if (tareaIds.length === 0) return map;
+  const { data, error } = await getInsforge().database
+    .from('orden_trabajo')
+    .select('*, tipo_trabajo:tipo_trabajo_ot(nombre)')
+    .in('tarea_id', tareaIds)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  for (const row of data ?? []) {
+    const ot = parseOrdenTrabajo(row as Record<string, unknown>) as OrdenTrabajo;
+    if (ot.tarea_id && !map.has(ot.tarea_id)) map.set(ot.tarea_id, ot);
+  }
+  return map;
+}
+
 // ---------------------------------------------------------------------------
 // OTs — queries
 // ---------------------------------------------------------------------------
@@ -150,6 +167,21 @@ export async function getOrdenesTrabajoTodas(): Promise<OrdenTrabajo[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r) => parseOrdenTrabajo(r as Record<string, unknown>)) as OrdenTrabajo[];
+}
+
+/** Última OT en borrador del usuario (autoguardado C-03). */
+export async function getBorradorOTUsuario(usuarioId: Id): Promise<OrdenTrabajo | null> {
+  const { data, error } = await getInsforge().database
+    .from('orden_trabajo')
+    .select(OT_SELECT)
+    .eq('creado_por', usuarioId)
+    .eq('estado', 'borrador')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return parseOrdenTrabajo(data as Record<string, unknown>) as OrdenTrabajo;
 }
 
 // ---------------------------------------------------------------------------

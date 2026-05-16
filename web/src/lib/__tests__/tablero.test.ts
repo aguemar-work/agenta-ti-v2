@@ -90,8 +90,14 @@ describe('agruparTareasTablero', () => {
     expect(result.completada).toHaveLength(0);
   });
 
-  it('tarea reprogramada → columna pendiente (else del agrupar)', () => {
-    const t = tarea({ estado: 'reprogramada' });
+  it('tarea reprogramada sin vencer → columna pendiente (else del agrupar)', () => {
+    const t = tarea({ estado: 'reprogramada', fecha_planificada: '2026-05-01' });
+    const result = agruparTareasTablero([t], HOY);
+    expect(result.pendiente).toContain(t);
+  });
+
+  it('tarea reprogramada vencida → columna pendiente (efectivo atrasada)', () => {
+    const t = tarea({ estado: 'reprogramada', tipo: 'planificada', fecha_planificada: AYER });
     const result = agruparTareasTablero([t], HOY);
     expect(result.pendiente).toContain(t);
   });

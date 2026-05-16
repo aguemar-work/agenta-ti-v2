@@ -51,8 +51,8 @@
 
 /* Pulso suave en tarea por vencer (4–5pm) */
 @keyframes mc-pulse-border-amber {
-  0%, 100% { border-left-color: #EF9F27; }
-  50%       { border-left-color: #BA7517; }
+  0%, 100% { border-left-color: var(--mc-state-precaucion-border); }
+  50%       { border-left-color: var(--mc-state-bloqueada-meta); }
 }
 
 .task-precaucion {
@@ -61,8 +61,8 @@
 
 /* Pulso rápido en tarea urgente (5–6pm) */
 @keyframes mc-pulse-border-red {
-  0%, 100% { border-left-color: #E24B4A; }
-  50%       { border-left-color: #A32D2D; }
+  0%, 100% { border-left-color: var(--mc-state-atrasada-border); }
+  50%       { border-left-color: var(--mc-state-atrasada-meta); }
 }
 
 .task-urgente {
@@ -107,6 +107,6 @@
     animation: none;
   }
 
-  .task-precaucion { border-left-color: #EF9F27; }
-  .task-urgente    { border-left-color: #E24B4A; }
+  .task-precaucion { border-left-color: var(--mc-state-precaucion-border); }
+  .task-urgente    { border-left-color: var(--mc-state-atrasada-border); }
 }

@@ -9,7 +9,8 @@ const QUERY_KEY_MAP: Record<QueryGroup, { queryKey: unknown[]; exact?: boolean }
   planificacion: { queryKey: ['planificacion']               },
   objetivos:     { queryKey: ['objetivos'],      exact: false },
   bitacora:      { queryKey: ['bitacora'],       exact: false },
-  ot:            { queryKey: ['ot'],            exact: false },
+  /** Lista OT en useOrdenesTrabajoPage: queryKey [Q_OT, usuarioId, esJefe] */
+  ot:            { queryKey: ['ordenes-trabajo'], exact: false },
 };
 
 /**

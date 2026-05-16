@@ -51,6 +51,13 @@ export function makeJefe(overrides: Partial<Usuario> = {}): Usuario {
   return makeUsuario({ id: 'uuid-jefe', nombre: 'Alejandro Jefe', rol: 'jefe', ...overrides });
 }
 
+/** UUIDs fijos alineados con `makeTarea` / `makeUsuario` para mocks de API y permisos. */
+export const TEST_IDS = {
+  jefe:     'uuid-jefe',
+  miembro:  'uuid-miembro',
+  tarea1:   'uuid-tarea',
+} as const;
+
 // ---------------------------------------------------------------------------
 // Fechas fijas para tests deterministas
 // ---------------------------------------------------------------------------

@@ -41,6 +41,7 @@ export function ModalJustificacion({
       open={open}
       onClose={onClose}
       title={titulo}
+      {...(descripcion ? { descriptionElementId: 'modal-just-desc' } : {})}
       size="sm"
       footer={(
         <>
@@ -59,7 +60,7 @@ export function ModalJustificacion({
     >
       <div className="flex flex-col gap-4">
         {descripcion && (
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">{descripcion}</p>
+          <p id="modal-just-desc" className="text-sm text-[var(--mc-color-text-secondary)]">{descripcion}</p>
         )}
 
         <JustificacionField

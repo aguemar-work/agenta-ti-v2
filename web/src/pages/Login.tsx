@@ -26,7 +26,7 @@ function IconEye({ off }: { off?: boolean }) {
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/hoy';
+  const from = (location.state as { from?: string } | null)?.from ?? '/semana';
 
   const authUser = useAuthStore((s) => s.authUser);
   const usuario = useAuthStore((s) => s.usuario);
@@ -40,7 +40,7 @@ export function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   if (!isLoading && authUser && usuario) {
-    return <Navigate to={from === '/login' ? '/hoy' : from} replace />;
+    return <Navigate to={from === '/login' || from === '/hoy' ? '/semana' : from} replace />;
   }
 
   function validate() {
@@ -104,7 +104,13 @@ export function Login() {
                 value={email}
                 onChange={(ev) => {
                   setEmail(ev.target.value);
-                  if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+                  if (errors.email) {
+                    setErrors((p) => {
+                      const next = { ...p };
+                      delete next.email;
+                      return next;
+                    });
+                  }
                 }}
               />
               {errors.email ? <span className="mc-field-error">{errors.email}</span> : null}
@@ -129,7 +135,13 @@ export function Login() {
                   value={password}
                   onChange={(ev) => {
                     setPassword(ev.target.value);
-                    if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
+                    if (errors.password) {
+                      setErrors((p) => {
+                        const next = { ...p };
+                        delete next.password;
+                        return next;
+                      });
+                    }
                   }}
                 />
                 <button

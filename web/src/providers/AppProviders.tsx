@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
+import { LiveRegion } from '@/components/a11y/LiveRegion';
 import { InsforgeConfigMissing } from '@/components/config/InsforgeConfigMissing';
 import { getInsforgeEnv } from '@/lib/insforge';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -24,6 +25,7 @@ export function AppProviders({ children }: Props) {
         <AuthProvider>{children}</AuthProvider>
       </BrowserRouter>
       <Toaster richColors position="top-center" />
+      <LiveRegion />
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );

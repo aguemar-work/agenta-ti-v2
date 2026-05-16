@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import type { Tarea } from '@/types';
@@ -26,6 +26,7 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
     setBusy(true);
     try {
       await onConfirm({ tareaId: tarea.id, nuevaFecha: fecha, justificacion: just.trim() });
+      markModalCompleted('modal-desbloquear-tarea');
       onClose();
       setFecha('');
       setJust('');
@@ -37,6 +38,8 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
       open={tarea !== null}
       onClose={onClose}
       title="Desbloquear tarea"
+      analyticsId="modal-desbloquear-tarea"
+      descriptionElementId="modal-desbloquear-desc"
       size="sm"
       footer={(
         <>
@@ -55,6 +58,9 @@ export function ModalDesbloquear({ tarea, onClose, onConfirm }: Props) {
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
+        <p id="modal-desbloquear-desc" className="text-sm text-[var(--mc-color-text-secondary)]">
+          Nueva fecha y justificación obligatorias para desbloquear.
+        </p>
 
         <div className="mc-field">
           <label className="mc-field-label" htmlFor="desbloq-fecha">Nueva fecha planificada</label>

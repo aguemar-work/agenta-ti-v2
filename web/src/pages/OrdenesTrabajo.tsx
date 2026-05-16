@@ -3,31 +3,41 @@
  * Lista de OTs + panel de configuración de tipos (solo jefe).
  */
 
-import { useState, type ReactNode } from 'react';
-import { AlertTriangle, ChevronDown, ClipboardCheck, Plus, Settings2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { AlertTriangle, ChevronDown, ClipboardCheck, Settings2 } from 'lucide-react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
+import { ModalTiposOT } from '@/components/ot/ModalTiposOT';
 import { OTFormModal } from '@/components/ot/OTFormModal';
-import { OTImpresion } from '@/components/ot/OTImpresion';
+const OTImpresion = lazy(() =>
+  import('@/components/ot/OTImpresion').then((m) => ({ default: m.OTImpresion })),
+);
 import { useOrdenesTrabajoPage } from '@/hooks/useOrdenesTrabajoPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ValuePropositionBanner } from '@/components/ui/ValuePropositionBanner';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL, MODALIDAD_OT_LABEL, PRIORIDAD_OT_BADGE, PRIORIDAD_OT_LABEL } from '@/lib/otConfig';
+import type { FiltroEstadoOT } from '@/hooks/useOrdenesTrabajoPage';
 import type { EstadoOT } from '@/api/ordenTrabajo';
 
-const FILTROS: { value: EstadoOT | 'todos'; label: string }[] = [
+const FILTROS_PRINCIPALES: { value: FiltroEstadoOT; label: string }[] = [
   { value: 'todos',        label: 'Todos' },
+  { value: 'activas',      label: 'Activas' },
+  { value: 'completadas',  label: 'Completadas' },
+];
+
+const FILTROS_ESPECIFICOS: { value: EstadoOT; label: string }[] = [
   { value: 'borrador',     label: 'Borrador' },
   { value: 'pendiente',    label: 'Pendiente' },
   { value: 'aprobada',     label: 'Aprobada' },
   { value: 'en_ejecucion', label: 'En ejecución' },
-  { value: 'completada',   label: 'Completada' },
   { value: 'rechazada',    label: 'Rechazada' },
   { value: 'cancelada',    label: 'Cancelada' },
 ];
@@ -119,12 +129,16 @@ function OTSeccionColapsable({ titulo, children }: { titulo: string; children: R
 // ---------------------------------------------------------------------------
 
 export function OrdenesTrabajo() {
+  const [modalTiposOpen, setModalTiposOpen] = useState(false);
+
   const {
     usuario, esJefe,
     ordenes, isLoading, isError, pendientesCount,
     tiposActivos, tiposInactivos,
     filtroEstado, setFiltroEstado,
-    modalForm, setModalForm, editandoOT,
+    modalForm, editandoOT,
+    borradorCargando, draftSaveStatus, draftSavedLabel, hasUnsavedChanges,
+    cerrarFormularioOT,
     viendoOT, setViendoOT,
     imprimiendoOT, setImprimiendoOT,
     modalCompletar, setModalCompletar,
@@ -165,19 +179,44 @@ export function OrdenesTrabajo() {
         actions={(
           <div className="mc-page-header-toolbar">
             <FilterBar.Pills
-              value={filtroEstado}
-              onChange={(v) => setFiltroEstado(v as typeof filtroEstado)}
-              options={FILTROS.map(({ value, label }) => ({
+              value={FILTROS_PRINCIPALES.some((f) => f.value === filtroEstado) ? filtroEstado : 'todos'}
+              onChange={(v) => setFiltroEstado(v as FiltroEstadoOT)}
+              options={FILTROS_PRINCIPALES.map(({ value, label }) => ({
                 value,
                 label,
-                badge: value === 'pendiente' ? pendientesCount : undefined,
+                ...(value === 'activas' && pendientesCount > 0
+                  ? { badge: pendientesCount }
+                  : {}),
               }))}
             />
+            <FilterBar.Select
+              id="ot-filtro-estado"
+              label="Estado específico"
+              value={FILTROS_ESPECIFICOS.some((f) => f.value === filtroEstado) ? filtroEstado : ''}
+              onChange={(v) => setFiltroEstado((v || 'todos') as FiltroEstadoOT)}
+              options={[
+                { value: '', label: '— Todos —' },
+                ...FILTROS_ESPECIFICOS.map(({ value, label }) => ({ value, label })),
+              ]}
+            />
+            {esJefe && (
+              <Button variant="secondary" onClick={() => setModalTiposOpen(true)} size="sm">
+                <Settings2 size={14} aria-hidden />
+                Tipos de trabajo
+              </Button>
+            )}
             <Button variant="primary" onClick={abrirNuevaOT} size="sm">
               + Nueva OT
             </Button>
           </div>
         )}
+      />
+
+      <ValuePropositionBanner
+        userId={usuario.id}
+        feature="ordenes_trabajo"
+        title="Órdenes con trazabilidad formal"
+        description="Envío, aprobación o rechazo con motivo, ejecución e impresión con datos del receptor. Pensado para mantenimiento y proyectos con control B2B."
       />
 
       {isError && (
@@ -192,13 +231,13 @@ export function OrdenesTrabajo() {
         {/* Cabecera */}
         <div style={{
           display:             'grid',
-          gridTemplateColumns: '110px 1fr 110px 160px',
+          gridTemplateColumns: '110px 1fr 120px 110px 160px',
           gap:                  12,
           padding:             '6px 16px',
           borderBottom:        '1px solid var(--mc-color-border)',
           background:          'var(--mc-color-bg)',
         }}>
-          {['Número', 'Descripción', 'Fecha', 'Estado'].map((h) => (
+          {['Número', 'Descripción', 'Creado por', 'Fecha', 'Estado'].map((h) => (
             <span key={h} style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--mc-color-text-secondary)' }}>
               {h}
             </span>
@@ -208,11 +247,11 @@ export function OrdenesTrabajo() {
         {isLoading ? (
           <p style={{ padding: 16, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>Cargando…</p>
         ) : ordenes.length === 0 ? (
-          <div className="mc-empty">
-            <ClipboardCheck size={28} style={{ color: 'var(--mc-color-border-strong)', marginBottom: 4 }} aria-hidden />
-            <p className="mc-empty-title">Sin órdenes de trabajo</p>
-            <p className="mc-empty-desc">Crea una nueva OT para registrar un trabajo.</p>
-          </div>
+          <EmptyState
+            icon={ClipboardCheck}
+            title="Sin órdenes de trabajo"
+            desc="Crea una nueva OT para registrar un trabajo."
+          />
         ) : (
           ordenes.map((ot) => {
             const esUrgente  = ot.prioridad === 'urgente';
@@ -224,7 +263,7 @@ export function OrdenesTrabajo() {
                 className="mc-ot-row"
                 style={{
                   display:             'grid',
-                  gridTemplateColumns: '110px 1fr 110px 160px',
+                  gridTemplateColumns: '110px 1fr 120px 110px 160px',
                   gap:                  12,
                   padding:             '10px 16px',
                   borderBottom:        '1px solid var(--mc-color-border)',
@@ -272,11 +311,13 @@ export function OrdenesTrabajo() {
                   <p style={{ margin: 0, fontSize: 11, color: 'var(--mc-color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {ot.tipo_trabajo?.nombre ? ot.descripcion : ''}
                   </p>
-                  {esJefe && ot.creador && (
-                    <p style={{ margin: 0, fontSize: 11, color: 'var(--mc-color-text-secondary)' }}>
-                      {ot.creador.nombre}
-                    </p>
-                  )}
+                </div>
+
+                {/* Creado por */}
+                <div>
+                  <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)' }}>
+                    {ot.creador?.nombre ?? '—'}
+                  </span>
                 </div>
 
                 {/* Fecha */}
@@ -317,90 +358,26 @@ export function OrdenesTrabajo() {
         )}
       </div>
 
-      {/* ── Panel tipos de trabajo (solo jefe) ──────────────────────────── */}
-      {esJefe && (
-        <div className="mc-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Settings2 size={16} style={{ color: 'var(--mc-color-text-secondary)' }} aria-hidden />
-            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--mc-color-text)' }}>
-              Tipos de trabajo
-            </h2>
-            <span style={{ fontSize: 12, color: 'var(--mc-color-text-secondary)' }}>
-              · {tiposActivos.length} activos
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <input
-              className="mc-input"
-              style={{ flex: 1 }}
-              value={nuevoTipoNombre}
-              onChange={(e) => setNuevoTipoNombre(e.target.value.toUpperCase())}
-              placeholder="Ej: REVISIÓN DE INFRAESTRUCTURA"
-              onKeyDown={(e) => { if (e.key === 'Enter' && canCrearTipo) mutCrearTipo.mutate(); }}
-              maxLength={60}
-            />
-            <Button variant="primary" size="sm" disabled={!canCrearTipo} onClick={() => mutCrearTipo.mutate()}>
-              <Plus size={14} aria-hidden /> Agregar
-            </Button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {tiposActivos.map((tipo) => (
-              <div key={tipo.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', borderRadius: 'var(--mc-radius-md)',
-                border: '1px solid var(--mc-color-border)', background: 'var(--mc-color-surface)',
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--mc-color-text)' }}>{tipo.nombre}</span>
-                <button type="button"
-                  onClick={() => mutToggleTipo.mutate({ id: tipo.id, activo: false })}
-                  disabled={mutToggleTipo.isPending}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mc-color-success)', fontSize: 12, fontWeight: 500, padding: '4px 8px', borderRadius: 'var(--mc-radius-sm)' }}
-                >
-                  <ToggleRight size={16} aria-hidden /> Activo
-                </button>
-              </div>
-            ))}
-
-            {tiposInactivos.length > 0 && (
-              <>
-                <div style={{ padding: '8px 0 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--mc-color-text-secondary)' }}>
-                  Inactivos
-                </div>
-                {tiposInactivos.map((tipo) => (
-                  <div key={tipo.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', borderRadius: 'var(--mc-radius-md)',
-                    border: '1px solid var(--mc-color-border)', background: 'var(--mc-color-bg)', opacity: 0.6,
-                  }}>
-                    <span style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', textDecoration: 'line-through' }}>{tipo.nombre}</span>
-                    <button type="button"
-                      onClick={() => mutToggleTipo.mutate({ id: tipo.id, activo: true })}
-                      disabled={mutToggleTipo.isPending}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mc-color-text-secondary)', fontSize: 12, fontWeight: 500, padding: '4px 8px', borderRadius: 'var(--mc-radius-sm)' }}
-                    >
-                      <ToggleLeft size={16} aria-hidden /> Reactivar
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {tiposActivos.length === 0 && tiposInactivos.length === 0 && (
-              <p style={{ fontSize: 13, color: 'var(--mc-color-text-secondary)', padding: '8px 0' }}>
-                Sin tipos de trabajo configurados.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      <ModalTiposOT
+        open={modalTiposOpen}
+        tiposActivos={tiposActivos}
+        tiposInactivos={tiposInactivos}
+        nuevoTipoNombre={nuevoTipoNombre}
+        setNuevoTipoNombre={setNuevoTipoNombre}
+        canCrearTipo={canCrearTipo}
+        onClose={() => setModalTiposOpen(false)}
+        onCrear={() => mutCrearTipo.mutate()}
+        onToggle={(input) => mutToggleTipo.mutate(input)}
+        isPendingToggle={mutToggleTipo.isPending}
+        isPendingCrear={mutCrearTipo.isPending}
+      />
 
       {/* ── Modal detalle / acciones ───────────────────────────────────── */}
       <Modal
         open={viendoOT !== null}
         onClose={() => setViendoOT(null)}
         title={viendoOT ? `${viendoOT.numero}${viendoOT.prioridad === 'urgente' ? ' · Urgente' : ''}` : ''}
+        analyticsId="modal-ot-detalle"
         size="md"
         footer={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -527,11 +504,14 @@ export function OrdenesTrabajo() {
       <Modal
         open={modalCompletar !== null}
         onClose={() => setModalCompletar(null)}
+        stackLevel={1}
         title="Completar orden de trabajo"
+        analyticsId="modal-ot-completar"
+        descriptionElementId="modal-ot-completar-desc"
         size="sm"
         footer={
           <>
-            <Button variant="primary" size="lg" fullWidth onClick={() => mutCompletar.mutate()} disabled={!canCompletar || mutCompletar.isPending}>
+            <Button variant="primary" size="lg" fullWidth onClick={() => mutCompletar.mutate(undefined, { onSuccess: () => markModalCompleted('modal-ot-completar') })} disabled={!canCompletar || mutCompletar.isPending}>
               {mutCompletar.isPending ? 'Guardando…' : 'Confirmar cierre'}
             </Button>
             <CancelButton onClick={() => setModalCompletar(null)} />
@@ -539,17 +519,17 @@ export function OrdenesTrabajo() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
+          <p id="modal-ot-completar-desc" style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
             Ingresa los datos del responsable que recibe el trabajo.
           </p>
           {[
-            { label: 'Nombre del receptor', value: receptorNombre, set: setReceptorNombre, placeholder: 'Nombre completo' },
-            { label: 'DNI',                 value: receptorDni,    set: setReceptorDni,    placeholder: '12345678' },
-            { label: 'Cargo',               value: receptorCargo,  set: setReceptorCargo,  placeholder: 'Jefe de área, etc.' },
-          ].map(({ label, value, set, placeholder }) => (
+            { label: 'Nombre del receptor', value: receptorNombre, set: setReceptorNombre, placeholder: 'Nombre completo', optional: false },
+            { label: 'DNI',                 value: receptorDni,    set: setReceptorDni,    placeholder: '12345678', optional: false },
+            { label: 'Cargo (opcional)',    value: receptorCargo,  set: setReceptorCargo,  placeholder: 'Jefe de área, etc.', optional: true },
+          ].map(({ label, value, set, placeholder, optional }) => (
             <label key={label} className="mc-field">
               <span className="mc-field-label">{label}</span>
-              <input className="mc-input" value={value} onChange={(e) => set(e.target.value)} placeholder={placeholder} required />
+              <input className="mc-input" value={value} onChange={(e) => set(e.target.value)} placeholder={placeholder} required={!optional} />
             </label>
           ))}
           <label className="mc-field">
@@ -563,14 +543,20 @@ export function OrdenesTrabajo() {
       <Modal
         open={modalRechazar !== null}
         onClose={() => { setModalRechazar(null); setMotivoRechazo(''); }}
+        stackLevel={1}
         title="Rechazar orden de trabajo"
+        analyticsId="modal-ot-rechazar"
+        descriptionElementId="modal-ot-rechazar-desc"
         size="sm"
         footer={
           <>
             <Button
               variant="danger" size="lg" fullWidth
               disabled={motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS || mutRechazar.isPending}
-              onClick={() => modalRechazar && mutRechazar.mutate({ otId: modalRechazar.id, motivo: motivoRechazo })}
+              onClick={() => modalRechazar && mutRechazar.mutate(
+                { otId: modalRechazar.id, motivo: motivoRechazo },
+                { onSuccess: () => markModalCompleted('modal-ot-rechazar') },
+              )}
             >
               {mutRechazar.isPending ? 'Guardando…' : 'Rechazar orden'}
             </Button>
@@ -579,7 +565,7 @@ export function OrdenesTrabajo() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
+          <p id="modal-ot-rechazar-desc" style={{ margin: 0, fontSize: 13, color: 'var(--mc-color-text-secondary)' }}>
             {modalRechazar?.numero} — Indica el motivo (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
           </p>
           <JustificacionField
@@ -601,16 +587,22 @@ export function OrdenesTrabajo() {
           form={form}
           setForm={setForm}
           tiposTrabajo={tiposTrabajo}
-          onClose={() => setModalForm(false)}
+          onClose={cerrarFormularioOT}
           tareasVinculables={tareasVinculables}
           onGuardar={() => (editandoOT ? mutActualizar.mutate() : mutCrear.mutate())}
           busy={mutCrear.isPending || mutActualizar.isPending}
+          hasUnsavedChanges={hasUnsavedChanges}
+          borradorCargando={borradorCargando}
+          draftSaveStatus={draftSaveStatus}
+          draftSavedLabel={draftSavedLabel}
         />
       )}
 
       {/* ── Documento impresión ────────────────────────────────────────── */}
       {imprimiendoOT && (
-        <OTImpresion ot={imprimiendoOT} onClose={() => setImprimiendoOT(null)} />
+        <Suspense fallback={null}>
+          <OTImpresion ot={imprimiendoOT} onClose={() => setImprimiendoOT(null)} />
+        </Suspense>
       )}
     </div>
   );

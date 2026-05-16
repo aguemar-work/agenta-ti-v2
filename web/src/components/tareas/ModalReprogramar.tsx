@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -43,6 +43,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
     setBusy(true);
     try {
       await onConfirm({ tareaId: tarea.id, nuevaFecha: fechaElegida, justificacion: just.trim() });
+      markModalCompleted('modal-reprogramar-tarea');
       onClose();
     } finally { setBusy(false); }
   }
@@ -52,6 +53,8 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
       open={tarea !== null}
       onClose={onClose}
       title="Reprogramar tarea"
+      analyticsId="modal-reprogramar-tarea"
+      descriptionElementId="modal-repr-desc"
       size="sm"
       footer={tarea ? (
         <>
@@ -71,7 +74,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
       {tarea && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">
+          <p id="modal-repr-desc" className="text-sm text-[var(--mc-color-text-secondary)]">
             La justificación es obligatoria (mínimo {MIN_JUSTIFICACION_CHARS} caracteres).
           </p>
 

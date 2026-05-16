@@ -1,40 +1,53 @@
 import {
-  IconCalendarWeek,
-  IconChartBar,
-  IconClipboardList,
-  IconDots,
-  IconFileDescription,
-  IconLogout,
-  IconTarget,
-} from '@tabler/icons-react';
-import { useState } from 'react';
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ClipboardList,
+  FileText,
+  LogOut,
+  MoreHorizontal,
+  Target,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { AppBrandIcon } from '@/components/brand/AppLogo';
+import { ModalPreferenciasNotificaciones } from '@/components/layout/ModalPreferenciasNotificaciones';
+import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
-import { getInsforge } from '@/lib/insforge';
-import { useAuthStore } from '@/store/authStore';
 import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
+import { getInsforge } from '@/lib/insforge';
+import { loadNotificationPrefs, type NotificationPrefs } from '@/lib/notificationPrefs';
+import { useAuthStore } from '@/store/authStore';
 
 // ---------------------------------------------------------------------------
-// Nav config (grupos + íconos Tabler)
+// Nav config (grupos + íconos Lucide)
 // ---------------------------------------------------------------------------
 const NAV_WORKSPACE = [
-  { to: '/semana',          label: 'Mi semana',     icon: IconCalendarWeek,  roles: ['jefe', 'miembro'] as const },
-  { to: '/objetivos',       label: 'Objetivos',     icon: IconTarget,          roles: ['jefe', 'miembro'] as const },
-  { to: '/ordenes-trabajo', label: 'Órdenes',       icon: IconFileDescription, roles: ['jefe', 'miembro'] as const },
+  { to: '/semana',          label: 'Mi semana',     icon: CalendarDays,  roles: ['jefe', 'miembro'] as const },
+  { to: '/objetivos',       label: 'Objetivos',     icon: Target,        roles: ['jefe', 'miembro'] as const },
+  { to: '/ordenes-trabajo', label: 'Órdenes',       icon: FileText,      roles: ['jefe', 'miembro'] as const },
 ] as const;
 
 const NAV_GESTION = [
-  { to: '/planificacion',   label: 'Planificación', icon: IconClipboardList, roles: ['jefe'] as const },
-  { to: '/metricas',        label: 'Métricas',      icon: IconChartBar,        roles: ['jefe'] as const },
+  { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] as const },
+  { to: '/metricas',        label: 'Métricas',      icon: BarChart3,     roles: ['jefe'] as const },
 ] as const;
+
+const ICON_NAV = { size: 18, strokeWidth: 1.75, 'aria-hidden': true as const };
+const ICON_NAV_MOBILE = { size: 20, strokeWidth: 1.75, 'aria-hidden': true as const };
 
 const NAV_ALL = [...NAV_WORKSPACE, ...NAV_GESTION] as const;
 
-const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/metricas', '/ordenes-trabajo'] as const;
-const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos']                  as const;
+/**
+ * Barra inferior móvil (máx. 4 ítems + "Más").
+ * Miembro (3 rutas): las tres en barra — sin drawer "Más".
+ * Jefe (5 rutas): semana, planificación, órdenes y objetivos en barra; métricas en "Más"
+ * (vista retrospectiva, menor frecuencia diaria que planificación/objetivos).
+ */
+const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/ordenes-trabajo', '/objetivos'] as const;
+const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos']                    as const;
 
 function getBottomItems(rol: string | undefined): readonly string[] {
   return rol === 'jefe' ? BOTTOM_NAV_JEFE : BOTTOM_NAV_MIEMBRO;
@@ -50,8 +63,11 @@ function filterNav<T extends { to: string; roles: readonly string[] }>(items: re
 function getInitials(nombre?: string): string {
   if (!nombre) return '?';
   const parts = nombre.trim().split(' ').filter(Boolean);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const first = parts[0];
+  if (!first) return '?';
+  if (parts.length === 1) return first[0]!.toUpperCase();
+  const last = parts[parts.length - 1];
+  return ((first[0] ?? '') + (last?.[0] ?? '')).toUpperCase() || '?';
 }
 
 // ---------------------------------------------------------------------------
@@ -70,8 +86,8 @@ function RealtimeIndicator({ conectado }: { conectado: boolean }) {
         height:        8,
         borderRadius: '50%',
         flexShrink:    0,
-        background:    conectado ? '#31A24C' : '#CED2D9',
-        boxShadow:     conectado ? '0 0 0 2px rgba(49,162,76,0.2)' : 'none',
+        background:    conectado ? 'var(--mc-color-success)' : 'var(--mc-color-border)',
+        boxShadow:     conectado ? '0 0 0 2px color-mix(in srgb, var(--mc-color-success) 25%, transparent)' : 'none',
         transition:   'background 0.4s ease, box-shadow 0.4s ease',
       }}
     />
@@ -85,11 +101,17 @@ export function AppShell() {
   const navigate  = useNavigate();
   const usuario   = useAuthStore((s) => s.usuario);
   const clear     = useAuthStore((s) => s.clear);
-  const { conectado }          = useRealtimeNotificaciones();
-  const [masDrawerOpen,     setMasDrawerOpen]     = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
+  const { conectado } = useRealtimeNotificaciones(notifPrefs ?? undefined);
+  const [masDrawerOpen, setMasDrawerOpen] = useState(false);
   const [confirmandoLogout, setConfirmandoLogout] = useState(false);
-  const [logoutPending,     setLogoutPending]     = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [prefsModalOpen, setPrefsModalOpen] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    if (usuario?.id) setNotifPrefs(loadNotificationPrefs(usuario.id));
+  }, [usuario?.id]);
 
   const rol = usuario?.rol;
   const navWorkspace = filterNav(NAV_WORKSPACE, rol);
@@ -142,7 +164,7 @@ export function AppShell() {
                   end
                   className="mc-sidebar-nav-link"
                 >
-                  <Icon size={18} stroke={1.75} aria-hidden />
+                  <Icon {...ICON_NAV} />
                   <span className="mc-sidebar-nav-label">{label}</span>
                 </NavLink>
               ))}
@@ -157,7 +179,7 @@ export function AppShell() {
                       end
                       className="mc-sidebar-nav-link"
                     >
-                      <Icon size={18} stroke={1.75} aria-hidden />
+                      <Icon {...ICON_NAV} />
                       <span className="mc-sidebar-nav-label">{label}</span>
                     </NavLink>
                   ))}
@@ -170,10 +192,19 @@ export function AppShell() {
               <button
                 type="button"
                 className="mc-sidebar-logout"
+                onClick={() => setPrefsModalOpen(true)}
+                aria-label="Preferencias de notificaciones"
+                title="Notificaciones"
+              >
+                <Bell {...ICON_NAV} />
+              </button>
+              <button
+                type="button"
+                className="mc-sidebar-logout"
                 onClick={() => setConfirmandoLogout(true)}
                 aria-label="Cerrar sesión"
               >
-                <IconLogout size={18} stroke={1.75} aria-hidden />
+                <LogOut {...ICON_NAV} />
               </button>
             </div>
           </nav>
@@ -193,10 +224,19 @@ export function AppShell() {
               <button
                 type="button"
                 className="mc-sidebar-logout"
+                onClick={() => setPrefsModalOpen(true)}
+                aria-label="Preferencias de notificaciones"
+                title="Notificaciones"
+              >
+                <Bell {...ICON_NAV_MOBILE} />
+              </button>
+              <button
+                type="button"
+                className="mc-sidebar-logout"
                 onClick={() => setConfirmandoLogout(true)}
                 aria-label="Cerrar sesión"
               >
-                <IconLogout size={18} stroke={1.75} aria-hidden />
+                <LogOut {...ICON_NAV_MOBILE} />
               </button>
             </div>
 
@@ -231,7 +271,7 @@ export function AppShell() {
                 onClick={() => setMasDrawerOpen(false)}
                 className="mc-sidebar-nav-link"
               >
-                <Icon size={20} stroke={1.75} aria-hidden />
+                  <Icon {...ICON_NAV_MOBILE} />
                 <span className="mc-sidebar-nav-label">{label}</span>
               </NavLink>
             ))}
@@ -250,7 +290,7 @@ export function AppShell() {
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon size={20} stroke={1.75} aria-hidden />
+                        <Icon {...ICON_NAV_MOBILE} />
                       <span>{label}</span>
                       {isActive && <span className="sr-only">(página actual)</span>}
                     </>
@@ -267,7 +307,7 @@ export function AppShell() {
                   aria-label="Más módulos"
                   style={{ flex: '1 1 0' }}
                 >
-                  <IconDots size={20} stroke={1.75} aria-hidden />
+                  <MoreHorizontal {...ICON_NAV_MOBILE} />
                   <span>Más</span>
                 </button>
               )}
@@ -277,8 +317,23 @@ export function AppShell() {
 
       </div>
 
+      {usuario && (
+        <OnboardingWelcome userId={usuario.id} rol={usuario.rol} />
+      )}
+
+      {usuario && (
+        <ModalPreferenciasNotificaciones
+          open={prefsModalOpen}
+          onClose={() => setPrefsModalOpen(false)}
+          userId={usuario.id}
+          rol={usuario.rol}
+          onSaved={setNotifPrefs}
+        />
+      )}
+
       <ModalConfirmar
         open={confirmandoLogout}
+        analyticsId="modal-logout"
         titulo="Cerrar sesión"
         mensaje="¿Seguro que quieres cerrar sesión?"
         labelConfirmar="Cerrar sesión"

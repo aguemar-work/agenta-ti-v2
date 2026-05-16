@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { AlertTriangle } from 'lucide-react';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
+import { estadoEfectivoTablero } from '@/lib/tableroEstado';
+import { fechaLocalYmd } from '@/lib/fecha';
 import type { Tarea } from '@/types';
 
 const MIN_RESUMEN = 10;
@@ -17,6 +20,11 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
   const [resumen, setResumen] = useState('');
   const [busy, setBusy]       = useState(false);
 
+  const hoyYmd = fechaLocalYmd(new Date());
+  const esAtrasada = tarea
+    ? estadoEfectivoTablero(tarea, hoyYmd) === 'atrasada'
+    : false;
+
   useEffect(() => { setResumen(''); }, [tarea?.id]);
 
   const canSubmit = resumen.trim().length >= MIN_RESUMEN && !busy;
@@ -26,6 +34,7 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
     setBusy(true);
     try {
       await onConfirm({ tareaId: tarea.id, resumen: resumen.trim() });
+      markModalCompleted('modal-completar-tarea');
       onClose();
     } finally { setBusy(false); }
   }
@@ -34,7 +43,10 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
     <Modal
       open={open && tarea !== null}
       onClose={onClose}
+      stackLevel={1}
       title="Completar tarea"
+      analyticsId="modal-completar-tarea"
+      descriptionElementId="modal-completar-desc"
       size="sm"
       footer={tarea ? (
         <>
@@ -54,7 +66,21 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
       {tarea && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">
+
+          {esAtrasada && (
+            <div
+              className="flex gap-2 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-warning)] bg-[var(--mc-color-warning-soft)] p-3 text-sm text-[var(--mc-color-text)]"
+              role="alert"
+            >
+              <AlertTriangle size={18} className="shrink-0 text-[var(--mc-color-warning)]" aria-hidden />
+              <p>
+                Esta tarea está atrasada. ¿Confirmas que fue completada?
+                Indica el motivo o resultado en el resumen (obligatorio).
+              </p>
+            </div>
+          )}
+
+          <p id="modal-completar-desc" className="text-sm text-[var(--mc-color-text-secondary)]">
             Indica un resumen de lo realizado (mínimo {MIN_RESUMEN} caracteres).
           </p>
 

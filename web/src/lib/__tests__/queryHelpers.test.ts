@@ -54,4 +54,12 @@ describe('invalidateRelatedQueries', () => {
     await invalidateRelatedQueries(qc, []);
     expect(qc.invalidateQueries).not.toHaveBeenCalled();
   });
+
+  it('invalida órdenes de trabajo con queryKey ordenes-trabajo', async () => {
+    const qc = makeQc();
+    await invalidateRelatedQueries(qc, ['ot']);
+    expect(qc.invalidateQueries).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['ordenes-trabajo'], exact: false }),
+    );
+  });
 });

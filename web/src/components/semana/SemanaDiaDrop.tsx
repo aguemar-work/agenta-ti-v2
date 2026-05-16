@@ -14,7 +14,7 @@ export function SemanaDiaDrop({ id, children, className = '', showPlaceholder = 
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[100px] ${isOver ? 'mc-drop-target-active' : ''} ${className}`.trim()}
+      className={`mc-semana-dia-drop min-h-[100px] ${isOver ? 'mc-drop-target-active' : ''} ${className}`.trim()}
     >
       {showPlaceholder ? <div className="mc-drag-placeholder" aria-hidden /> : null}
       {children}

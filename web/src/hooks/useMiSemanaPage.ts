@@ -8,7 +8,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
@@ -18,7 +18,14 @@ import { useSemanaDnD } from '@/hooks/useSemanaDnD';
 import { useSemanaModales } from '@/hooks/useSemanaModales';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
-import { crearIncidencia, insertarNotaBitacoraRapida } from '@/api/hoyColumnas';
+import {
+  crearIncidencia,
+  getIncidenciasEquipoPorFechaPlanificada,
+  getIncidenciasRangoUsuario,
+  insertarNotaBitacoraRapida,
+} from '@/api/hoyColumnas';
+import { getOrdenesPorTareaIds, type OrdenTrabajo } from '@/api/ordenTrabajo';
+import { fechaLocalYmd } from '@/lib/fecha';
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { puedeGestionarTarea } from '@/lib/permisos';
@@ -39,10 +46,10 @@ export function useMiSemanaPage() {
 
   useMarcarAtrasadasAlMontar(uid);
   const { tareasPlan, eventos, isError } = useMiSemanaData(uid, semanaISO, lunes);
-  const mut = useMiSemanaMutations(uid, semanaISO);
+  const mut = useMiSemanaMutations(uid);
 
   const conteos = useMemo(() => {
-    const c = { pendiente: 0, en_progreso: 0, atrasada: 0, reprogramada: 0, completada: 0 };
+    const c = { pendiente: 0, en_progreso: 0, atrasada: 0, reprogramada: 0, completada: 0, bloqueada: 0 };
     for (const t of tareasPlan) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       if (est in c) c[est as keyof typeof c]++;
@@ -50,7 +57,67 @@ export function useMiSemanaPage() {
     return c;
   }, [tareasPlan, hoyYmd]);
 
-  // ── Incidencias de hoy y notas ────────────────────────────────────────────
+  const desdeYmd = fechaLocalYmd(lunes);
+  const hastaYmd = fechaLocalYmd(sabado);
+  const verEquipoIncidencias = Boolean(esJefe && uid && usuario?.id && uid === usuario.id);
+
+  const { data: incidenciasSemana = [] } = useQuery({
+    queryKey: ['semana', 'incidencias', semanaISO, verEquipoIncidencias ? 'equipo' : uid],
+    enabled: Boolean(uid),
+    queryFn: () =>
+      verEquipoIncidencias
+        ? getIncidenciasEquipoPorFechaPlanificada(desdeYmd, hastaYmd)
+        : getIncidenciasRangoUsuario(uid!, desdeYmd, hastaYmd),
+  });
+
+  const tareaIds = useMemo(() => tareasPlan.map((t) => t.id), [tareasPlan]);
+  const { data: ordenesPorTarea = new Map<string, OrdenTrabajo>() } = useQuery({
+    queryKey: ['semana', 'ot-por-tarea', tareaIds],
+    enabled: tareaIds.length > 0,
+    queryFn: () => getOrdenesPorTareaIds(tareaIds),
+  });
+
+  const nombresPorId = useMemo(() => {
+    const m = new Map<string, string>();
+    if (usuario) m.set(usuario.id, usuario.nombre);
+    for (const u of usuariosAsignables) m.set(u.id, u.nombre);
+    for (const u of usuariosJefe ?? []) m.set(u.id, u.nombre);
+    return m;
+  }, [usuario, usuariosAsignables, usuariosJefe]);
+
+  const resumenDia = useMemo(() => {
+    let pendientesHoy = 0;
+    let atrasadas = 0;
+    let bloqueadas = 0;
+    for (const t of tareasPlan) {
+      const est = estadoEfectivoTablero(t, hoyYmd);
+      if (t.fecha_planificada === hoyYmd && est === 'pendiente') pendientesHoy++;
+      if (est === 'atrasada') atrasadas++;
+      if (est === 'bloqueada') bloqueadas++;
+    }
+    return { pendientesHoy, atrasadas, bloqueadas };
+  }, [tareasPlan, hoyYmd]);
+
+  const [ocultarCompletadas, setOcultarCompletadas] = useState(() => {
+    try {
+      const v = localStorage.getItem('mc-misemana-hide-completed');
+      if (v !== null) return v === '1';
+      return localStorage.getItem('mc-misemana-compact') === '1';
+    } catch { return false; }
+  });
+
+  function toggleOcultarCompletadas() {
+    setOcultarCompletadas((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem('mc-misemana-hide-completed', next ? '1' : '0');
+        localStorage.removeItem('mc-misemana-compact');
+      } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  // ── Incidencias de hoy (registro rápido) y notas ─────────────────────────
   const { data: incidenciasHoy = [] } = useIncidenciasDelDia(uid, hoyYmd);
   const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid);
 
@@ -66,15 +133,17 @@ export function useMiSemanaPage() {
     prioridad:    Tarea['prioridad'];
     descripcion?: string | null;
     asignado_a?:  string | null;
+    fecha_planificada?: string;
     ya_resuelta:  boolean;
   }) {
     if (!usuario || !uid) return;
+    const fecha = input.fecha_planificada ?? hoyYmd;
     const incidencia = await crearIncidencia({
       titulo:            input.titulo,
       prioridad:         input.prioridad,
       descripcion:       input.descripcion ?? null,
       asignado_a:        input.asignado_a ?? uid,
-      fecha_planificada: hoyYmd,
+      fecha_planificada: fecha,
       ya_resuelta:       input.ya_resuelta,
     });
 
@@ -136,7 +205,9 @@ export function useMiSemanaPage() {
     uid, seleccionId, setSeleccionId,
     usuariosJefe, esBannerViernes,
     tareasPlan, eventos, isError, hoyYmd, conteos,
-    incidenciasHoy, notasHoy,
+    incidenciasSemana, incidenciasHoy, notasHoy,
+    ordenesPorTarea, nombresPorId, resumenDia,
+    ocultarCompletadas, toggleOcultarCompletadas,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
     crearIncidenciaHoy, guardarNotaRapida,

@@ -1,0 +1,226 @@
+/**
+ * OTImpresion — documento imprimible (tokens --mc-*, sin hex en TSX).
+ */
+
+@media print {
+  body > *:not(#ot-print-root) {
+    display: none !important;
+  }
+  #ot-print-root {
+    display: block !important;
+  }
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  .ot-close-btn {
+    display: none !important;
+  }
+}
+
+@media screen {
+  #ot-print-root {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: color-mix(in srgb, var(--mc-color-text) 50%, transparent);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 24px 16px;
+  }
+}
+
+.ot-close-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: var(--mc-color-surface);
+  border: 1px solid var(--mc-color-border-strong);
+  border-radius: var(--mc-radius-md);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 10000;
+  font-family: var(--mc-font-sans, system-ui, sans-serif);
+}
+
+.ot-doc {
+  background: var(--mc-color-surface);
+  width: 180mm;
+  padding: 12mm;
+  box-sizing: border-box;
+  font-family: var(--mc-font-sans, 'Inter', Arial, sans-serif);
+  font-size: 9.5pt;
+  color: var(--mc-color-text);
+}
+
+.ot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid var(--mc-color-text);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.ot-head-left p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ot-area {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mc-color-text-secondary);
+}
+
+.ot-title {
+  font-size: 15pt;
+  font-weight: 700;
+}
+
+.ot-numero {
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--mc-color-accent);
+  font-family: monospace;
+}
+
+.ot-head-right {
+  text-align: right;
+}
+
+.ot-estado-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1.5px solid var(--mc-color-text);
+  border-radius: 4px;
+  font-size: 8.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ot-meta {
+  font-size: 8pt;
+  color: var(--mc-color-text-secondary);
+  margin-top: 4px;
+}
+
+.ot-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.ot-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px 8px;
+  margin-bottom: 6px;
+}
+
+.ot-field {
+  padding: 3px 0;
+}
+
+.ot-field--spaced {
+  margin-bottom: 6px;
+}
+
+.ot-value--padded {
+  padding: 2px 0;
+}
+
+.ot-label {
+  font-size: 7.5pt;
+  color: var(--mc-color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 1px;
+}
+
+.ot-value {
+  font-size: 9.5pt;
+  border-bottom: 0.5px solid var(--mc-color-border-strong);
+  padding-bottom: 1px;
+  min-height: 4mm;
+}
+
+.ot-value.tall {
+  min-height: 10mm;
+}
+
+.ot-section {
+  font-size: 7.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mc-color-text-secondary);
+  border-bottom: 0.5px solid var(--mc-color-border-strong);
+  padding-bottom: 2px;
+  margin: 8px 0 5px;
+}
+
+.ot-firmas {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8mm;
+  margin-top: 8mm;
+}
+
+.ot-firma {
+  border: 0.5px solid var(--mc-color-border-strong);
+  border-radius: 4px;
+  padding: 4px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  min-height: 28mm;
+}
+
+.ot-firma-role {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: var(--mc-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.ot-firma-name {
+  font-size: 9pt;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+.ot-firma-campo {
+  font-size: 8pt;
+  color: var(--mc-color-text-secondary);
+  margin-bottom: 1px;
+}
+
+.ot-firma-linea {
+  border-top: 0.8px solid var(--mc-color-text);
+  margin-top: auto;
+  padding-top: 3px;
+  font-size: 7.5pt;
+  color: var(--mc-color-text-secondary);
+  text-align: center;
+}
+
+.ot-footer {
+  margin-top: 6mm;
+  font-size: 7.5pt;
+  color: var(--mc-color-text-placeholder);
+  text-align: center;
+  border-top: 0.5px solid var(--mc-color-border);
+  padding-top: 3px;
+}

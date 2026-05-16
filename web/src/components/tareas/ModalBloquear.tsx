@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import type { Tarea } from '@/types';
@@ -24,6 +24,7 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
     setBusy(true);
     try {
       await onConfirm({ tareaId: tarea.id, justificacion: just.trim() });
+      markModalCompleted('modal-bloquear-tarea');
       onClose();
       setJust('');
     } finally { setBusy(false); }
@@ -34,6 +35,8 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
       open={tarea !== null}
       onClose={onClose}
       title="Bloquear tarea"
+      analyticsId="modal-bloquear-tarea"
+      descriptionElementId="modal-bloquear-desc"
       size="sm"
       footer={tarea ? (
         <>
@@ -53,7 +56,7 @@ export function ModalBloquear({ tarea, onClose, onConfirm }: Props) {
       {tarea && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-[var(--mc-color-text-secondary)]">{tarea.titulo}</p>
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">
+          <p id="modal-bloquear-desc" className="text-sm text-[var(--mc-color-text-secondary)]">
             Indica el motivo. El jefe podrá revisarlo y desbloquearla.
           </p>
 

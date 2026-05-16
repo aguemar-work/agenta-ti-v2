@@ -13,11 +13,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 
-import { Modal } from '@/components/ui/Modal';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import { useDraftForm } from '@/hooks/useDraftForm';
-import { TAREA_BADGE, TAREA_LABEL, PRIORIDAD_BADGE, PRIORIDAD_LABEL } from '@/lib/estadoConfig';
+import { PRIORIDAD_BADGE, PRIORIDAD_LABEL } from '@/lib/estadoConfig';
+import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
+import { TareaHistorialSection } from '@/components/tareas/TareaHistorialSection';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import type { Objetivo, Tarea, Usuario } from '@/types';
@@ -28,13 +30,6 @@ type EditarTareaDraft = {
   descripcion: string;
   objetivoId:  string;
   asignadoId:  string;
-};
-
-type TareaLogHistorial = {
-  tipo_accion:    string;
-  justificacion:  string | null;
-  created_at:     string;
-  usuario_nombre?: string;
 };
 
 const EDITAR_IDLE: EditarTareaDraft = {
@@ -82,7 +77,6 @@ export function ModalDetalleTareaSemana({
   const [motivoEliminar, setMotivoEliminar] = useState('');
   const [busy,           setBusy]           = useState(false);
   const [menuOpen,       setMenuOpen]       = useState(false);
-  const [logsHistorial,  setLogsHistorial]  = useState<TareaLogHistorial[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const initialEditar = useMemo<EditarTareaDraft>(() => {
@@ -115,26 +109,6 @@ export function ModalDetalleTareaSemana({
       setVista('detalle');
       setMotivoEliminar('');
       setMenuOpen(false);
-      setLogsHistorial([]);
-    });
-
-    import('@/lib/insforge').then(({ getInsforge }) => {
-      getInsforge().database
-        .from('log_accion')
-        .select('tipo_accion,justificacion,created_at,usuario:usuario_id(nombre)')
-        .eq('tarea_id', tareaId)
-        .order('created_at', { ascending: false })
-        .limit(10)
-        .then(({ data }) => {
-          if (data) {
-            setLogsHistorial(data.map((r: Record<string, unknown>) => ({
-              tipo_accion:    r.tipo_accion as string,
-              justificacion:  r.justificacion as string | null,
-              created_at:     r.created_at as string,
-              usuario_nombre: (r.usuario as { nombre?: string } | null)?.nombre,
-            })));
-          }
-        });
     });
   }, [tareaId]);
 
@@ -162,6 +136,7 @@ export function ModalDetalleTareaSemana({
     setBusy(true);
     try {
       await onEliminar({ tareaId: tarea.id, motivo: motivoEliminar.trim() });
+      markModalCompleted('modal-detalle-tarea');
       handleModalClose();
     } finally { setBusy(false); }
   }
@@ -306,9 +281,7 @@ export function ModalDetalleTareaSemana({
 
             {/* Estado + Prioridad + Fecha — badges del design system */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`mc-badge ${TAREA_BADGE[tarea.estado] ?? 'mc-badge-neutral'}`}>
-                {TAREA_LABEL[tarea.estado] ?? tarea.estado}
-              </span>
+              <TareaEstadoIndicator estado={tarea.estado} />
               <span className={PRIORIDAD_BADGE[tarea.prioridad]}>
                 {PRIORIDAD_LABEL[tarea.prioridad]}
               </span>
@@ -339,7 +312,7 @@ export function ModalDetalleTareaSemana({
                 const u = usuariosAsignables.find((u) => u.id === tarea.asignado_a);
                 const nombre = u?.nombre ?? tarea.asignado_a;
                 const initials = nombre.trim().split(' ').filter(Boolean)
-                  .map((p) => p[0].toUpperCase()).slice(0, 2).join('');
+                  .map((p) => (p[0] ?? '').toUpperCase()).slice(0, 2).join('');
                 return (
                   <>
                     <span style={{
@@ -357,31 +330,7 @@ export function ModalDetalleTareaSemana({
               })()}
             </div>
 
-            {/* Historial */}
-            {logsHistorial.length > 0 && (
-              <div className="border-t border-[var(--mc-color-border)] pt-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
-                  Historial reciente
-                </div>
-                <div className="flex flex-col gap-2">
-                  {logsHistorial.map((log) => (
-                    <div
-                      key={`${log.created_at}-${log.tipo_accion}`}
-                      className="rounded-lg bg-[var(--mc-color-bg-secondary)] px-3 py-2"
-                    >
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mc-color-text-secondary)]">
-                        <span className="font-medium text-[var(--mc-color-text)]">{log.tipo_accion}</span>
-                        {log.usuario_nombre && <span>{log.usuario_nombre}</span>}
-                        <span>{new Date(log.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                      </div>
-                      {log.justificacion && (
-                        <p className="mt-1 text-xs text-[var(--mc-color-text)]">{log.justificacion}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <TareaHistorialSection tareaId={tarea.id} />
           </div>
         );
 
@@ -475,8 +424,10 @@ export function ModalDetalleTareaSemana({
       open={open && tarea !== null}
       onClose={handleModalClose}
       title={MODAL_TITULO[vista]}
+      analyticsId="modal-detalle-tarea"
       size="lg"
       hasUnsavedChanges={vista === 'editar' && editarHasChanges}
+      {...(vista === 'eliminar' ? { descriptionElementId: ELIM_HINT_ID } : {})}
       footer={renderFooter()}
     >
       {renderCuerpo()}

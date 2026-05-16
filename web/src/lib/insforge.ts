@@ -20,7 +20,13 @@ function readEnv(): { baseUrl: string; anonKey: string } {
   return env;
 }
 
-/** Cliente singleton InsForge (sesión y PostgREST). Requiere `.env` con variables VITE_*. */
+/**
+ * Cliente singleton InsForge (sesión y PostgREST). Requiere `.env` con variables VITE_*.
+ *
+ * Sesión: el SDK gestiona tokens en almacenamiento del navegador — no en authStore (solo perfil `usuario`).
+ * Mitigación V4: CSP en vercel.json, sin secretos en Zustand, interceptor 401, refresh automático.
+ * httpOnly cookies requerirían proxy de auth propio (fuera de alcance SPA + InsForge BaaS).
+ */
 export function getInsforge(): InsForgeClient {
   if (!client) {
     const { baseUrl, anonKey } = readEnv();

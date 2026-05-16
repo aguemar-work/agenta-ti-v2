@@ -7,11 +7,14 @@ import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { usePlanificacionPage } from '@/hooks/usePlanificacionPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { fechaLocalDdMmYyyy, fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import { TAREA_LABEL_PLURAL, TAREA_PILL } from '@/lib/estadoConfig';
+import { TAREA_LABEL_PLURAL } from '@/lib/estadoConfig';
+import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { agregarDias } from '@/lib/semanas';
 import { useRef } from 'react';
+import { PlanificacionSection } from '@/components/planificacion/PlanificacionSection';
 import { AlertTriangle, CheckCircle, Clock, History, Info, XCircle } from 'lucide-react';
 import type { EstadoTarea, LogAccion, TipoAccionLog } from '@/types';
 import type { LogActividadItem } from '@/api/audit';
@@ -86,15 +89,15 @@ export function Planificacion() {
     abrirDevolver, cerrarDevolver,
   } = usePlanificacionPage();
 
-  if (!usuario) return null;
-
-  const nombreMiembro = Object.fromEntries(miembros.map((m) => [m.id, m.nombre]));
-
-  // Refs para hacer scroll desde los KPIs ejecutivos a cada sección.
+  // Refs deben declararse antes de cualquier retorno condicional (reglas de hooks).
   const refHeatmap     = useRef<HTMLElement | null>(null);
   const refActividad   = useRef<HTMLElement | null>(null);
   const refIncidencias = useRef<HTMLElement | null>(null);
   const refLogs        = useRef<HTMLElement | null>(null);
+
+  if (!usuario) return null;
+
+  const nombreMiembro = Object.fromEntries(miembros.map((m) => [m.id, m.nombre]));
 
   function scrollTo(ref: React.RefObject<HTMLElement | null>) {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -115,7 +118,7 @@ export function Planificacion() {
       />
 
       {/* ── Resumen ejecutivo ──────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <div className="mc-planificacion-kpis">
         <KpiCard
           size="md"
           value={conteoSemana.atrasada ?? 0}
@@ -167,14 +170,11 @@ export function Planificacion() {
             </div>
           ))}
         </div>
-        <div className="overflow-x-auto rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+        <div className="planificacion-carga-scroll rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
+          <table className="planificacion-carga-table w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--mc-color-border)]">
-                <th
-                  className="p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]"
-                  style={{ position: 'sticky', left: 0, background: 'var(--mc-color-surface)', zIndex: 2 }}
-                >
+                <th className="planificacion-celda-miembro p-2 text-[10px] font-medium uppercase tracking-wide text-[var(--mc-color-text-secondary)]">
                   Miembro
                 </th>
                 {diasLab.map((d, i) => (
@@ -190,10 +190,7 @@ export function Planificacion() {
                 const totalSem = diasLab.reduce((acc, d) => acc + cuenta(u.id, fechaLocalYmd(d)), 0);
                 return (
                   <tr key={u.id} className="border-b border-[var(--mc-color-border)]">
-                    <td
-                      className="p-2 font-medium text-[var(--mc-color-text)]"
-                      style={{ position: 'sticky', left: 0, background: 'var(--mc-color-surface)', zIndex: 1 }}
-                    >
+                    <td className="planificacion-celda-miembro p-2 font-medium text-[var(--mc-color-text)]">
                       {u.nombre}
                     </td>
                     {diasLab.map((d) => {
@@ -203,7 +200,7 @@ export function Planificacion() {
                         <td key={ymd} className="p-2">
                           <button
                             type="button"
-                            className={`w-full rounded-md py-1 text-center text-xs font-medium ${celdaClass(n)}`}
+                            className={`planificacion-celda-btn w-full rounded-md py-1 text-center text-xs font-medium ${celdaClass(n)}`}
                             onClick={() => setModal({ usuarioId: u.id, fecha: ymd, nombre: u.nombre })}
                             aria-label={`${u.nombre} — ${ymd}: ${n} tareas`}
                           >
@@ -218,11 +215,8 @@ export function Planificacion() {
               })}
 
               {/* Fila resumen por estado */}
-              <tr className="border-t border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)]">
-                <td
-                  className="p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]"
-                  style={{ position: 'sticky', left: 0, background: 'var(--mc-color-bg-secondary)', zIndex: 1 }}
-                >
+              <tr className="planificacion-fila-resumen border-t border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)]">
+                <td className="planificacion-celda-miembro p-2 text-xs font-medium text-[var(--mc-color-text-secondary)]">
                   Resumen del día
                 </td>
                 {diasLab.map((d) => {
@@ -236,9 +230,9 @@ export function Planificacion() {
                       ) : (
                         <div className="flex flex-col gap-0.5">
                           {ESTADOS.filter((e) => counts[e]).map((e) => (
-                            <span key={e} className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${TAREA_PILL[e] ?? ''}`}>
+                            <TareaEstadoIndicator key={e} estado={e} variant="pill" plural>
                               {counts[e]} {TAREA_LABEL_PLURAL[e]}
-                            </span>
+                            </TareaEstadoIndicator>
                           ))}
                         </div>
                       )}
@@ -248,9 +242,9 @@ export function Planificacion() {
                 <td className="p-2">
                   <div className="flex flex-col gap-0.5">
                     {ESTADOS.filter((e) => conteoSemana[e]).map((e) => (
-                      <span key={e} className={`inline-block rounded px-1 py-0.5 text-[10px] font-medium ${TAREA_PILL[e] ?? ''}`}>
+                      <TareaEstadoIndicator key={e} estado={e} variant="pill" plural>
                         {conteoSemana[e]} {TAREA_LABEL_PLURAL[e]}
-                      </span>
+                      </TareaEstadoIndicator>
                     ))}
                   </div>
                 </td>
@@ -261,6 +255,7 @@ export function Planificacion() {
       </section>
 
       {/* ── Actividad del equipo ─────────────────────────────────────────── */}
+      <PlanificacionSection title="Actividad del equipo" sectionRef={refActividad}>
       <section ref={refActividad}>
         <div className="mc-section-header">
           <span>Actividad del equipo esta semana</span>
@@ -271,9 +266,7 @@ export function Planificacion() {
         {loadActividad ? (
           <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
         ) : actividad.length === 0 ? (
-          <div className="mc-empty">
-            <p className="mc-empty-title">Sin actividad registrada esta semana</p>
-          </div>
+          <EmptyState compact title="Sin actividad registrada esta semana" />
         ) : (
           <div className="overflow-hidden rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
             {actividad.map((item: LogActividadItem) => {
@@ -330,8 +323,10 @@ export function Planificacion() {
           </div>
         )}
       </section>
+      </PlanificacionSection>
 
       {/* ── Incidencias del equipo ────────────────────────────────────── */}
+      <PlanificacionSection title="Incidencias de la semana" sectionRef={refIncidencias}>
       <section ref={refIncidencias}>
         <div className="mc-section-header">
           <span className="flex items-center gap-2">
@@ -345,9 +340,7 @@ export function Planificacion() {
         {loadInc ? (
           <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
         ) : incidencias.length === 0 ? (
-          <div className="mc-empty">
-            <p className="mc-empty-title">Sin incidencias esta semana</p>
-          </div>
+          <EmptyState compact title="Sin incidencias esta semana" />
         ) : (
           <div className="overflow-hidden rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
             {incidencias.map((t) => {
@@ -371,17 +364,17 @@ export function Planificacion() {
                       <p className="text-xs text-[var(--mc-color-text-secondary)] line-clamp-2">{t.descripcion}</p>
                     )}
                   </div>
-                  <span className={`mc-badge text-[10px] shrink-0 ${TAREA_PILL[est] ?? 'mc-badge-neutral'}`}>
-                    {TAREA_LABEL_PLURAL[est] ?? est}
-                  </span>
+                  <TareaEstadoIndicator estado={est} variant="pill" plural className="shrink-0" />
                 </div>
               );
             })}
           </div>
         )}
       </section>
+      </PlanificacionSection>
 
       {/* ── Logs de auditoría ────────────────────────────────────────────── */}
+      <PlanificacionSection title="Justificaciones y log" sectionRef={refLogs}>
       <section ref={refLogs}>
         {/* Cabecera con toggle pendientes / historial */}
         <div className="mc-section-header">
@@ -410,9 +403,7 @@ export function Planificacion() {
             {loadLogs ? (
               <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
             ) : logsPend.length === 0 ? (
-              <div className="mc-empty">
-                <p className="mc-empty-title">Sin pendientes de lectura</p>
-              </div>
+              <EmptyState compact title="Sin pendientes de lectura" />
             ) : (
               <div className="overflow-hidden rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
                 {logsPend.map((log: LogAccion) => (
@@ -489,9 +480,7 @@ export function Planificacion() {
             {loadHist ? (
               <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando historial…</p>
             ) : histLogs.length === 0 ? (
-              <div className="mc-empty">
-                <p className="mc-empty-title">Sin registros con estos filtros</p>
-              </div>
+              <EmptyState compact title="Sin registros con estos filtros" />
             ) : (
               <div className="overflow-hidden rounded-xl border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]">
                 {histLogs.map((log: LogAccion) => (
@@ -542,6 +531,7 @@ export function Planificacion() {
           </div>
         )}
       </section>
+      </PlanificacionSection>
 
       {/* ── Modal: detalle de celda ─────────────────────────────────────── */}
       <Modal
@@ -572,9 +562,7 @@ export function Planificacion() {
               {detalle.length} {detalle.length === 1 ? 'tarea' : 'tareas'}
             </p>
             {detalle.length === 0 ? (
-              <div className="mc-empty">
-                <p className="mc-empty-title">Sin tareas planificadas</p>
-              </div>
+              <EmptyState compact title="Sin tareas planificadas" />
             ) : (
               detalle.map((t) => {
                 const est = estadoEfectivoTablero(t, hoyYmd);
@@ -582,9 +570,7 @@ export function Planificacion() {
                   <div key={t.id} className="mc-entity-card flex flex-col gap-2">
                     <p className="text-sm font-semibold text-[var(--mc-color-text)]">{t.titulo}</p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`mc-badge ${TAREA_PILL[est] ?? 'mc-badge-neutral'} text-[10px]`}>
-                        {TAREA_LABEL_PLURAL[est] ?? est}
-                      </span>
+                      <TareaEstadoIndicator estado={est} variant="pill" plural />
                       <span className="text-[11px] text-[var(--mc-color-text-secondary)]">{t.prioridad} prioridad</span>
                     </div>
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -642,7 +628,7 @@ export function Planificacion() {
       <ModalMiSemana
         open={modalCrear !== null}
         modoOrigen="dia"
-        fechaDia={modalCrear?.fecha}
+        {...(modalCrear?.fecha ? { fechaDia: modalCrear.fecha } : {})}
         objetivos={objetivosActivos}
         usuariosAsignables={miembros}
         asignadoPorDefectoId={modalCrear?.usuarioId ?? ''}

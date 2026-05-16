@@ -1,20 +1,11 @@
 import { StrictMode, Component, type ReactNode, type ErrorInfo } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import * as Sentry from '@sentry/react';
 import App from '@/App.tsx';
 import { getInsforgeEnv } from '@/lib/insforge';
+import { captureSentryException, initSentry } from '@/lib/sentry';
 
-const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
-
-if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    environment: import.meta.env.MODE,
-    sendDefaultPii: true,
-    tracesSampleRate: import.meta.env.DEV ? 1 : 0.1,
-  });
-}
+initSentry();
 import { installInsforgeFetchInterceptor } from '@/lib/insforgeFetchInterceptor';
 import { setAppIcons } from '@/lib/setAppIcons';
 import { AppProviders } from '@/providers/AppProviders';
@@ -46,14 +37,15 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     return { hasError: true, message };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[AppErrorBoundary]', error, info.componentStack);
-    if (sentryDsn) {
-      Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
-    }
+    captureSentryException(error, {
+      ...(info.componentStack ? { componentStack: info.componentStack } : {}),
+      label: 'AppErrorBoundary',
+    });
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div
@@ -85,7 +77,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, EBState> {
                 padding: '12px 16px',
                 maxWidth: '600px',
                 overflowX: 'auto',
-                color: 'var(--mc-color-danger, #dc2626)',
+                color: 'var(--mc-color-danger)',
               }}
             >
               {this.state.message}

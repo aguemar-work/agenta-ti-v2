@@ -1,12 +1,12 @@
 /**
  * lib/permisos.ts
  *
- * Fuente única de verdad para reglas de permisos de UI.
- * Estas funciones son frontend-only: complementan las políticas RLS de BD
- * controlando qué CTAs y acciones se muestran al usuario.
+ * Reglas de permisos de UI (ocultar CTAs, readOnly en tarjetas).
+ * La autorización real está en PostgreSQL: RLS + RPCs SECURITY DEFINER.
+ * Ver matriz de paridad en `permisosBackend.ts` y tests `permisos.rls-paridad.test.ts`.
  *
  * Regla: si la lógica de "¿puede hacer X?" aparece en más de un hook o
- * componente, pertenece aquí.
+ * componente, pertenece aquí — nunca confiar solo en el cliente.
  */
 
 import type { Tarea, Usuario } from '@/types';

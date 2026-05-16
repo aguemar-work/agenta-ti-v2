@@ -25,8 +25,16 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { announcePolitely } from '@/components/a11y/LiveRegion';
+
 import { Q_INC_HOY } from '@/hooks/useHoyColumnas';
 import { getInsforge } from '@/lib/insforge';
+import {
+  getDefaultNotificationPrefs,
+  isNotificationEnabled,
+  type NotificationEventKey,
+  type NotificationPrefs,
+} from '@/lib/notificationPrefs';
 import { useAuthStore } from '@/store/authStore';
 
 type EventPayload = Record<string, unknown>;
@@ -35,7 +43,15 @@ type EventPayload = Record<string, unknown>;
 const RETRY_DELAYS_MS = [2_000, 4_000, 8_000]; // 3 intentos: 2s, 4s, 8s
 const MAX_RETRIES = RETRY_DELAYS_MS.length;
 
-export function useRealtimeNotificaciones() {
+function notifyIfEnabled(
+  prefs: NotificationPrefs,
+  event: NotificationEventKey,
+  show: () => void,
+) {
+  if (isNotificationEnabled(prefs, event)) show();
+}
+
+export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultNotificationPrefs()) {
   const usuario = useAuthStore((s) => s.usuario);
   const qc      = useQueryClient();
 
@@ -72,17 +88,29 @@ export function useRealtimeNotificaciones() {
 
         rt.on('tarea_asignada', (payload: EventPayload) => {
           if (cancelledRef.current) return;
-          toast.info(`Nueva tarea asignada: ${payload.titulo ?? ''}`);
+          notifyIfEnabled(prefs, 'tarea_asignada', () => {
+            const msg = `Nueva tarea asignada: ${payload.titulo ?? ''}`;
+            toast.info(msg);
+            announcePolitely(msg);
+          });
         });
 
         rt.on('ot_aprobada', (payload: EventPayload) => {
           if (cancelledRef.current) return;
-          toast.success(`OT ${payload.numero ?? ''} aprobada ✓`);
+          notifyIfEnabled(prefs, 'ot_aprobada', () => {
+            const msg = `OT ${payload.numero ?? ''} aprobada`;
+            toast.success(`${msg} ✓`);
+            announcePolitely(msg);
+          });
         });
 
         rt.on('ot_rechazada', (payload: EventPayload) => {
           if (cancelledRef.current) return;
-          toast.error(`OT ${payload.numero ?? ''} rechazada${payload.motivo ? `: ${payload.motivo}` : ''}`);
+          notifyIfEnabled(prefs, 'ot_rechazada', () => {
+            const msg = `OT ${payload.numero ?? ''} rechazada${payload.motivo ? `: ${payload.motivo}` : ''}`;
+            toast.error(msg);
+            announcePolitely(msg);
+          });
         });
 
         // ── Canal del equipo (solo Jefe) ───────────────────────────────
@@ -97,18 +125,24 @@ export function useRealtimeNotificaciones() {
               qc.invalidateQueries({ queryKey: ['tareas-hoy'],   exact: false }),
               qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
             ]);
-            toast.success(
-              `${payload.usuarioNombre ?? 'Miembro'} completó "${payload.titulo ?? ''}"`,
-              { description: payload.resumen ? String(payload.resumen).slice(0, 120) : undefined },
-            );
+            notifyIfEnabled(prefs, 'tarea_completada', () => {
+              const msg = `${payload.usuarioNombre ?? 'Miembro'} completó "${payload.titulo ?? ''}"`;
+              toast.success(msg, {
+                description: payload.resumen ? String(payload.resumen).slice(0, 120) : undefined,
+              });
+              announcePolitely(msg);
+            });
           });
 
           rt.on('ot_enviada', (payload: EventPayload) => {
             if (cancelledRef.current) return;
-            toast.info(
-              `Nueva OT de ${payload.usuarioNombre ?? 'Miembro'}`,
-              { description: `${payload.numero ?? ''} — pendiente de aprobación` },
-            );
+            notifyIfEnabled(prefs, 'ot_enviada', () => {
+              const msg = `Nueva OT de ${payload.usuarioNombre ?? 'Miembro'}, ${payload.numero ?? ''}, pendiente de aprobación`;
+              toast.info(`Nueva OT de ${payload.usuarioNombre ?? 'Miembro'}`, {
+                description: `${payload.numero ?? ''} — pendiente de aprobación`,
+              });
+              announcePolitely(msg);
+            });
           });
 
           rt.on('incidencia_registrada', (payload: EventPayload) => {
@@ -118,10 +152,13 @@ export function useRealtimeNotificaciones() {
               qc.invalidateQueries({ queryKey: ['tablero'],       exact: false }),
               qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
             ]);
-            toast.warning(
-              `Incidencia: ${payload.titulo ?? ''}`,
-              { description: `Registrada por ${payload.usuarioNombre ?? ''}` },
-            );
+            notifyIfEnabled(prefs, 'incidencia_registrada', () => {
+              const msg = `Incidencia registrada: ${payload.titulo ?? ''}, por ${payload.usuarioNombre ?? ''}`;
+              toast.warning(`Incidencia: ${payload.titulo ?? ''}`, {
+                description: `Registrada por ${payload.usuarioNombre ?? ''}`,
+              });
+              announcePolitely(msg);
+            });
           });
         }
       } catch (err) {
@@ -166,7 +203,7 @@ export function useRealtimeNotificaciones() {
         // ignorar errores de cleanup
       }
     };
-  }, [qc, usuario?.id, usuario?.rol]);
+  }, [qc, usuario?.id, usuario?.rol, prefs]);
 
   return { conectado };
 }

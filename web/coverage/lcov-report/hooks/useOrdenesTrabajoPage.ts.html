@@ -1,0 +1,1024 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for hooks/useOrdenesTrabajoPage.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">hooks</a> useOrdenesTrabajoPage.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/167</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/57</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/51</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/134</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
+ * hooks/useOrdenesTrabajoPage.ts
+ * Fix: keepPreviousData en query de tipos para evitar que el panel desaparezca
+ * al hacer toggle activo/inactivo.
+ */
+&nbsp;
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+&nbsp;
+import {
+  aprobarOT, cancelarOrdenTrabajo, completarOT,
+  crearOrdenTrabajo, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
+  getTiposTrabajoOT, iniciarEjecucionOT, rechazarOT, actualizarOrdenTrabajo,
+  crearTipoTrabajoOT, toggleTipoTrabajoOT,
+  type CrearOTInput, type EstadoOT, type OrdenTrabajo,
+} from '@/api/ordenTrabajo';
+import { useAuthStore } from '@/store/authStore';
+import { publicarEventoUsuario } from '@/lib/realtimePublish';
+import { getInsforge } from '@/lib/insforge';
+import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import type { Id, Tarea } from '@/types';
+&nbsp;
+export const Q_OT = <span class="cstat-no" title="statement not covered" >'ordenes-trabajo';</span>
+export const Q_TIPOS_OT = <span class="cstat-no" title="statement not covered" >'tipos-trabajo-ot';</span>
+&nbsp;
+const OT_NUEVA_DRAFT_PREFIX = <span class="cstat-no" title="statement not covered" >'mc_draft_ot-nueva-';</span>
+&nbsp;
+function <span class="fstat-no" title="function not covered" >safeParseOTDraft(r</span>aw: string | null): Partial&lt;Omit&lt;CrearOTInput, 'enviar'&gt;&gt; | null {
+<span class="cstat-no" title="statement not covered" >  if (!raw) <span class="cstat-no" title="statement not covered" >return null;</span></span>
+<span class="cstat-no" title="statement not covered" >  try {</span>
+<span class="cstat-no" title="statement not covered" >    return JSON.parse(raw) as Partial&lt;Omit&lt;CrearOTInput, 'enviar'&gt;&gt;;</span>
+  } catch {
+<span class="cstat-no" title="statement not covered" >    return null;</span>
+  }
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >formInicial(u</span>suarioId: Id): Omit&lt;CrearOTInput, 'enviar'&gt; {
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    creado_por: usuarioId, tipo_trabajo_id: null, tarea_id: null,
+    descripcion: '', area_destino: '', ubicacion: '',
+    modalidad: 'presencial', fecha_estimada: '',
+    hora_inicio_est: '', duracion_est_min: null,
+    equipos_materiales: '', observaciones: '',
+  };
+}
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >useOrdenesTrabajoPage() {</span>
+  const <span class="cstat-no" title="statement not covered" >qc = useQueryClient();</span>
+  const <span class="cstat-no" title="statement not covered" >usuario = <span class="fstat-no" title="function not covered" >useAuthStore((s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.usuario);</span></span>
+  const esJefe = <span class="cstat-no" title="statement not covered" >usuario?.rol === 'jefe';</span>
+&nbsp;
+  // ── Queries ───────────────────────────────────────────────────────────────
+  const { data: ordenes = <span class="branch-0 cbranch-no" title="branch not covered" >[],</span> isLoading, <span class="cstat-no" title="statement not covered" >isError } = useQuery({</span>
+    queryKey: [Q_OT, usuario?.id, esJefe],
+    enabled: Boolean(usuario?.id),
+<span class="fstat-no" title="function not covered" >    queryFn: () =&gt; <span class="cstat-no" title="statement not covered" >e</span>sJefe ? getOrdenesTrabajoTodas() : getOrdenesTrabajoMiembro(usuario!.id),</span>
+  });
+&nbsp;
+  const { data: tiposTrabajo = <span class="branch-0 cbranch-no" title="branch not covered" >[]<span class="cstat-no" title="statement not covered" > </span>} = useQuery({</span>
+    queryKey: [Q_TIPOS_OT],
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    queryFn: () =&gt; g</span>etTiposTrabajoOT(),</span>
+    // FIX: mantiene datos anteriores mientras refetch — evita que el panel desaparezca
+    placeholderData: keepPreviousData,
+  });
+&nbsp;
+  /** Tareas planificadas del miembro para vincular a la OT */
+  const { data: tareasVinculables = <span class="branch-0 cbranch-no" title="branch not covered" >[]<span class="cstat-no" title="statement not covered" > </span>} = useQuery({</span>
+    queryKey: ['ot-tareas-vinculables', usuario?.id],
+    enabled: Boolean(usuario?.id),
+    queryFn: <span class="fstat-no" title="function not covered" >async (): Promise&lt;Pick&lt;Tarea, 'id' | 'titulo' | 'estado'&gt;[]&gt; =&gt; {</span>
+      const { data, error } = <span class="cstat-no" title="statement not covered" >await getInsforge().database</span>
+        .from('tarea')
+        .select('id,titulo,estado')
+        .eq('asignado_a', usuario!.id)
+        .in('estado', ['pendiente', 'en_progreso', 'atrasada'])
+        .order('fecha_planificada', { ascending: true });
+<span class="cstat-no" title="statement not covered" >      if (error) <span class="cstat-no" title="statement not covered" >throw error;</span></span>
+<span class="cstat-no" title="statement not covered" >      return (data ?? []) as Pick&lt;Tarea, 'id' | 'titulo' | 'estado'&gt;[];</span>
+    },
+  });
+&nbsp;
+  // ── Estado UI — OTs ───────────────────────────────────────────────────────
+  const [modalForm, <span class="cstat-no" title="statement not covered" >setModalForm] = useState(false);</span>
+  const [editandoOT, <span class="cstat-no" title="statement not covered" >setEditandoOT] = useState&lt;OrdenTrabajo | null&gt;(null);</span>
+  const [viendoOT, <span class="cstat-no" title="statement not covered" >setViendoOT] = useState&lt;OrdenTrabajo | null&gt;(null);</span>
+  const [imprimiendoOT, <span class="cstat-no" title="statement not covered" >setImprimiendoOT] = useState&lt;OrdenTrabajo | null&gt;(null);</span>
+  const [modalCompletar, <span class="cstat-no" title="statement not covered" >setModalCompletar] = useState&lt;OrdenTrabajo | null&gt;(null);</span>
+  const [modalRechazar, <span class="cstat-no" title="statement not covered" >setModalRechazar] = useState&lt;OrdenTrabajo | null&gt;(null);</span>
+  const [motivoRechazo, <span class="cstat-no" title="statement not covered" >setMotivoRechazo] = useState('');</span>
+  const [filtroEstado, <span class="cstat-no" title="statement not covered" >setFiltroEstado] = useState&lt;EstadoOT | 'todos'&gt;('todos');</span>
+  const [form, <span class="cstat-no" title="statement not covered" >setForm] = <span class="fstat-no" title="function not covered" >useState&lt;Omit&lt;CrearOTInput, 'enviar'&gt;&gt;(() =&gt; <span class="cstat-no" title="statement not covered" >f</span>ormInicial(usuario?.id ?? ''))</span>;</span>
+&nbsp;
+  /** Borrador local al crear nueva OT (sin segundo botón en UI). */
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >  useEffect(() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!modalForm || editandoOT || !usuario?.id) <span class="cstat-no" title="statement not covered" >return;</span></span>
+    const key = <span class="cstat-no" title="statement not covered" >OT_NUEVA_DRAFT_PREFIX + usuario.id;</span>
+    const t = <span class="cstat-no" title="statement not covered" >window.<span class="fstat-no" title="function not covered" >setTimeout(() =&gt; {</span></span>
+      const base = <span class="cstat-no" title="statement not covered" >formInicial(usuario.id);</span>
+      const sameAsEmpty = <span class="cstat-no" title="statement not covered" >JSON.stringify(form) === JSON.stringify(base);</span>
+<span class="cstat-no" title="statement not covered" >      try {</span>
+<span class="cstat-no" title="statement not covered" >        if (sameAsEmpty) <span class="cstat-no" title="statement not covered" >localStorage.removeItem(key);</span></span>
+        else <span class="cstat-no" title="statement not covered" >localStorage.setItem(key, JSON.stringify(form));</span>
+      } catch { /* quota */ }
+    }, 500);
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    return () =&gt; <span class="cstat-no" title="statement not covered" >w</span>indow.clearTimeout(t);</span></span>
+  }, [form, modalForm, editandoOT, usuario?.id]);
+&nbsp;
+  const [receptorNombre, <span class="cstat-no" title="statement not covered" >setReceptorNombre] = useState('');</span>
+  const [receptorDni, <span class="cstat-no" title="statement not covered" >setReceptorDni] = useState('');</span>
+  const [receptorCargo, <span class="cstat-no" title="statement not covered" >setReceptorCargo] = useState('');</span>
+  const [obsCierre, <span class="cstat-no" title="statement not covered" >setObsCierre] = useState('');</span>
+&nbsp;
+  // ── Estado UI — Tipos de trabajo ──────────────────────────────────────────
+  const [nuevoTipoNombre, <span class="cstat-no" title="statement not covered" >setNuevoTipoNombre] = useState('');</span>
+&nbsp;
+  // ── Invalidar ─────────────────────────────────────────────────────────────
+  const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >invalidarOTs = () =&gt; i</span>nvalidateRelatedQueries(qc, ['ot']);</span>
+  const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >invalidarTipos = () =&gt; <span class="cstat-no" title="statement not covered" >q</span>c.invalidateQueries({ refetchType: 'active', queryKey: [Q_TIPOS_OT] });</span></span>
+&nbsp;
+  // ── Mutaciones — OTs ──────────────────────────────────────────────────────
+  const <span class="cstat-no" title="statement not covered" >mutCrear = useMutation({</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    mutationFn: () =&gt; c</span>rearOrdenTrabajo({ ...form, enviar: true }),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async (o</span>t) =&gt; {
+<span class="cstat-no" title="statement not covered" >      await invalidarOTs();</span>
+<span class="cstat-no" title="statement not covered" >      if (usuario?.id) {</span>
+<span class="cstat-no" title="statement not covered" >        try { <span class="cstat-no" title="statement not covered" >localStorage.removeItem(OT_NUEVA_DRAFT_PREFIX + usuario.id); } catch {</span> /* ignore */ }</span>
+      }
+<span class="cstat-no" title="statement not covered" >      if (ot.estado === 'pendiente') {</span>
+<span class="cstat-no" title="statement not covered" >        void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });</span>
+      }
+<span class="cstat-no" title="statement not covered" >      setModalForm(false);</span>
+<span class="cstat-no" title="statement not covered" >      setForm(formInicial(usuario?.id ?? ''));</span>
+<span class="cstat-no" title="statement not covered" >      toast.success(`${ot.numero} enviada al jefe`);</span>
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutCrearOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo crear la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutActualizar = useMutation({</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    mutationFn: () =&gt; a</span>ctualizarOrdenTrabajo({ ...form, otId: editandoOT!.id, enviar: true }),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      await invalidarOTs();</span>
+<span class="cstat-no" title="statement not covered" >      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });</span>
+<span class="cstat-no" title="statement not covered" >      setModalForm(false); <span class="cstat-no" title="statement not covered" >s</span>etEditandoOT(null);</span>
+<span class="cstat-no" title="statement not covered" >      toast.success('OT enviada al jefe');</span>
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutActualizarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo actualizar la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutAprobar = useMutation({</span>
+<span class="fstat-no" title="function not covered" >    mutationFn: (<span class="cstat-no" title="statement not covered" >o</span>tId: Id) =&gt; aprobarOT(otId, usuario!.id),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async (_</span>data, otId) =&gt; {
+<span class="cstat-no" title="statement not covered" >      await invalidarOTs();</span>
+<span class="cstat-no" title="statement not covered" >      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });</span>
+<span class="cstat-no" title="statement not covered" >      toast.success('OT aprobada');</span>
+      // Notificar al creador de la OT
+      const ot = <span class="cstat-no" title="statement not covered" >ordenes.<span class="fstat-no" title="function not covered" >find((o</span>) =&gt; <span class="cstat-no" title="statement not covered" >o.id === otId);</span></span>
+<span class="cstat-no" title="statement not covered" >      if (ot) {</span>
+<span class="cstat-no" title="statement not covered" >        void publicarEventoUsuario({</span>
+          tipo:      'ot_aprobada',
+          usuarioId: ot.creado_por,
+          otId:      ot.id,
+          numero:    ot.numero,
+        });
+      }
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutAprobarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo aprobar la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutRechazar = useMutation({</span>
+<span class="fstat-no" title="function not covered" >    mutationFn: ({</span> otId, <span class="cstat-no" title="statement not covered" >motivo }: { otId: Id; motivo: string }) =&gt; rechazarOT(otId, usuario!.id, motivo),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async (_</span>data, { otId, motivo }) =&gt; {
+<span class="cstat-no" title="statement not covered" >      await invalidarOTs();</span>
+<span class="cstat-no" title="statement not covered" >      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });</span>
+<span class="cstat-no" title="statement not covered" >      setModalRechazar(null); <span class="cstat-no" title="statement not covered" >s</span>etMotivoRechazo('');</span>
+<span class="cstat-no" title="statement not covered" >      toast.success('OT rechazada');</span>
+      // Notificar al creador de la OT
+      const ot = <span class="cstat-no" title="statement not covered" >ordenes.<span class="fstat-no" title="function not covered" >find((o</span>) =&gt; <span class="cstat-no" title="statement not covered" >o.id === otId);</span></span>
+<span class="cstat-no" title="statement not covered" >      if (ot) {</span>
+<span class="cstat-no" title="statement not covered" >        void publicarEventoUsuario({</span>
+          tipo:      'ot_rechazada',
+          usuarioId: ot.creado_por,
+          otId:      ot.id,
+          numero:    ot.numero,
+          motivo,
+        });
+      }
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutRechazarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo rechazar la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutIniciar = useMutation({</span>
+<span class="fstat-no" title="function not covered" >    mutationFn: (<span class="cstat-no" title="statement not covered" >o</span>tId: Id) =&gt; iniciarEjecucionOT(otId, usuario!.id),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async () =&gt; {</span> <span class="cstat-no" title="statement not covered" >await invalidarOTs(); <span class="cstat-no" title="statement not covered" >t</span>oast.success('OT en ejecución'); },</span>
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutIniciarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo iniciar la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutCompletar = useMutation({</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    mutationFn: () =&gt; c</span>ompletarOT({</span>
+      otId: modalCompletar!.id,
+      usuarioId: usuario!.id,
+      receptorNombre,
+      receptorDni,
+      receptorCargo,
+      observacionesCierre: obsCierre || undefined,
+    }),
+    onSuccess: <span class="fstat-no" title="function not covered" >async () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      await invalidarOTs();</span>
+<span class="cstat-no" title="statement not covered" >      setModalCompletar(null);</span>
+<span class="cstat-no" title="statement not covered" >      setReceptorNombre(''); <span class="cstat-no" title="statement not covered" >s</span>etReceptorDni(''); <span class="cstat-no" title="statement not covered" >s</span>etReceptorCargo(''); <span class="cstat-no" title="statement not covered" >s</span>etObsCierre('');</span>
+<span class="cstat-no" title="statement not covered" >      toast.success('OT completada');</span>
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutCompletarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo completar la OT.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutCancelar = useMutation({</span>
+<span class="fstat-no" title="function not covered" >    mutationFn: (<span class="cstat-no" title="statement not covered" >o</span>tId: Id) =&gt; cancelarOrdenTrabajo(otId, usuario!.id),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async () =&gt; {</span> <span class="cstat-no" title="statement not covered" >await invalidarOTs(); <span class="cstat-no" title="statement not covered" >t</span>oast.success('OT cancelada'); },</span>
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutCancelarOT]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo cancelar la OT.'); },</span>
+  });
+&nbsp;
+  // ── Mutaciones — Tipos de trabajo ─────────────────────────────────────────
+  const <span class="cstat-no" title="statement not covered" >mutCrearTipo = useMutation({</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >    mutationFn: () =&gt; c</span>rearTipoTrabajoOT(nuevoTipoNombre),</span>
+    onSuccess: <span class="fstat-no" title="function not covered" >async () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      await invalidarTipos();</span>
+<span class="cstat-no" title="statement not covered" >      setNuevoTipoNombre('');</span>
+<span class="cstat-no" title="statement not covered" >      toast.success('Tipo de trabajo agregado');</span>
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr) =&gt; { <span class="cstat-no" title="statement not covered" >console.error('[mutCrearTipo]', err); <span class="cstat-no" title="statement not covered" >t</span>oast.error('No se pudo agregar el tipo.'); },</span>
+  });
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >mutToggleTipo = useMutation({</span>
+<span class="fstat-no" title="function not covered" >    mutationFn: ({</span> id, <span class="cstat-no" title="statement not covered" >activo }: { id: Id; activo: boolean }) =&gt; toggleTipoTrabajoOT(id, activo),</span>
+    // FIX: optimistic update — cambia el estado localmente antes del refetch
+    onMutate: <span class="fstat-no" title="function not covered" >async ({</span> id, activo }) =&gt; {
+<span class="cstat-no" title="statement not covered" >      await qc.cancelQueries({ queryKey: [Q_TIPOS_OT] });</span>
+      const prev = <span class="cstat-no" title="statement not covered" >qc.getQueryData([Q_TIPOS_OT]);</span>
+<span class="cstat-no" title="statement not covered" >      qc.setQueryData([Q_TIPOS_OT]<span class="fstat-no" title="function not covered" >, (o</span>ld: typeof tiposTrabajo) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >        old.<span class="fstat-no" title="function not covered" >map((t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.id === id ? { ...t, activo } : t),</span></span>
+      );
+<span class="cstat-no" title="statement not covered" >      return { prev };</span>
+    },
+<span class="fstat-no" title="function not covered" >    onError: (e</span>rr, _, ctx) =&gt; {
+      // Revertir si falla
+<span class="cstat-no" title="statement not covered" >      if (ctx?.prev) <span class="cstat-no" title="statement not covered" >qc.setQueryData([Q_TIPOS_OT], ctx.prev);</span></span>
+<span class="cstat-no" title="statement not covered" >      console.error('[mutToggleTipo]', err);</span>
+<span class="cstat-no" title="statement not covered" >      toast.error('No se pudo actualizar el tipo.');</span>
+    },
+<span class="fstat-no" title="function not covered" >    onSettled: () =&gt; {</span> <span class="cstat-no" title="statement not covered" >void invalidarTipos(); },</span>
+  });
+&nbsp;
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function <span class="fstat-no" title="function not covered" >abrirNuevaOT() {</span>
+<span class="cstat-no" title="statement not covered" >    setEditandoOT(null);</span>
+    const uid = <span class="cstat-no" title="statement not covered" >usuario?.id ?? '';</span>
+    const base = <span class="cstat-no" title="statement not covered" >formInicial(uid);</span>
+    let next = <span class="cstat-no" title="statement not covered" >base;</span>
+<span class="cstat-no" title="statement not covered" >    if (uid) {</span>
+<span class="cstat-no" title="statement not covered" >      try {</span>
+        const partial = <span class="cstat-no" title="statement not covered" >safeParseOTDraft(localStorage.getItem(OT_NUEVA_DRAFT_PREFIX + uid));</span>
+<span class="cstat-no" title="statement not covered" >        if (partial) <span class="cstat-no" title="statement not covered" >next = { ...base, ...partial, creado_por: uid };</span></span>
+      } catch { /* ignore */ }
+    }
+<span class="cstat-no" title="statement not covered" >    setForm(next);</span>
+<span class="cstat-no" title="statement not covered" >    setModalForm(true);</span>
+  }
+&nbsp;
+  function <span class="fstat-no" title="function not covered" >abrirEditarOT(o</span>t: OrdenTrabajo) {
+<span class="cstat-no" title="statement not covered" >    setEditandoOT(ot);</span>
+<span class="cstat-no" title="statement not covered" >    setForm({</span>
+      creado_por: ot.creado_por, tipo_trabajo_id: ot.tipo_trabajo_id,
+      tarea_id: ot.tarea_id, descripcion: ot.descripcion,
+      area_destino: ot.area_destino, ubicacion: ot.ubicacion ?? '',
+      modalidad: ot.modalidad, fecha_estimada: ot.fecha_estimada,
+      hora_inicio_est: ot.hora_inicio_est ?? '', duracion_est_min: ot.duracion_est_min,
+      equipos_materiales: ot.equipos_materiales ?? '', observaciones: ot.observaciones ?? '',
+    });
+<span class="cstat-no" title="statement not covered" >    setModalForm(true);</span>
+  }
+&nbsp;
+  const ordenesFiltradas = <span class="cstat-no" title="statement not covered" >filtroEstado === 'todos' ? ordenes : ordenes.<span class="fstat-no" title="function not covered" >filter((o</span>) =&gt; <span class="cstat-no" title="statement not covered" >o.estado === filtroEstado);</span></span>
+  const pendientesCount = <span class="cstat-no" title="statement not covered" >ordenes.<span class="fstat-no" title="function not covered" >filter((o</span>) =&gt; <span class="cstat-no" title="statement not covered" >o.estado === 'pendiente').</span>length;</span>
+  const canCompletar = <span class="cstat-no" title="statement not covered" >receptorNombre.trim().length &gt; 0 &amp;&amp; receptorDni.trim().length &gt; 0 &amp;&amp; receptorCargo.trim().length &gt; 0;</span>
+  const canCrearTipo = <span class="cstat-no" title="statement not covered" >nuevoTipoNombre.trim().length &gt; 0 &amp;&amp; !mutCrearTipo.isPending;</span>
+  const tiposActivos = <span class="cstat-no" title="statement not covered" >tiposTrabajo.<span class="fstat-no" title="function not covered" >filter((t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.activo);</span></span>
+  const tiposInactivos = <span class="cstat-no" title="statement not covered" >tiposTrabajo.<span class="fstat-no" title="function not covered" >filter((t</span>) =&gt; <span class="cstat-no" title="statement not covered" >!t.activo);</span></span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    usuario, esJefe,
+    ordenes: ordenesFiltradas, isLoading, isError,
+    pendientesCount,
+    tiposTrabajo, tiposActivos, tiposInactivos,
+    tareasVinculables,
+    filtroEstado, setFiltroEstado,
+    form, setForm,
+    modalForm, setModalForm, editandoOT,
+    viendoOT, setViendoOT,
+    imprimiendoOT, setImprimiendoOT,
+    modalCompletar, setModalCompletar,
+    modalRechazar, setModalRechazar,
+    motivoRechazo, setMotivoRechazo,
+    receptorNombre, setReceptorNombre,
+    receptorDni, setReceptorDni,
+    receptorCargo, setReceptorCargo,
+    obsCierre, setObsCierre,
+    canCompletar,
+    nuevoTipoNombre, setNuevoTipoNombre, canCrearTipo,
+    abrirNuevaOT, abrirEditarOT,
+    mutCrear, mutActualizar, mutAprobar, mutRechazar,
+    mutIniciar, mutCompletar, mutCancelar,
+    mutCrearTipo, mutToggleTipo,
+  };
+}</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-05-13T14:22:18.927Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

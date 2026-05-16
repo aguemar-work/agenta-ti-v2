@@ -1,3 +1,6 @@
+/**
+ * tokens.css — Fuente de verdad Meta Canvas (--mc-*)
+ */
 :root {
   /* ── Superficies ────────────────────────────────────────────────── */
   --mc-color-bg:               #f5f6f7;
@@ -50,6 +53,12 @@
   --mc-sidebar-w-expanded:  220px;
   --mc-bottom-nav-h:        60px;
   --mc-topbar-h:            56px;
+  /* Mi Semana: chrome sobre la grilla (header + resumen + filtros; ver appLayout.ts) */
+  --mc-main-padding-block:  calc(var(--mc-space-6) * 2);
+  --mc-semana-page-chrome:  19rem;
+  --mc-semana-dia-col-max-height: calc(
+    100dvh - var(--mc-topbar-h) - var(--mc-bottom-nav-h) - var(--mc-main-padding-block) - var(--mc-semana-page-chrome)
+  );
 
   /* ── Radios ─────────────────────────────────────────────────────── */
   --mc-radius-sm:   6px;
@@ -185,6 +194,12 @@
   --mc-state-reprogramada-fg:    #3C3489;
   --mc-state-reprogramada-border:#7F77DD;
 
+  /* pendiente / cancelada (pills compactos en Planificación) */
+  --mc-state-pendiente-bg:       #F1EFE8;
+  --mc-state-pendiente-fg:       #5F5E5A;
+  --mc-state-cancelada-bg:       #F1F1F1;
+  --mc-state-cancelada-fg:       #6B6B6B;
+
   /* ── Incidencias ─ registro neutral (NO advertencia) ────────────── */
   --mc-state-incidencia-bg:      color-mix(in srgb, var(--mc-color-info) 8%, transparent);
   --mc-state-incidencia-border:  var(--mc-color-info);
@@ -205,4 +220,12 @@
 
   /* Color neutro de "pendientes" usado en gráficos (gris desaturado) */
   --mc-color-neutral-soft:       #B4B2A9;
+
+  /* ── Capas (modales > drawer > shell) ───────────────────────────── */
+  --mc-z-bottom-nav:   40;
+  --mc-z-drawer:       60;
+  --mc-z-modal:        70;
+  --mc-z-modal-stack:  80;
+  --mc-z-modal-top:    90;
+  --mc-z-popover:      65;
 }

@@ -43,7 +43,7 @@ Redirección: `/` → `/semana`.
 - **Orquestación:** hooks por vista (`useMiSemanaPage`, `usePlanificacionPage`, `useOrdenesTrabajoPage`, etc.) encapsulan queries, mutaciones y estado de UI.
 - **Datos:** `src/api/*` habla con InsForge; validación y contratos con **Zod** en `src/lib/schemas.ts` donde aplica.
 - **Estado transversal:** `authStore`, `vistaStore`; realtime opcional vía hooks y publicación de eventos.
-- **Estilos:** sistema **Meta Canvas** (`mc-*`) + tokens semánticos (`design-tokens.css` / `ds-*` donde se introdujo); Tailwind para utilidades.
+- **Estilos:** sistema **Meta Canvas** (`mc-*`, `tokens.css`); Tailwind para utilidades.
 - **Reglas de negocio:** documentadas en `.cursor/rules/sgtd-business-rules.mdc` y alineadas con el esquema canónico (p. ej. imprevistos, log con justificación, métricas ponderadas); la **autoridad** en permisos es **RLS + rol en tabla `usuario`**.
 
 ### 1.5 Fortalezas actuales
@@ -73,7 +73,7 @@ Redirección: `/` → `/semana`.
 ### 2.1 Diseño y marca
 
 - Tokens de **marca morada** (`--mc-brand-violet`, soft) para navegación activa y CTAs de formulario unificado.
-- **`design-tokens.css`** (`--ds-*`) y componentes como **`StatusBadge`** donde se alineó con estados.
+- Estados de tarea vía **`estadoConfig`** + **`mc-badge`** + `--mc-state-*` en `tokens.css`.
 - Tarjetas de **Mi semana** con radios, bordes y tipografía acordados; eventos tipo **reunión** con acento lateral morado.
 
 ### 2.2 Experiencia de usuario (UX/UI)
@@ -162,7 +162,7 @@ Redirección: `/` → `/semana`.
 
 ### 4.3 Design system
 
-- Ya existe base **`mc-*`** + **`design-tokens.css`**; siguiente paso es **obligar** nuevas pantallas a checklist de auditoría (sección “Checklist para nuevos módulos” en `auditoria_consistencia_2026-05-12.md`).
+- Base visual única **`mc-*`** + **`tokens.css`**; obligar nuevas pantallas al checklist de auditoría (sección “Checklist para nuevos módulos” en `auditoria_consistencia_2026-05-12.md`).
 - Opcional: documento **`DESIGN-SYSTEM.md`** en raíz si el equipo lo mantiene fuera de Cursor rules.
 
 ### 4.4 Arquitectura

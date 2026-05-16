@@ -15,8 +15,8 @@ export function TarjetaTarea({ tarea, canEdit, onReprogramar, onCompletar }: Pro
       variant="card"
       tarea={tarea}
       readOnly={!canEdit}
-      onReprogramar={canEdit ? onReprogramar : undefined}
-      onCompletar={canEdit ? onCompletar : undefined}
+      {...(canEdit && onReprogramar ? { onReprogramar } : {})}
+      {...(canEdit && onCompletar ? { onCompletar } : {})}
     />
   );
 }

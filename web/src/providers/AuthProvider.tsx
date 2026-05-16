@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect } from 'react';
 
 import { asegurarUsuario } from '@/api/usuario';
+import { identifyAnalyticsUser, resetAnalyticsUser } from '@/lib/analytics';
+import { clearSentryUser, identifySentryUser } from '@/lib/sentry';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
 import { useVistaStore } from '@/store/vistaStore';
@@ -17,13 +19,27 @@ export function AuthProvider({ children }: Props) {
   const setLoading = useAuthStore((s) => s.setLoading);
   const clear      = useAuthStore((s) => s.clear);
   const onClear    = useAuthStore((s) => s.onClear);
+  const usuario    = useAuthStore((s) => s.usuario);
+  const authUser   = useAuthStore((s) => s.authUser);
 
   useEffect(() => {
     const unsub = onClear(() => {
       useVistaStore.getState().reset();
+      resetAnalyticsUser();
+      clearSentryUser();
     });
     return unsub;
   }, [onClear]);
+
+  useEffect(() => {
+    if (!usuario) return;
+    identifyAnalyticsUser(usuario.id, { rol: usuario.rol });
+    identifySentryUser({
+      id: usuario.id,
+      email: authUser?.email ?? usuario.email,
+      role: usuario.rol,
+    });
+  }, [usuario, authUser?.email]);
 
   const bootstrap = useCallback(async () => {
     setLoading(true);

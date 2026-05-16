@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { useEffect, useMemo, useState } from 'react';
+import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
@@ -21,6 +21,7 @@ type Props = {
     descripcion:  string;
     objetivo_id?: string | null;
     asignado_a:   string;
+    fecha_planificada?: string;
   }) => Promise<void>;
 };
 
@@ -47,8 +48,13 @@ export function ModalNuevaTarea({
   const draftKey = `tarea-nueva-${modo}-${usuarioActualId}`;
   const { form, setForm, hasChanges, clearDraft } = useDraftForm(draftKey, initialForm);
 
-  const fechaLimiteYmd = modo === 'dia' && fechaDia ? fechaDia : fechaReferencia;
+  const [fechaIncidencia, setFechaIncidencia] = useState(fechaReferencia);
+  const fechaLimiteYmd = modo === 'dia' && fechaDia ? fechaDia : fechaIncidencia;
   const canSubmit      = form.titulo.trim().length > 0 && !busy;
+
+  useEffect(() => {
+    if (open && modo === 'incidencia') setFechaIncidencia(fechaReferencia);
+  }, [open, modo, fechaReferencia]);
 
   async function submit() {
     if (!canSubmit) return;
@@ -63,7 +69,9 @@ export function ModalNuevaTarea({
         descripcion:  form.descripcion.trim(),
         objetivo_id:  modo === 'incidencia' ? null : (form.objetivoId || null),
         asignado_a:   asignado,
+        ...(modo === 'incidencia' ? { fecha_planificada: fechaIncidencia } : {}),
       });
+      markModalCompleted('modal-nueva-tarea');
       clearDraft();
       onClose();
     } finally { setBusy(false); }
@@ -77,6 +85,7 @@ export function ModalNuevaTarea({
       onClose={handleClose}
       title={TITULO_MODAL[modo](fechaDia)}
       size="md"
+      analyticsId="modal-nueva-tarea"
       hasUnsavedChanges={hasChanges}
       bodyClassName="mc-modal-form"
       footerClassName="mc-modal-footer--stack"
@@ -96,13 +105,32 @@ export function ModalNuevaTarea({
     >
       <div className="flex flex-col gap-4">
         {modo === 'incidencia' ? (
-          <p className="text-sm text-[var(--mc-color-text-secondary)]">
-            Se registrará como imprevisto del día de hoy.
-          </p>
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-fecha-inc">Fecha del incidente</label>
+            <input
+              id="new-fecha-inc"
+              type="date"
+              className="mc-input"
+              value={fechaIncidencia}
+              onChange={(e) => setFechaIncidencia(e.target.value)}
+            />
+          </div>
         ) : (
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
-            <input id="new-fecha" type="date" className="mc-input" readOnly value={fechaLimiteYmd} aria-readonly="true" />
+            <input
+              id="new-fecha"
+              type="date"
+              className="mc-input"
+              readOnly
+              disabled
+              value={fechaLimiteYmd}
+              aria-readonly
+              title="Fecha fijada al día seleccionado"
+            />
+            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">
+              Fecha fijada al día seleccionado
+            </p>
           </div>
         )}
 

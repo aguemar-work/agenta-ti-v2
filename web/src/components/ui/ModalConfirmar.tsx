@@ -42,6 +42,7 @@ interface ModalConfirmarProps {
   labelCancelar?:    string;
   /** Muestra estado de carga en el botón confirmar */
   cargando?:         boolean;
+  analyticsId?:      string;
   onConfirmar:       () => void;
   onCancelar:        () => void;
 }
@@ -54,6 +55,7 @@ export function ModalConfirmar({
   variantConfirmar = 'danger',
   labelCancelar   = 'Cancelar',
   cargando        = false,
+  analyticsId     = 'modal-confirmar',
   onConfirmar,
   onCancelar,
 }: ModalConfirmarProps) {
@@ -62,6 +64,8 @@ export function ModalConfirmar({
       open={open}
       onClose={onCancelar}
       title={titulo}
+      description={mensaje}
+      analyticsId={analyticsId}
       size="sm"
       footer={
         <>
@@ -78,14 +82,7 @@ export function ModalConfirmar({
         </>
       }
     >
-      <p style={{
-        margin: 0,
-        fontSize: '14px',
-        color: 'var(--mc-color-text-secondary)',
-        lineHeight: 1.55,
-      }}>
-        {mensaje}
-      </p>
+      {null}
     </Modal>
   );
 }

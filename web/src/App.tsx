@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/AppShell';
+import { usePageAnalytics } from '@/hooks/usePageAnalytics';
 import { JefeRoute } from '@/components/routing/JefeRoute';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
@@ -18,14 +19,7 @@ const Metricas       = lazy(() => import('@/pages/Metricas').then((m) => ({ defa
 const OrdenesTrabajo = lazy(() => import('@/pages/OrdenesTrabajo').then((m) => ({ default: m.OrdenesTrabajo })));
 
 function PageSpinner() {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', color: 'var(--mc-color-text-secondary)', fontSize: '14px',
-    }}>
-      Cargando…
-    </div>
-  );
+  return <div className="mc-page-loading">Cargando…</div>;
 }
 
 function RouteWrapper({ children, label }: { children: ReactNode; label: string }) {
@@ -40,6 +34,8 @@ function RouteWrapper({ children, label }: { children: ReactNode; label: string 
 }
 
 export default function App() {
+  usePageAnalytics();
+
   return (
     <Routes>
       {/* Rutas públicas */}
