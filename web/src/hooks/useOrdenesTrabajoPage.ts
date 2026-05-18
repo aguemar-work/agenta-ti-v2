@@ -60,6 +60,8 @@ import { getInsforge } from '@/lib/insforge';
 
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
+import { fechaLocalYmd } from '@/lib/fecha';
+import { otVencida } from '@/lib/otHelpers';
 
 import type { Id, Tarea } from '@/types';
 
@@ -75,7 +77,7 @@ export const Q_OT_BORRADOR = 'ot-borrador-usuario';
 
 const FILTRO_ESTADO_OT_VALORES = [
 
-  'todos', 'activas', 'completadas',
+  'todos', 'activas', 'completadas', 'urgentes', 'vencidas',
 
   'borrador', 'pendiente', 'aprobada', 'en_ejecucion', 'completada', 'rechazada', 'cancelada',
 
@@ -751,11 +753,31 @@ export function useOrdenesTrabajoPage() {
 
     if (filtroEstado === 'completadas') return ordenes.filter((o) => o.estado === 'completada');
 
+    if (filtroEstado === 'urgentes') {
+      return ordenes.filter(
+        (o) => o.prioridad === 'urgente' && !['completada', 'cancelada', 'rechazada'].includes(o.estado),
+      );
+    }
+
+    if (filtroEstado === 'vencidas') {
+      const hoy = fechaLocalYmd(new Date());
+      return ordenes.filter((o) => otVencida(o, hoy));
+    }
+
     return ordenes.filter((o) => o.estado === filtroEstado);
 
   })();
 
   const pendientesCount = ordenes.filter((o) => o.estado === 'pendiente').length;
+
+  const resumenOT = {
+    activas: ordenes.filter((o) => ESTADOS_OT_ACTIVAS.includes(o.estado)).length,
+    urgentes: ordenes.filter(
+      (o) => o.prioridad === 'urgente' && !['completada', 'cancelada', 'rechazada'].includes(o.estado),
+    ).length,
+    vencidas: ordenes.filter((o) => otVencida(o, fechaLocalYmd(new Date()))).length,
+    pendientes: pendientesCount,
+  };
 
   const canCompletar = puedeCompletarOTReceptor(receptorNombre, receptorDni);
 
@@ -773,7 +795,7 @@ export function useOrdenesTrabajoPage() {
 
     ordenes: ordenesFiltradas, isLoading, isError,
 
-    pendientesCount,
+    pendientesCount, resumenOT,
 
     tiposTrabajo, tiposActivos, tiposInactivos,
 

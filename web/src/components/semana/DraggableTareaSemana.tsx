@@ -5,26 +5,23 @@ import type { CSSProperties } from 'react';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
-import { TareaMetaChips } from '@/components/tareas/TareaMetaChips';
+import { ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
 
 type Props = {
   tarea: Tarea;
   hoyYmd: string;
-  compact?: boolean;
-  objetivoTitulo?: string | null;
   ot?: OrdenTrabajo | null;
   readOnly?: boolean;
   onOpenDetalle?: (t: Tarea) => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
 };
 
+/** Tarjeta en grilla semanal: título + estado (+ chip OT si aplica). */
 export function DraggableTareaSemana({
   tarea,
   hoyYmd,
-  compact = false,
-  objetivoTitulo,
   ot,
   readOnly,
   onOpenDetalle,
@@ -50,92 +47,73 @@ export function DraggableTareaSemana({
       };
 
   const est = estadoEfectivoTablero(tarea, hoyYmd);
-
-  if (compact) {
-    return (
-      <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>
-        <div
-          className="mc-semana-task-card mc-semana-task-card--compact"
-          onClick={() => onOpenDetalle?.(tarea)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea);
-          }}
-        >
-          {!dragBloqueado ? (
-            <button
-              type="button"
-              className="mc-btn-ghost !p-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
-              aria-label="Arrastrar tarea"
-              {...listeners}
-              {...attributes}
-              style={{ touchAction: 'none' }}
-              draggable={false}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical size={14} aria-hidden />
-            </button>
-          ) : dragBloqueado && !readOnly ? (
-            <span
-              className="shrink-0 text-[var(--mc-color-text-secondary)] opacity-40"
-              title="No se puede mover una tarea completada o cancelada"
-              aria-hidden
-            >
-              <GripVertical size={14} />
-            </span>
-          ) : null}
-          <p className="mc-semana-task-card__title flex-1 truncate">{tarea.titulo}</p>
-          <TareaEstadoIndicator estado={est} style={{ fontSize: 10 }} />
-          <TareaMetaChips tarea={tarea} hoyYmd={hoyYmd} ot={ot ?? null} {...(onOtClick ? { onOtClick } : {})} />
-        </div>
-      </div>
-    );
-  }
+  const lineThrough = est === 'completada' || est === 'cancelada';
+  const descripcionTip = tarea.descripcion?.trim() || undefined;
 
   return (
     <div ref={setNodeRef} style={style} draggable={false} onDragStart={(e) => e.preventDefault()}>
       <div
-        className="mc-semana-task-card"
+        className={[
+          'mc-semana-task-card',
+          'mc-semana-task-card--stacked',
+          lineThrough ? 'mc-semana-task-card--done' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={() => onOpenDetalle?.(tarea)}
         role="button"
         tabIndex={0}
+        title={descripcionTip}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea);
         }}
       >
-        <div className="mc-semana-task-card__row-top">
-          {!dragBloqueado ? (
-            <button
-              type="button"
-              className="mc-btn-ghost !p-0.5 shrink-0 text-[var(--mc-color-text-secondary)]"
-              aria-label="Arrastrar tarea"
-              {...listeners}
-              {...attributes}
-              style={{ touchAction: 'none', cursor: 'grab' }}
-              draggable={false}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical size={14} aria-hidden />
-            </button>
-          ) : dragBloqueado && !readOnly ? (
-            <span
-              className="shrink-0 cursor-not-allowed text-[var(--mc-color-text-secondary)] opacity-40"
-              title="No se puede mover una tarea completada o cancelada"
-              aria-hidden
-            >
-              <GripVertical size={14} />
-            </span>
-          ) : null}
-          <p className="mc-semana-task-card__title">{tarea.titulo}</p>
-        </div>
-
-        <div className="mc-semana-task-card__footer">
-          <TareaEstadoIndicator estado={est} style={{ fontSize: 10 }} />
-          <span className="mc-semana-task-card__objetivo">
-            {objetivoTitulo?.trim() ? objetivoTitulo : '\u00a0'}
+        {!dragBloqueado ? (
+          <button
+            type="button"
+            className="mc-semana-task-card__grip"
+            aria-label="Arrastrar tarea"
+            {...listeners}
+            {...attributes}
+            style={{ touchAction: 'none' }}
+            draggable={false}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={14} aria-hidden />
+          </button>
+        ) : (
+          <span className="mc-semana-task-card__grip mc-semana-task-card__grip--muted" aria-hidden>
+            <GripVertical size={14} />
           </span>
-          <TareaMetaChips tarea={tarea} hoyYmd={hoyYmd} ot={ot ?? null} {...(onOtClick ? { onOtClick } : {})} />
+        )}
+
+        <div className="mc-semana-task-card__body">
+          <p
+            className={`mc-semana-task-card__title ${lineThrough ? 'line-through opacity-60' : ''}`}
+          >
+            {tarea.titulo}
+          </p>
+          <div className="mc-semana-task-card__meta">
+            <TareaEstadoIndicator estado={est} variant="pill" />
+            {ot &&
+              (onOtClick ? (
+                <button
+                  type="button"
+                  className="mc-chip mc-chip--ot"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOtClick(ot);
+                  }}
+                  title={`OT ${ot.numero}: ${ESTADO_OT_LABEL[ot.estado]}`}
+                >
+                  OT · {ESTADO_OT_LABEL[ot.estado]}
+                </button>
+              ) : (
+                <span className="mc-chip mc-chip--ot" title={`OT ${ot.numero}`}>
+                  OT · {ESTADO_OT_LABEL[ot.estado]}
+                </span>
+              ))}
+          </div>
         </div>
       </div>
     </div>

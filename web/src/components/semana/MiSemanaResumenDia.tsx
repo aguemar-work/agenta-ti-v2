@@ -29,7 +29,7 @@ export function MiSemanaResumenDia({ pendientesHoy, atrasadas, bloqueadas }: Pro
   }
 
   return (
-    <div className="mc-misemana-resumen" role="status">
+    <div className="mc-misemana-resumen mc-misemana-resumen--inline" role="status">
       <div className="mc-misemana-resumen__items">
         {pendientesHoy > 0 && (
           <span className="mc-misemana-resumen__item">

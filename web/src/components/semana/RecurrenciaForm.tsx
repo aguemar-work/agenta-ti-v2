@@ -26,9 +26,14 @@ const DIAS: { value: DiaSemana; label: string; short: string }[] = [
 type Props = {
   value: RecurrenciaConfig;
   onChange: (v: RecurrenciaConfig) => void;
+  /** Día desde el que aplica la serie (YYYY-MM-DD) — valida fecha_fin ≥ inicio (V2). */
+  fechaInicio?: string;
 };
 
-export function RecurrenciaForm({ value, onChange }: Props) {
+export function RecurrenciaForm({ value, onChange, fechaInicio }: Props) {
+  const fechaFinInvalida = Boolean(
+    fechaInicio && value.fecha_fin && value.fecha_fin < fechaInicio,
+  );
   function toggleDia(dia: DiaSemana) {
     const next = value.dias_semana.includes(dia)
       ? value.dias_semana.filter((d) => d !== dia)
@@ -104,11 +109,15 @@ export function RecurrenciaForm({ value, onChange }: Props) {
           value={value.fecha_fin}
           onChange={(e) => onChange({ ...value, fecha_fin: e.target.value })}
         />
-        {!value.fecha_fin && (
+        {fechaFinInvalida ? (
+          <p className="mt-1 text-[10px] text-[var(--mc-color-danger)]">
+            La fecha de fin no puede ser anterior a la fecha de inicio.
+          </p>
+        ) : !value.fecha_fin ? (
           <p className="mt-1 text-[10px] text-[var(--mc-color-text-secondary)]">
             Sin fecha fin — se repite indefinidamente (mes a mes).
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

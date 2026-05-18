@@ -21,7 +21,7 @@ describe('analytics', () => {
     expect(pathToModule('/semana')).toBe('mi_semana');
     expect(pathToModule('/objetivos')).toBe('objetivos');
     expect(pathToModule('/ordenes-trabajo')).toBe('ordenes_trabajo');
-    expect(pathToModule('/metricas')).toBe('metricas');
+    expect(pathToModule('/metricas')).toBe('planificacion');
   });
 
   it('registra abandono de modal si no se marca completado', () => {

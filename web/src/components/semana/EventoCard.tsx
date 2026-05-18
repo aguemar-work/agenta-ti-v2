@@ -2,23 +2,11 @@ import { Clock, RefreshCw } from 'lucide-react';
 
 import type { Evento, TipoEvento } from '@/types';
 
-const TIPO_CONFIG: Record<TipoEvento, { label: string; badge: string }> = {
-  reunion: {
-    label: 'Reunión',
-    badge: 'var(--mc-brand-violet)',
-  },
-  entrega: {
-    label: 'Entrega',
-    badge: 'var(--mc-color-warning)',
-  },
-  personal: {
-    label: 'Personal',
-    badge: 'var(--mc-color-success)',
-  },
-  otro: {
-    label: 'Otro',
-    badge: 'var(--mc-color-text-secondary)',
-  },
+const TIPO_LABEL: Record<TipoEvento, string> = {
+  reunion: 'Reunión',
+  entrega: 'Entrega',
+  personal: 'Personal',
+  otro: 'Otro',
 };
 
 function formatHora(iso: string): string {
@@ -36,36 +24,43 @@ function formatDuracion(min: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+/** Horario compacto para la tercera línea (equivalente al «aviso» de tareas). */
+function getEventoHorarioLinea(evento: Evento): string {
+  const duracion = formatDuracion(duracionMin(evento.fecha_inicio, evento.fecha_fin));
+  return `${formatHora(evento.fecha_inicio)} – ${formatHora(evento.fecha_fin)} · ${duracion}`;
+}
+
+/**
+ * Card de evento en columna de día.
+ * Misma lectura que tareas: título + tipo (pill) + horario (línea secundaria).
+ */
 export function EventoCard({ evento }: { evento: Evento }) {
-  const cfg = TIPO_CONFIG[evento.tipo] ?? TIPO_CONFIG.otro;
-  const duracion = duracionMin(evento.fecha_inicio, evento.fecha_fin);
-  const esReunion = evento.tipo === 'reunion';
+  const horario = getEventoHorarioLinea(evento);
 
   return (
     <div
-      className={['mc-evento-card', esReunion ? 'mc-evento-card--reunion' : ''].filter(Boolean).join(' ')}
+      className={['mc-evento-card', `mc-evento-card--${evento.tipo}`].join(' ')}
       role="article"
-      aria-label={`Evento: ${evento.titulo}`}
+      aria-label={`${TIPO_LABEL[evento.tipo]}: ${evento.titulo}, ${horario}`}
     >
       <p className="mc-evento-card__title">{evento.titulo}</p>
 
-      <div className="mc-evento-card__footer">
-        <span className="mc-evento-card-badge" style={{ background: cfg.badge }}>
-          {cfg.label}
+      <div className="mc-evento-card__meta">
+        <span className={`mc-meta-pill mc-meta-pill--evento-${evento.tipo}`}>
+          {TIPO_LABEL[evento.tipo]}
         </span>
-        <div className="mc-evento-card-meta" style={{ marginLeft: 'auto' }}>
-          <span className="mc-evento-card-hora">
-            <Clock size={10} aria-hidden />
-            {formatHora(evento.fecha_inicio)} – {formatHora(evento.fecha_fin)}
+        {evento.es_recurrente && (
+          <span className="mc-meta-pill mc-meta-pill--evento-recurrente" title="Evento recurrente">
+            <RefreshCw size={10} aria-hidden />
+            Recurrente
           </span>
-          <span className="mc-evento-card-duracion">{formatDuracion(duracion)}</span>
-          {evento.es_recurrente && (
-            <span className="mc-evento-card-recurrente" title="Evento recurrente">
-              <RefreshCw size={10} aria-hidden />
-            </span>
-          )}
-        </div>
+        )}
       </div>
+
+      <p className="mc-evento-card__horario">
+        <Clock size={11} strokeWidth={2} aria-hidden />
+        {horario}
+      </p>
     </div>
   );
 }

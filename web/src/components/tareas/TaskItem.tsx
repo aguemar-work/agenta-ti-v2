@@ -294,13 +294,13 @@ export function TaskItem({
 
   // ── Variante WEEK ─────────────────────────────────────────────────────────
   // Meta reducido: solo estado + urgencia. Asignado/objetivo/fecha van al detalle.
-  const metaWeek = (
+  const metaWeek = est !== 'pendiente' || urgenciaTag || readOnly ? (
     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs" style={textColorStyle}>
-      <TareaEstadoIndicator estado={est} />
+      {est !== 'pendiente' && <TareaEstadoIndicator estado={est} />}
       {urgenciaTag}
       {readOnly && <Lock className="inline" size={12} aria-label="Solo lectura" />}
     </div>
-  );
+  ) : null;
 
   if (variant === 'week') {
     return (

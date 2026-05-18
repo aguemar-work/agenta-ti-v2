@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react';
 
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
-import { crearRecurrenciaEvento } from '@/api/recurrencia';
+import {
+  crearRecurrenciaEvento,
+  RecurrenciaValidationError,
+} from '@/api/recurrencia';
+import { toast } from 'sonner';
 import { CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
@@ -113,7 +117,6 @@ export function ModalMiSemana({
     if (!form.titulo.trim() || !fechaEvento) return;
     // Recurrente: usar RPC de recurrencia en lugar de crear evento único
     if (form.recurrente) {
-      if (recConfig.dias_semana.length === 0) return;
       setBusy(true);
       try {
         await crearRecurrenciaEvento({
@@ -130,6 +133,11 @@ export function ModalMiSemana({
         markModalCompleted('modal-mi-semana-nuevo');
         clearDraft();
         onClose();
+      } catch (err) {
+        const msg = err instanceof RecurrenciaValidationError
+          ? err.message
+          : 'No se pudo crear la recurrencia.';
+        toast.error(msg);
       } finally {
         setBusy(false);
       }
@@ -178,7 +186,14 @@ export function ModalMiSemana({
             <button
               type="button"
               className="mc-btn-modal-primary"
-              disabled={busy || !form.titulo.trim() || !fechaEvento}
+              disabled={
+                busy
+                || !form.titulo.trim()
+                || !fechaEvento
+                || (form.recurrente && recConfig.dias_semana.length === 0)
+                || (form.recurrente && !!recConfig.fecha_fin && recConfig.fecha_fin < fechaEvento)
+                || form.horaFin <= form.horaIni
+              }
               onClick={() => void submitEvento()}
             >
               {busy ? 'Guardando…' : 'Crear evento'}
@@ -312,7 +327,11 @@ export function ModalMiSemana({
               Recurrente (se repite cada semana)
             </label>
             {form.recurrente && (
-              <RecurrenciaForm value={recConfig} onChange={setRecConfig} />
+              <RecurrenciaForm
+                value={recConfig}
+                onChange={setRecConfig}
+                {...(fechaEvento ? { fechaInicio: fechaEvento } : {})}
+              />
             )}
           </div>
         )}

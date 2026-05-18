@@ -1,7 +1,7 @@
 /**
  * api/recurrencia.ts
- * Operaciones sobre eventos recurrentes.
- * La lógica de negocio (validación, generación de instancias) vive en el servidor.
+ * Eventos recurrentes: validación en cliente + RPC / PostgREST.
+ * La generación de instancias vive en el servidor (migraciones 025–026).
  */
 
 import { getInsforge } from '@/lib/insforge';
@@ -16,9 +16,47 @@ export type CrearRecurrenciaEventoInput = {
   usuario_id: string;
   dias_semana: DiaSemana[];
   fecha_inicio: string;  // 'YYYY-MM-DD' — primer día desde el que aplica
-  fecha_fin?: string;    // 'YYYY-MM-DD' — null = sin fin
+  fecha_fin?: string;    // 'YYYY-MM-DD' — sin fin si se omite
   meses?: number;        // cuántos meses generar (default 3)
 };
+
+/** Alcance al eliminar un evento que pertenece a una serie recurrente. */
+export type AlcanceEliminarEventoRecurrente = 'solo_este' | 'toda_serie';
+
+export class RecurrenciaValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RecurrenciaValidationError';
+  }
+}
+
+/**
+ * Valida reglas de negocio antes de llamar al RPC.
+ * Alineado con sgtd_crear_recurrencia_evento (BD) y RecurrenciaForm (UI).
+ */
+export function validarCrearRecurrenciaEventoInput(
+  input: CrearRecurrenciaEventoInput,
+): void {
+  if (!input.titulo.trim()) {
+    throw new RecurrenciaValidationError('El título de la recurrencia es obligatorio.');
+  }
+
+  if (!input.dias_semana.length) {
+    throw new RecurrenciaValidationError('Debes seleccionar al menos un día de la semana.');
+  }
+
+  if (input.hora_fin <= input.hora_inicio) {
+    throw new RecurrenciaValidationError(
+      'La hora de fin debe ser posterior a la hora de inicio.',
+    );
+  }
+
+  if (input.fecha_fin && input.fecha_fin < input.fecha_inicio) {
+    throw new RecurrenciaValidationError(
+      'La fecha de fin no puede ser anterior a la fecha de inicio.',
+    );
+  }
+}
 
 /**
  * Crea la regla de recurrencia y genera las instancias del período en un solo paso.
@@ -27,6 +65,8 @@ export type CrearRecurrenciaEventoInput = {
 export async function crearRecurrenciaEvento(
   input: CrearRecurrenciaEventoInput,
 ): Promise<string> {
+  validarCrearRecurrenciaEventoInput(input);
+
   const { data, error } = await getInsforge().database.rpc(
     'sgtd_crear_recurrencia_evento',
     {
@@ -47,7 +87,6 @@ export async function crearRecurrenciaEvento(
 
 /**
  * Extiende las instancias de una recurrencia existente al siguiente período.
- * Útil para el botón "Generar próximo mes".
  */
 export async function extenderRecurrenciaEvento(
   recurrenciaId: string,
@@ -62,6 +101,46 @@ export async function extenderRecurrenciaEvento(
   );
   if (error) throw error;
   return data as number;
+}
+
+/**
+ * Elimina un evento recurrente según el alcance elegido por el usuario.
+ * - solo_este: borra solo la fila en `evento`.
+ * - toda_serie: borra todas las instancias con `recurrencia_id` y la regla en `recurrencia_evento`.
+ */
+export async function eliminarEventoRecurrente(input: {
+  eventoId: string;
+  recurrenciaId: string | null | undefined;
+  alcance: AlcanceEliminarEventoRecurrente;
+}): Promise<void> {
+  const insforge = getInsforge();
+
+  if (input.alcance === 'solo_este') {
+    const { error } = await insforge.database
+      .from('evento')
+      .delete()
+      .eq('id', input.eventoId);
+    if (error) throw error;
+    return;
+  }
+
+  if (!input.recurrenciaId) {
+    throw new RecurrenciaValidationError(
+      'No se puede eliminar toda la serie sin identificador de recurrencia.',
+    );
+  }
+
+  const { error: errInstancias } = await insforge.database
+    .from('evento')
+    .delete()
+    .eq('recurrencia_id', input.recurrenciaId);
+  if (errInstancias) throw errInstancias;
+
+  const { error: errRegla } = await insforge.database
+    .from('recurrencia_evento')
+    .delete()
+    .eq('id', input.recurrenciaId);
+  if (errRegla) throw errRegla;
 }
 
 export type RecurrenciaEvento = {

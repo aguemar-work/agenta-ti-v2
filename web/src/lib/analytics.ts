@@ -102,7 +102,7 @@ export function pathToModule(pathname: string): string {
   if (pathname.startsWith('/objetivos')) return 'objetivos';
   if (pathname.startsWith('/ordenes-trabajo')) return 'ordenes_trabajo';
   if (pathname.startsWith('/planificacion')) return 'planificacion';
-  if (pathname.startsWith('/metricas')) return 'metricas';
+  if (pathname.startsWith('/metricas')) return 'planificacion';
   if (pathname.startsWith('/login')) return 'auth';
   return 'other';
 }

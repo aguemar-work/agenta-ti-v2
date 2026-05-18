@@ -15,6 +15,9 @@
  *   ot_aprobada           → { otId, numero }
  *   ot_rechazada          → { otId, numero, motivo }
  *   incidencia_registrada → { titulo, usuarioNombre }
+ *   tarea_atrasada          → { tareaId, titulo, diasAtraso, usuarioNombre }
+ *   tarea_bloqueada_critica → { tareaId, titulo, horasBloqueada, usuarioNombre }
+ *   resumen_sla_diario      → { nuevasAtrasadas, bloqueadasCriticas, fecha }
  *
  * Uso:
  *   const { conectado } = useRealtimeNotificaciones();
@@ -23,12 +26,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { announcePolitely } from '@/components/a11y/LiveRegion';
 
 import { Q_INC_HOY } from '@/hooks/useHoyColumnas';
+import { Q_SLA_RESUMEN } from '@/hooks/useResumenSlaJefe';
 import { getInsforge } from '@/lib/insforge';
+import { planificacionSlaPath } from '@/lib/slaNavigation';
 import {
   getDefaultNotificationPrefs,
   isNotificationEnabled,
@@ -51,9 +57,18 @@ function notifyIfEnabled(
   if (isNotificationEnabled(prefs, event)) show();
 }
 
+function invalidatePlanificacionYsla(qc: ReturnType<typeof useQueryClient>) {
+  void Promise.all([
+    qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+    qc.invalidateQueries({ queryKey: [...Q_SLA_RESUMEN], exact: false }),
+    qc.invalidateQueries({ queryKey: ['semana'], exact: false }),
+  ]);
+}
+
 export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultNotificationPrefs()) {
   const usuario = useAuthStore((s) => s.usuario);
   const qc      = useQueryClient();
+  const navigate = useNavigate();
 
   const [conectado, setConectado] = useState(false);
 
@@ -160,6 +175,67 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
               announcePolitely(msg);
             });
           });
+
+          rt.on('tarea_atrasada', (payload: EventPayload) => {
+            if (cancelledRef.current) return;
+            invalidatePlanificacionYsla(qc);
+            notifyIfEnabled(prefs, 'tarea_atrasada', () => {
+              const dias = Number(payload.diasAtraso ?? 1);
+              const quien = payload.usuarioNombre ? ` (${payload.usuarioNombre})` : '';
+              const msg = `Tarea atrasada${quien}: "${payload.titulo ?? ''}" — ${dias} día${dias !== 1 ? 's' : ''}`;
+              toast.warning(msg, {
+                description: 'Ir a planificación',
+                duration: 8_000,
+                action: {
+                  label: 'Ver',
+                  onClick: () => navigate(planificacionSlaPath()),
+                },
+              });
+              announcePolitely(msg);
+            });
+          });
+
+          rt.on('tarea_bloqueada_critica', (payload: EventPayload) => {
+            if (cancelledRef.current) return;
+            invalidatePlanificacionYsla(qc);
+            notifyIfEnabled(prefs, 'tarea_bloqueada_critica', () => {
+              const horas = Number(payload.horasBloqueada ?? 48);
+              const quien = payload.usuarioNombre ? ` (${payload.usuarioNombre})` : '';
+              const msg = `Tarea bloqueada ${horas}h${quien}: "${payload.titulo ?? ''}"`;
+              toast.error(msg, {
+                description: 'Sin resolver hace más de 48 horas',
+                duration: 10_000,
+                action: {
+                  label: 'Ver',
+                  onClick: () => navigate(planificacionSlaPath()),
+                },
+              });
+              announcePolitely(msg);
+            });
+          });
+
+          rt.on('resumen_sla_diario', (payload: EventPayload) => {
+            if (cancelledRef.current) return;
+            invalidatePlanificacionYsla(qc);
+            notifyIfEnabled(prefs, 'resumen_sla_diario', () => {
+              const n = Number(payload.nuevasAtrasadas ?? 0);
+              const b = Number(payload.bloqueadasCriticas ?? 0);
+              if (n === 0 && b === 0) return;
+              const partes: string[] = [];
+              if (n > 0) partes.push(`${n} atrasada${n !== 1 ? 's' : ''} nuevas`);
+              if (b > 0) partes.push(`${b} bloqueada${b !== 1 ? 's' : ''} >48 h`);
+              const msg = `Resumen SLA: ${partes.join(', ')}`;
+              toast.warning(msg, {
+                description: 'Revisar en planificación',
+                duration: 12_000,
+                action: {
+                  label: 'Ver',
+                  onClick: () => navigate(planificacionSlaPath()),
+                },
+              });
+              announcePolitely(msg);
+            });
+          });
         }
       } catch (err) {
         if (cancelledRef.current) return;
@@ -203,7 +279,7 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
         // ignorar errores de cleanup
       }
     };
-  }, [qc, usuario?.id, usuario?.rol, prefs]);
+  }, [navigate, qc, usuario?.id, usuario?.rol, prefs]);
 
   return { conectado };
 }

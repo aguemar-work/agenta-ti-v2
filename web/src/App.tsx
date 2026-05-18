@@ -15,7 +15,6 @@ const ResetPassword  = lazy(() => import('@/pages/ResetPassword').then((m) => ({
 const MiSemana       = lazy(() => import('@/pages/MiSemana').then((m) => ({ default: m.MiSemana })));
 const Planificacion  = lazy(() => import('@/pages/Planificacion').then((m) => ({ default: m.Planificacion })));
 const Objetivos      = lazy(() => import('@/pages/Objetivos').then((m) => ({ default: m.Objetivos })));
-const Metricas       = lazy(() => import('@/pages/Metricas').then((m) => ({ default: m.Metricas })));
 const OrdenesTrabajo = lazy(() => import('@/pages/OrdenesTrabajo').then((m) => ({ default: m.OrdenesTrabajo })));
 
 function PageSpinner() {
@@ -62,11 +61,7 @@ export default function App() {
             <RouteWrapper label="Planificación"><Planificacion /></RouteWrapper>
           </JefeRoute>
         } />
-        <Route path="metricas" element={
-          <JefeRoute>
-            <RouteWrapper label="Métricas"><Metricas /></RouteWrapper>
-          </JefeRoute>
-        } />
+        <Route path="metricas" element={<Navigate to="/planificacion" replace />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/semana" replace />} />

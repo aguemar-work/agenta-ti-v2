@@ -6,6 +6,7 @@
   --mc-color-bg:               #f5f6f7;
   --mc-color-bg-secondary:     #eef0f3;
   --mc-color-surface:          #ffffff;
+  --mc-color-surface-elevated: #f8f9fb;
   --mc-color-surface-hover:    #f2f4f7;
   --mc-color-surface-active:   #e8eaef;
 
@@ -55,7 +56,7 @@
   --mc-topbar-h:            56px;
   /* Mi Semana: chrome sobre la grilla (header + resumen + filtros; ver appLayout.ts) */
   --mc-main-padding-block:  calc(var(--mc-space-6) * 2);
-  --mc-semana-page-chrome:  19rem;
+  --mc-semana-page-chrome:  10.5rem;
   --mc-semana-dia-col-max-height: calc(
     100dvh - var(--mc-topbar-h) - var(--mc-bottom-nav-h) - var(--mc-main-padding-block) - var(--mc-semana-page-chrome)
   );

@@ -101,7 +101,7 @@ export function usePlanificacionPage() {
     queryFn: () => getIncidenciasEquipoSemana(lunes, sabado),
   });
 
-  const { data: detalle = [] } = useQuery({
+  const { data: detalle = [], isLoading: loadDetalleCelda } = useQuery({
     queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha],
     enabled: Boolean(modal),
     queryFn: () => getTareasUsuarioDia(modal!.usuarioId, modal!.fecha),
@@ -160,12 +160,57 @@ export function usePlanificacionPage() {
   });
 
   // ── Datos derivados ───────────────────────────────────────────────────────
-  function cuenta(uid: string, ymd: string): number {
-    return carga.filter((t) => t.asignado_a === uid && t.fecha_planificada === ymd).length;
+  function esTareaActivaCelda(t: Tarea): boolean {
+    const est = estadoEfectivoTablero(t, hoyYmd);
+    return est !== 'completada' && est !== 'cancelada';
   }
+
+  function cuenta(uid: string, ymd: string): number {
+    return carga.filter(
+      (t) => t.asignado_a === uid && t.fecha_planificada === ymd && esTareaActivaCelda(t),
+    ).length;
+  }
+
+  function totalDiaEquipo(ymd: string): number {
+    return miembros.reduce((acc, u) => acc + cuenta(u.id, ymd), 0);
+  }
+
+  const resumenAlertas = useMemo(() => {
+    let atrasadas = 0;
+    for (const t of carga) {
+      if (estadoEfectivoTablero(t, hoyYmd) === 'atrasada') atrasadas++;
+    }
+    const ymdsSemana = new Set(diasLab.map((d) => fechaLocalYmd(d)));
+    const bloqueadas = carga.filter(
+      (t) => estadoEfectivoTablero(t, hoyYmd) === 'bloqueada' && t.fecha_planificada && ymdsSemana.has(t.fecha_planificada),
+    );
+    return {
+      atrasadas,
+      otsPendientes: otsPendientes.length,
+      incidenciasActivas: incidencias.length + bloqueadas.length,
+      justificacionesSinLeer: logsPend.length,
+    };
+  }, [carga, hoyYmd, diasLab, otsPendientes, incidencias.length, logsPend.length]);
+
+  const bloqueadasSemana = useMemo(() => {
+    const ymdsSemana = new Set(diasLab.map((d) => fechaLocalYmd(d)));
+    return carga.filter(
+      (t) => estadoEfectivoTablero(t, hoyYmd) === 'bloqueada' && t.fecha_planificada && ymdsSemana.has(t.fecha_planificada),
+    );
+  }, [carga, diasLab, hoyYmd]);
 
   function conteoEstadosDia(ymd: string): Partial<Record<EstadoTarea, number>> {
     const del = carga.filter((t) => t.fecha_planificada === ymd);
+    const counts: Partial<Record<EstadoTarea, number>> = {};
+    for (const t of del) {
+      const est = estadoEfectivoTablero(t, hoyYmd);
+      counts[est] = (counts[est] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  function conteoEstadosDiaMiembro(uid: string, ymd: string): Partial<Record<EstadoTarea, number>> {
+    const del = carga.filter((t) => t.asignado_a === uid && t.fecha_planificada === ymd);
     const counts: Partial<Record<EstadoTarea, number>> = {};
     for (const t of del) {
       const est = estadoEfectivoTablero(t, hoyYmd);
@@ -268,7 +313,7 @@ export function usePlanificacionPage() {
     lunes, setLunes, sabado, diasLab, semanaISO, numSem, fechaLunes, hoyYmd,
 
     // Datos
-    miembros, carga, detalle, incidencias, loadInc, logsPend, loadLogs, errLogs,
+    miembros, carga, detalle, loadDetalleCelda, incidencias, loadInc, logsPend, loadLogs, errLogs,
     actividad, loadActividad,
     objetivosActivos,
     modalCrear, setModalCrear,
@@ -283,6 +328,9 @@ export function usePlanificacionPage() {
     resetHistFiltros,
     conteoSemana,
     otsPendientes,
+    resumenAlertas,
+    bloqueadasSemana,
+    totalDiaEquipo,
 
     // Mutaciones
     mutLeerLog,
@@ -299,6 +347,7 @@ export function usePlanificacionPage() {
     // Helpers
     cuenta,
     conteoEstadosDia,
+    conteoEstadosDiaMiembro,
 
     // Handlers
     confirmarDesbloqueo,

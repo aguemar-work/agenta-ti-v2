@@ -20,7 +20,6 @@ import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
 import {
   crearIncidencia,
-  getIncidenciasEquipoPorFechaPlanificada,
   getIncidenciasRangoUsuario,
   insertarNotaBitacoraRapida,
 } from '@/api/hoyColumnas';
@@ -59,15 +58,11 @@ export function useMiSemanaPage() {
 
   const desdeYmd = fechaLocalYmd(lunes);
   const hastaYmd = fechaLocalYmd(sabado);
-  const verEquipoIncidencias = Boolean(esJefe && uid && usuario?.id && uid === usuario.id);
-
+  /** Siempre incidencias del usuario de la vista activa (el jefe ve las suyas; otras vías selector). */
   const { data: incidenciasSemana = [] } = useQuery({
-    queryKey: ['semana', 'incidencias', semanaISO, verEquipoIncidencias ? 'equipo' : uid],
+    queryKey: ['semana', 'incidencias', semanaISO, uid],
     enabled: Boolean(uid),
-    queryFn: () =>
-      verEquipoIncidencias
-        ? getIncidenciasEquipoPorFechaPlanificada(desdeYmd, hastaYmd)
-        : getIncidenciasRangoUsuario(uid!, desdeYmd, hastaYmd),
+    queryFn: () => getIncidenciasRangoUsuario(uid!, desdeYmd, hastaYmd),
   });
 
   const tareaIds = useMemo(() => tareasPlan.map((t) => t.id), [tareasPlan]);

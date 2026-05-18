@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   Bell,
   CalendarDays,
   ClipboardList,
@@ -17,6 +16,8 @@ import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
+import { useSlaAlertCount } from '@/hooks/useResumenSlaJefe';
+import { useSlaDigestToast } from '@/hooks/useSlaDigestToast';
 import { getInsforge } from '@/lib/insforge';
 import { loadNotificationPrefs, type NotificationPrefs } from '@/lib/notificationPrefs';
 import { useAuthStore } from '@/store/authStore';
@@ -31,8 +32,7 @@ const NAV_WORKSPACE = [
 ] as const;
 
 const NAV_GESTION = [
-  { to: '/planificacion',   label: 'Planificación', icon: ClipboardList, roles: ['jefe'] as const },
-  { to: '/metricas',        label: 'Métricas',      icon: BarChart3,     roles: ['jefe'] as const },
+  { to: '/planificacion', label: 'Planificación', icon: ClipboardList, roles: ['jefe'] as const },
 ] as const;
 
 const ICON_NAV = { size: 18, strokeWidth: 1.75, 'aria-hidden': true as const };
@@ -43,8 +43,7 @@ const NAV_ALL = [...NAV_WORKSPACE, ...NAV_GESTION] as const;
 /**
  * Barra inferior móvil (máx. 4 ítems + "Más").
  * Miembro (3 rutas): las tres en barra — sin drawer "Más".
- * Jefe (5 rutas): semana, planificación, órdenes y objetivos en barra; métricas en "Más"
- * (vista retrospectiva, menor frecuencia diaria que planificación/objetivos).
+ * Jefe (4 rutas): semana, planificación, órdenes y objetivos en barra — sin drawer "Más".
  */
 const BOTTOM_NAV_JEFE    = ['/semana', '/planificacion', '/ordenes-trabajo', '/objetivos'] as const;
 const BOTTOM_NAV_MIEMBRO = ['/semana', '/ordenes-trabajo', '/objetivos']                    as const;
@@ -73,6 +72,20 @@ function getInitials(nombre?: string): string {
 // ---------------------------------------------------------------------------
 // Indicador realtime
 // ---------------------------------------------------------------------------
+function NavSlaBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = count > 9 ? '9+' : String(count);
+  return (
+    <span
+      className="mc-filter-pill-badge"
+      aria-label={`${count} alerta${count !== 1 ? 's' : ''} SLA`}
+      style={{ marginLeft: 'auto' }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function RealtimeIndicator({ conectado }: { conectado: boolean }) {
   return (
     <span
@@ -103,6 +116,8 @@ export function AppShell() {
   const clear     = useAuthStore((s) => s.clear);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
   const { conectado } = useRealtimeNotificaciones(notifPrefs ?? undefined);
+  const slaAlertCount = useSlaAlertCount();
+  useSlaDigestToast(notifPrefs);
   const [masDrawerOpen, setMasDrawerOpen] = useState(false);
   const [confirmandoLogout, setConfirmandoLogout] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
@@ -178,9 +193,11 @@ export function AppShell() {
                       to={to}
                       end
                       className="mc-sidebar-nav-link"
+                      style={{ display: 'flex', alignItems: 'center', gap: 'var(--mc-space-2)' }}
                     >
                       <Icon {...ICON_NAV} />
                       <span className="mc-sidebar-nav-label">{label}</span>
+                      {to === '/planificacion' && <NavSlaBadge count={slaAlertCount} />}
                     </NavLink>
                   ))}
                 </>
@@ -287,11 +304,28 @@ export function AppShell() {
                   className={({ isActive }) =>
                     `mc-bottom-nav-link${isActive ? ' mc-bottom-nav-link--active' : ''}`
                   }
+                  style={{ position: 'relative' }}
                 >
                   {({ isActive }) => (
                     <>
                         <Icon {...ICON_NAV_MOBILE} />
                       <span>{label}</span>
+                      {to === '/planificacion' && slaAlertCount > 0 && (
+                        <span
+                          className="mc-filter-pill-badge"
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 'calc(50% - 22px)',
+                            minWidth: 16,
+                            padding: '0 4px',
+                            fontSize: 9,
+                          }}
+                          aria-hidden
+                        >
+                          {slaAlertCount > 9 ? '9+' : slaAlertCount}
+                        </span>
+                      )}
                       {isActive && <span className="sr-only">(página actual)</span>}
                     </>
                   )}

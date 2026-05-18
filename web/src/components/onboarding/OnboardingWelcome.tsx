@@ -1,4 +1,4 @@
-import { BarChart3, FileText, Target } from 'lucide-react';
+import { ClipboardList, FileText, Target } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -33,14 +33,14 @@ function stepsForRol(rol: RolUsuario): Step[] {
     icon: FileText,
     cta: { label: 'Ver órdenes', to: '/ordenes-trabajo', feature: 'ordenes_trabajo' },
   };
-  const metricas: Step = {
-    title: 'Métricas del equipo',
-    body: 'Compara cumplimiento ponderado, tareas atrasadas y objetivos activos por miembro. Usa Métricas para decisiones de capacidad, no solo para reportar.',
-    icon: BarChart3,
-    cta: { label: 'Abrir métricas', to: '/metricas', feature: 'metricas' },
+  const planificacion: Step = {
+    title: 'Planificación del equipo',
+    body: 'Carga semanal, alertas operativas y rendimiento del período en una vista de solo lectura para supervisar al equipo.',
+    icon: ClipboardList,
+    cta: { label: 'Abrir planificación', to: '/planificacion', feature: 'planificacion' },
   };
 
-  if (rol === 'jefe') return [objetivos, metricas, ot];
+  if (rol === 'jefe') return [objetivos, planificacion, ot];
   return [objetivos, ot];
 }
 

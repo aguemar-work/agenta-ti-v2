@@ -9,7 +9,10 @@ export type NotificationEventKey =
   | 'ot_rechazada'
   | 'tarea_completada'
   | 'ot_enviada'
-  | 'incidencia_registrada';
+  | 'incidencia_registrada'
+  | 'tarea_atrasada'
+  | 'tarea_bloqueada_critica'
+  | 'resumen_sla_diario';
 
 export type NotificationPrefs = Record<NotificationEventKey, boolean>;
 
@@ -20,13 +23,24 @@ export const NOTIFICATION_EVENT_LABELS: Record<NotificationEventKey, string> = {
   tarea_completada: 'Tarea completada (equipo)',
   ot_enviada: 'OT enviada a aprobación',
   incidencia_registrada: 'Incidencia registrada',
+  tarea_atrasada: 'Tarea atrasada (equipo)',
+  tarea_bloqueada_critica: 'Tarea bloqueada >48 h',
+  resumen_sla_diario: 'Resumen diario SLA',
 };
 
 /** Eventos visibles según rol */
 export function eventosDisponiblesPorRol(rol: 'jefe' | 'miembro'): NotificationEventKey[] {
   const base: NotificationEventKey[] = ['tarea_asignada', 'ot_aprobada', 'ot_rechazada'];
   if (rol === 'jefe') {
-    return [...base, 'tarea_completada', 'ot_enviada', 'incidencia_registrada'];
+    return [
+      ...base,
+      'tarea_completada',
+      'ot_enviada',
+      'incidencia_registrada',
+      'tarea_atrasada',
+      'tarea_bloqueada_critica',
+      'resumen_sla_diario',
+    ];
   }
   return base;
 }
@@ -38,6 +52,9 @@ const DEFAULT_PREFS: NotificationPrefs = {
   tarea_completada: true,
   ot_enviada: true,
   incidencia_registrada: true,
+  tarea_atrasada: true,
+  tarea_bloqueada_critica: true,
+  resumen_sla_diario: true,
 };
 
 function storageKey(userId: string) {
