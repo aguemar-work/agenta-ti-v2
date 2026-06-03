@@ -12,12 +12,13 @@
 export const OT_MIGRATION_028_APLICADA =
   import.meta.env.VITE_OT_MIGRATION_028 === 'true';
 
-/** Mínimo para habilitar el botón "Confirmar cierre" (UI + RPC). */
+/** Mínimo para habilitar el botón "Confirmar cierre" (UI + RPC migr. 036). */
 export function puedeCompletarOTReceptor(
   receptorNombre: string,
   receptorDni: string,
 ): boolean {
-  return receptorNombre.trim().length > 0 && receptorDni.trim().length > 0;
+  const dni = receptorDni.trim();
+  return receptorNombre.trim().length > 0 && /^[0-9]{8}$/.test(dni);
 }
 
 /** Regla de integridad al parsear filas desde la BD (solo si migración 028 activa en app). */

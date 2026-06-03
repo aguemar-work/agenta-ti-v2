@@ -2,10 +2,10 @@
  * Utilidades para borrador de OT (autoguardado en servidor).
  */
 
-import type { ActualizarOTInput, CrearOTInput, OrdenTrabajo } from '@/api/ordenTrabajo';
+import type { ActualizarOTInput, CrearOTInput, EstadoOT, OrdenTrabajo } from '@/api/ordenTrabajo';
 import type { Id } from '@/types';
 
-export function formInicialOT(creadoPor: Id): Omit<CrearOTInput, 'enviar'> {
+export function formInicialOT(creadoPor: Id): CrearOTInput {
   return {
     creado_por: creadoPor,
     tipo_trabajo_id: null,
@@ -22,7 +22,7 @@ export function formInicialOT(creadoPor: Id): Omit<CrearOTInput, 'enviar'> {
   };
 }
 
-export function ordenTrabajoToForm(ot: OrdenTrabajo): Omit<CrearOTInput, 'enviar'> {
+export function ordenTrabajoToForm(ot: OrdenTrabajo): CrearOTInput {
   return {
     creado_por: ot.creado_por,
     tipo_trabajo_id: ot.tipo_trabajo_id,
@@ -41,22 +41,19 @@ export function ordenTrabajoToForm(ot: OrdenTrabajo): Omit<CrearOTInput, 'enviar
   };
 }
 
-export function tieneContenidoBorrador(
-  form: Omit<CrearOTInput, 'enviar'>,
-  vacio: Omit<CrearOTInput, 'enviar'>,
-): boolean {
+export function tieneContenidoBorrador(form: CrearOTInput, vacio: CrearOTInput): boolean {
   return JSON.stringify(form) !== JSON.stringify(vacio);
 }
 
 /** Valores mínimos para INSERT/UPDATE en BD (campos NOT NULL). */
 export function formToActualizarInput(
-  form: Omit<CrearOTInput, 'enviar'>,
+  form: CrearOTInput,
   otId: Id,
-  enviar: boolean,
+  estadoActual: EstadoOT,
 ): ActualizarOTInput {
   return {
     otId,
-    enviar,
+    estadoActual,
     tipo_trabajo_id: form.tipo_trabajo_id ?? null,
     tarea_id: form.tarea_id ?? null,
     objetivo_id: form.objetivo_id ?? null,
@@ -73,10 +70,7 @@ export function formToActualizarInput(
   };
 }
 
-export function normalizarFormOTParaGuardar(
-  form: Omit<CrearOTInput, 'enviar'>,
-  creadoPor: Id,
-): CrearOTInput {
+export function normalizarFormOTParaGuardar(form: CrearOTInput, creadoPor: Id): CrearOTInput {
   const hoy = new Date().toISOString().slice(0, 10);
   return {
     ...form,
@@ -84,7 +78,6 @@ export function normalizarFormOTParaGuardar(
     descripcion: form.descripcion.trim() || '(borrador)',
     area_destino: form.area_destino.trim() || '(pendiente)',
     fecha_estimada: form.fecha_estimada || hoy,
-    enviar: false,
   };
 }
 

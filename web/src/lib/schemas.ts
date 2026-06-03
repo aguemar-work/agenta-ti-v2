@@ -139,12 +139,12 @@ export const TipoTrabajoOTSchema = z.object({
 
 export const OrdenTrabajoSchema = z.object({
   id:                   z.string().uuid(),
-  numero:               z.string(),
+  numero:               z.string().nullable(),
   creado_por:           z.string().uuid(),
   tipo_trabajo_id:      z.string().uuid().nullable(),
   tarea_id:             z.string().uuid().nullable(),
   objetivo_id:          z.string().uuid().nullable(),
-  estado:               z.enum(['borrador', 'pendiente', 'aprobada', 'en_ejecucion', 'completada', 'rechazada', 'cancelada']),
+  estado:               z.enum(['borrador', 'pendiente', 'aprobada', 'completada', 'rechazada', 'cancelada']),
   prioridad:            z.enum(['normal', 'urgente']),
   descripcion:          z.string(),
   area_destino:         z.string(),

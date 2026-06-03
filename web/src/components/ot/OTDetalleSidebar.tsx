@@ -1,6 +1,7 @@
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { OTDetalleContenido } from '@/components/ot/OTDetalleContenido';
 import type { OTDetalleAcciones } from '@/lib/otDetalleAcciones';
+import { labelNumeroOT } from '@/lib/otNumero';
 
 type Props = {
   ot: OrdenTrabajo;
@@ -14,7 +15,7 @@ export function OTDetalleSidebar({ ot, hoy, acciones, onClose }: Props) {
     <aside className="mc-ot-sidebar" role="complementary" aria-label="Detalle de orden de trabajo">
       <header className="mc-ot-sidebar__header">
         <div className="min-w-0 flex-1">
-          <p className="mc-ot-sidebar__numero">{ot.numero}</p>
+          <p className="mc-ot-sidebar__numero">{labelNumeroOT(ot.numero)}</p>
           <p className="mc-ot-sidebar__titulo">{ot.tipo_trabajo?.nombre ?? ot.descripcion}</p>
         </div>
         <button type="button" className="mc-modal-close" onClick={onClose} aria-label="Cerrar panel">

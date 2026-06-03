@@ -15,7 +15,6 @@ export type EstadoOT =
   | 'borrador'
   | 'pendiente'
   | 'aprobada'
-  | 'en_ejecucion'
   | 'completada'
   | 'rechazada'
   | 'cancelada';
@@ -32,7 +31,8 @@ export interface TipoTrabajoOT {
 
 export interface OrdenTrabajo {
   id:                   Id;
-  numero:               string;
+  /** NULL en borrador hasta «Enviar al jefe» (migr. 036). */
+  numero:               string | null;
   creado_por:           Id;
   tipo_trabajo_id:      Id | null;
   tarea_id:             Id | null;
@@ -81,13 +81,12 @@ export type CrearOTInput = {
   equipos_materiales?: string | null;
   observaciones?:      string | null;
   prioridad?:          PrioridadOT;
-  /** true = enviar directo a pendiente, false = guardar como borrador */
-  enviar:              boolean;
 };
 
-export type ActualizarOTInput = Omit<CrearOTInput, 'creado_por' | 'enviar'> & {
-  otId:   Id;
-  enviar: boolean;
+export type ActualizarOTInput = Omit<CrearOTInput, 'creado_por'> & {
+  otId:          Id;
+  /** Estado actual en BD — se preserva (borrador o pendiente al editar). */
+  estadoActual:  EstadoOT;
 };
 
 // ---------------------------------------------------------------------------
@@ -194,7 +193,7 @@ export async function crearOrdenTrabajo(input: CrearOTInput): Promise<OrdenTraba
     tipo_trabajo_id:     input.tipo_trabajo_id ?? null,
     tarea_id:            input.tarea_id ?? null,
     objetivo_id:         input.objetivo_id ?? null,
-    estado:              input.enviar ? 'pendiente' : 'borrador',
+    estado:              'borrador' as const,
     prioridad:           input.prioridad ?? 'normal',
     descripcion:         input.descripcion.trim(),
     area_destino:        input.area_destino.trim(),
@@ -214,18 +213,33 @@ export async function crearOrdenTrabajo(input: CrearOTInput): Promise<OrdenTraba
 
 export async function actualizarOrdenTrabajo(input: ActualizarOTInput): Promise<OrdenTrabajo> {
   const insforge = getInsforge();
-  const { otId, enviar, ...rest } = input;
+  const { otId, estadoActual, ...rest } = input;
+  const estadoPreservado = estadoActual === 'pendiente' ? 'pendiente' : 'borrador';
   const updates = {
     ...rest,
     prioridad:    rest.prioridad ?? 'normal',
     descripcion:  rest.descripcion.trim(),
     area_destino: rest.area_destino.trim(),
-    estado:       enviar ? 'pendiente' : 'borrador',
+    estado:       estadoPreservado,
   };
   const { data: updated, error } = await insforge.database
     .from('orden_trabajo').update(updates).eq('id', otId).select(OT_SELECT).single();
   if (error) throw error;
   return parseOrdenTrabajo(updated as Record<string, unknown>) as OrdenTrabajo;
+}
+
+/** Transición borrador → pendiente + número OT-TI-XXXX (migr. 036). */
+export async function enviarOTAlJefe(otId: Id, usuarioId: Id): Promise<OrdenTrabajo> {
+  const insforge = getInsforge();
+  const { error } = await insforge.database.rpc('sgtd_enviar_ot', {
+    p_ot_id:      otId,
+    p_usuario_id: usuarioId,
+  });
+  if (error) throw error;
+  const { data, error: fetchErr } = await insforge.database
+    .from('orden_trabajo').select(OT_SELECT).eq('id', otId).single();
+  if (fetchErr) throw fetchErr;
+  return parseOrdenTrabajo(data as Record<string, unknown>) as OrdenTrabajo;
 }
 
 export async function aprobarOT(otId: Id, usuarioId: Id): Promise<void> {
@@ -241,14 +255,6 @@ export async function rechazarOT(otId: Id, usuarioId: Id, motivo: string): Promi
     p_ot_id:      otId,
     p_usuario_id: usuarioId,
     p_motivo:     motivo.trim(),
-  });
-  if (error) throw error;
-}
-
-export async function iniciarEjecucionOT(otId: Id, usuarioId: Id): Promise<void> {
-  const { error } = await getInsforge().database.rpc('sgtd_iniciar_ejecucion_ot', {
-    p_ot_id:      otId,
-    p_usuario_id: usuarioId,
   });
   if (error) throw error;
 }

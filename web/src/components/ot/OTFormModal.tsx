@@ -6,14 +6,15 @@
 import { Modal } from '@/components/ui/Modal';
 import { CancelButton } from '@/components/ui/Button';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
+import { labelNumeroOT } from '@/lib/otNumero';
 import type { DraftSaveStatus } from '@/hooks/useOrdenesTrabajoPage';
 import type { Tarea } from '@/types';
 
 type Props = {
     open: boolean;
     editando: OrdenTrabajo | null;
-    form: Omit<CrearOTInput, 'enviar'>;
-    setForm: (f: Omit<CrearOTInput, 'enviar'>) => void;
+    form: CrearOTInput;
+    setForm: (f: CrearOTInput) => void;
     tiposTrabajo: TipoTrabajoOT[];
     tareasVinculables: Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
     onClose: () => void;
@@ -82,7 +83,9 @@ export function OTFormModal({
 }: Props) {
     const fechaEsValida = form.fecha_estimada.length > 0 && form.fecha_estimada >= new Date().toISOString().slice(0, 10);
     const canSave = form.descripcion.trim().length > 0 && form.area_destino.trim().length > 0 && fechaEsValida;
-    const titulo = editando ? `Editar ${editando.numero}` : 'Nueva orden de trabajo';
+    const titulo = editando
+        ? `Editar ${labelNumeroOT(editando.numero)}`
+        : 'Nueva orden de trabajo';
 
     function upd<K extends keyof typeof form>(key: K, val: typeof form[K]) {
         setForm({ ...form, [key]: val });

@@ -40,7 +40,6 @@ const FILTROS_ESPECIFICOS: { value: EstadoOT; label: string }[] = [
   { value: 'borrador', label: 'Borrador' },
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'aprobada', label: 'Aprobada' },
-  { value: 'en_ejecucion', label: 'En ejecución' },
   { value: 'rechazada', label: 'Rechazada' },
   { value: 'cancelada', label: 'Cancelada' },
 ];
@@ -54,7 +53,6 @@ const FILTRO_LABELS: Record<FiltroEstadoOT, string> = {
   borrador: 'borrador',
   pendiente: 'pendientes',
   aprobada: 'aprobadas',
-  en_ejecucion: 'en ejecución',
   completada: 'completadas',
   rechazada: 'rechazadas',
   cancelada: 'canceladas',
@@ -124,7 +122,6 @@ export function OrdenesTrabajo() {
     mutActualizar,
     mutAprobar,
     mutRechazar,
-    mutIniciar,
     mutCompletar,
     mutCancelar,
     mutCrearTipo,
@@ -159,10 +156,6 @@ export function OrdenesTrabajo() {
     () => ({
       onAprobar: (id: string) => mutAprobar.mutate(id),
       onRechazar: (ot: OrdenTrabajo) => setModalRechazar(ot),
-      onIniciar: (id: string) => {
-        mutIniciar.mutate(id);
-        setViendoOT(null);
-      },
       onCompletar: (ot: OrdenTrabajo) => setModalCompletar(ot),
       onEditar: (ot: OrdenTrabajo) => {
         setViendoOT(null);
@@ -175,7 +168,7 @@ export function OrdenesTrabajo() {
       onImprimir: (ot: OrdenTrabajo) => setImprimiendoOT(ot),
       aprobarPending: mutAprobar.isPending,
     }),
-    [mutAprobar, mutIniciar, mutCancelar, setModalRechazar, setModalCompletar, setViendoOT, abrirEditarOT, setImprimiendoOT],
+    [mutAprobar, mutCancelar, setModalRechazar, setModalCompletar, setViendoOT, abrirEditarOT, setImprimiendoOT],
   );
 
   const accionesDetalle = useMemo(

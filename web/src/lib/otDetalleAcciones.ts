@@ -4,7 +4,6 @@ export type OTDetalleAcciones = {
   esJefe: boolean;
   puedeAprobar: boolean;
   puedeRechazar: boolean;
-  puedeIniciar: boolean;
   puedeCompletar: boolean;
   puedeEditar: boolean;
   puedeCancelar: boolean;
@@ -12,7 +11,6 @@ export type OTDetalleAcciones = {
   aprobarPending: boolean;
   onAprobar: () => void;
   onRechazar: () => void;
-  onIniciar: () => void;
   onCompletar: () => void;
   onEditar: () => void;
   onCancelar: () => void;
@@ -22,7 +20,6 @@ export type OTDetalleAcciones = {
 type Handlers = {
   onAprobar: (id: string) => void;
   onRechazar: (ot: OrdenTrabajo) => void;
-  onIniciar: (id: string) => void;
   onCompletar: (ot: OrdenTrabajo) => void;
   onEditar: (ot: OrdenTrabajo) => void;
   onCancelar: (id: string) => void;
@@ -30,7 +27,7 @@ type Handlers = {
   aprobarPending?: boolean;
 };
 
-/** Alineado con RPCs sgtd_iniciar_ejecucion_ot / sgtd_completar_ot (creador o jefe). */
+/** Alineado con RPCs sgtd_completar_ot (creador o jefe, estado aprobada). */
 export function buildOTDetalleAcciones(
   ot: OrdenTrabajo,
   esJefe: boolean,
@@ -42,18 +39,15 @@ export function buildOTDetalleAcciones(
 
   const puedeAprobar = esJefe && ot.estado === 'pendiente';
   const puedeRechazar = esJefe && ot.estado === 'pendiente';
-  const puedeIniciar = puedeEjecutar && ot.estado === 'aprobada';
-  /** RPC exige estado en_ejecucion — no mostrar en aprobada. */
-  const puedeCompletar = puedeEjecutar && ot.estado === 'en_ejecucion';
+  const puedeCompletar = puedeEjecutar && ot.estado === 'aprobada';
   const puedeEditar = esCreador && ['borrador', 'pendiente'].includes(ot.estado);
   const puedeCancelar = esCreador && ['borrador', 'pendiente'].includes(ot.estado);
-  const puedeImprimir = ['aprobada', 'en_ejecucion', 'completada'].includes(ot.estado);
+  const puedeImprimir = ['aprobada', 'completada'].includes(ot.estado);
 
   return {
     esJefe,
     puedeAprobar,
     puedeRechazar,
-    puedeIniciar,
     puedeCompletar,
     puedeEditar,
     puedeCancelar,
@@ -61,7 +55,6 @@ export function buildOTDetalleAcciones(
     aprobarPending: handlers.aprobarPending ?? false,
     onAprobar: () => handlers.onAprobar(ot.id),
     onRechazar: () => handlers.onRechazar(ot),
-    onIniciar: () => handlers.onIniciar(ot.id),
     onCompletar: () => handlers.onCompletar(ot),
     onEditar: () => handlers.onEditar(ot),
     onCancelar: () => handlers.onCancelar(ot.id),
@@ -79,7 +72,7 @@ export function accionesSwipeOT(
   const puedeEjecutar = esJefe || esCreador;
   return {
     aprobar: esJefe && ot.estado === 'pendiente',
-    completar: puedeEjecutar && ot.estado === 'en_ejecucion',
+    completar: puedeEjecutar && ot.estado === 'aprobada',
     cancelar:
       (esCreador && ['borrador', 'pendiente'].includes(ot.estado)) ||
       (esJefe && ot.estado === 'pendiente'),

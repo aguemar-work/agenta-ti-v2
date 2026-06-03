@@ -281,7 +281,7 @@ export const ordenTrabajoHandlers = [
   http.post(`${BASE}/rpc/sgtd_rechazar_ot`, () =>
     HttpResponse.json(null),
   ),
-  http.post(`${BASE}/rpc/sgtd_iniciar_ejecucion_ot`, () =>
+  http.post(`${BASE}/rpc/sgtd_enviar_ot`, () =>
     HttpResponse.json(null),
   ),
   http.post(`${BASE}/rpc/sgtd_completar_ot`, () =>

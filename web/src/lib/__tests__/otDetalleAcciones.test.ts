@@ -6,7 +6,6 @@ import { buildOTDetalleAcciones } from '@/lib/otDetalleAcciones';
 const HANDLERS = {
   onAprobar: vi.fn(),
   onRechazar: vi.fn(),
-  onIniciar: vi.fn(),
   onCompletar: vi.fn(),
   onEditar: vi.fn(),
   onCancelar: vi.fn(),
@@ -19,12 +18,12 @@ const UID_OTRO    = '22222222-2222-2222-2222-222222222222';
 function ot(partial: Partial<OrdenTrabajo>): OrdenTrabajo {
   return {
     id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    numero: 'OT-001',
+    numero: 'OT-TI-0001',
     creado_por: UID_CREADOR,
     tipo_trabajo_id: null,
     tarea_id: null,
     objetivo_id: null,
-    estado: 'en_ejecucion',
+    estado: 'aprobada',
     prioridad: 'normal',
     descripcion: 'Test',
     area_destino: 'TI',
@@ -51,26 +50,23 @@ function ot(partial: Partial<OrdenTrabajo>): OrdenTrabajo {
 }
 
 describe('buildOTDetalleAcciones', () => {
-  it('jefe puede completar OT en ejecución', () => {
-    const a = buildOTDetalleAcciones(ot({ estado: 'en_ejecucion' }), true, UID_OTRO, HANDLERS);
+  it('jefe puede completar OT aprobada', () => {
+    const a = buildOTDetalleAcciones(ot({ estado: 'aprobada' }), true, UID_OTRO, HANDLERS);
     expect(a.puedeCompletar).toBe(true);
-    expect(a.puedeIniciar).toBe(false);
   });
 
-  it('miembro creador puede iniciar en aprobada pero no completar', () => {
+  it('miembro creador completa en aprobada', () => {
     const a = buildOTDetalleAcciones(ot({ estado: 'aprobada' }), false, UID_CREADOR, HANDLERS);
-    expect(a.puedeIniciar).toBe(true);
-    expect(a.puedeCompletar).toBe(false);
-  });
-
-  it('miembro no creador no ve iniciar ni completar', () => {
-    const a = buildOTDetalleAcciones(ot({ estado: 'en_ejecucion' }), false, UID_OTRO, HANDLERS);
-    expect(a.puedeIniciar).toBe(false);
-    expect(a.puedeCompletar).toBe(false);
-  });
-
-  it('creador completa solo en ejecución', () => {
-    const a = buildOTDetalleAcciones(ot({ estado: 'en_ejecucion' }), false, UID_CREADOR, HANDLERS);
     expect(a.puedeCompletar).toBe(true);
+  });
+
+  it('miembro no creador no ve completar', () => {
+    const a = buildOTDetalleAcciones(ot({ estado: 'aprobada' }), false, UID_OTRO, HANDLERS);
+    expect(a.puedeCompletar).toBe(false);
+  });
+
+  it('no se completa desde pendiente', () => {
+    const a = buildOTDetalleAcciones(ot({ estado: 'pendiente' }), true, UID_CREADOR, HANDLERS);
+    expect(a.puedeCompletar).toBe(false);
   });
 });

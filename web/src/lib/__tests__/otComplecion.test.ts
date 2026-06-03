@@ -12,13 +12,18 @@ describe('puedeCompletarOTReceptor', () => {
     expect(puedeCompletarOTReceptor('Ana', '')).toBe(false);
     expect(puedeCompletarOTReceptor('  ', '12345678')).toBe(false);
   });
+
+  it('exige DNI peruano de 8 dígitos', () => {
+    expect(puedeCompletarOTReceptor('Ana Pérez', '1234567')).toBe(false);
+    expect(puedeCompletarOTReceptor('Ana Pérez', '123456789')).toBe(false);
+  });
 });
 
 describe('ordenTrabajoCompletadaTieneReceptor', () => {
   it('no aplica fuera de completada', () => {
     expect(
       ordenTrabajoCompletadaTieneReceptor({
-        estado: 'en_ejecucion',
+        estado: 'aprobada',
         receptor_nombre: null,
         receptor_dni: null,
       }),

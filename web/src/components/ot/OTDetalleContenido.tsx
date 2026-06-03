@@ -125,11 +125,6 @@ export function OTDetalleContenido({ ot, hoy, acciones }: Props) {
             Aprobar
           </Button>
         )}
-        {acciones.puedeIniciar && (
-          <Button variant="primary" size="sm" fullWidth onClick={acciones.onIniciar}>
-            Iniciar ejecución
-          </Button>
-        )}
         {acciones.puedeCompletar && (
           <Button variant="primary" size="sm" fullWidth onClick={acciones.onCompletar}>
             Completar OT

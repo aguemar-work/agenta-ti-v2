@@ -12,6 +12,7 @@ import { JustificacionField } from '@/components/ui/JustificacionField';
 import { TareaHistorialSection } from '@/components/tareas/TareaHistorialSection';
 import { TareaMetaPillRow } from '@/components/tareas/TareaMetaPillRow';
 import { ESTADO_OT_LABEL } from '@/lib/otConfig';
+import { labelNumeroOT } from '@/lib/otNumero';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -341,11 +342,11 @@ export function ModalDetalleTareaSemana({
                     className="mc-text-link"
                     onClick={() => onOtClick(ot)}
                   >
-                    {ot.numero} · {ESTADO_OT_LABEL[ot.estado]}
+                    {labelNumeroOT(ot.numero)} · {ESTADO_OT_LABEL[ot.estado]}
                   </button>
                 ) : (
                   <span>
-                    {ot.numero} · {ESTADO_OT_LABEL[ot.estado]}
+                    {labelNumeroOT(ot.numero)} · {ESTADO_OT_LABEL[ot.estado]}
                   </span>
                 )}
               </p>

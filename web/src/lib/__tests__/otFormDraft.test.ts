@@ -20,7 +20,6 @@ describe('otFormDraft', () => {
   it('rellena campos obligatorios al autoguardar', () => {
     const vacio = formInicialOT(UID);
     const out = normalizarFormOTParaGuardar(vacio, UID);
-    expect(out.enviar).toBe(false);
     expect(out.descripcion).toBe('(borrador)');
     expect(out.area_destino).toBe('(pendiente)');
     expect(out.fecha_estimada).toMatch(/^\d{4}-\d{2}-\d{2}$/);

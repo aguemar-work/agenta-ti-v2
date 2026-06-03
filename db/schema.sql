@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS public.tipo_trabajo_ot (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.orden_trabajo (
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  numero                text        NOT NULL UNIQUE,
+  numero                text        UNIQUE,
   creado_por            uuid        NOT NULL REFERENCES public.usuario (id),
   tipo_trabajo_id       uuid        REFERENCES public.tipo_trabajo_ot (id),
   tarea_id              uuid        REFERENCES public.tarea (id) ON DELETE SET NULL,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS public.orden_trabajo (
   estado                text        NOT NULL DEFAULT 'borrador'
                                     CHECK (estado IN (
                                       'borrador', 'pendiente', 'aprobada',
-                                      'en_ejecucion', 'completada', 'rechazada', 'cancelada'
+                                      'completada', 'rechazada', 'cancelada'
                                     )),
   prioridad             text        NOT NULL DEFAULT 'normal'
                                     CHECK (prioridad IN ('normal', 'urgente')),
@@ -183,6 +183,10 @@ CREATE TABLE IF NOT EXISTS public.orden_trabajo (
       receptor_nombre IS NOT NULL AND btrim(receptor_nombre) <> ''
       AND receptor_dni    IS NOT NULL AND btrim(receptor_dni)    <> ''
     )
+  ),
+  CONSTRAINT ck_ot_pendiente_tiene_numero CHECK (
+    estado = 'borrador'
+    OR (numero IS NOT NULL AND btrim(numero) <> '')
   )
 );
 

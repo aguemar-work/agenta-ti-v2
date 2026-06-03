@@ -26,9 +26,9 @@ import {
 
   aprobarOT, cancelarOrdenTrabajo, completarOT,
 
-  crearOrdenTrabajo, getBorradorOTUsuario, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
+  crearOrdenTrabajo, enviarOTAlJefe, getBorradorOTUsuario, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
 
-  getTiposTrabajoOT, iniciarEjecucionOT, rechazarOT, actualizarOrdenTrabajo,
+  getTiposTrabajoOT, rechazarOT, actualizarOrdenTrabajo,
 
   crearTipoTrabajoOT, toggleTipoTrabajoOT,
 
@@ -63,6 +63,7 @@ import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
+import { labelNumeroOT } from '@/lib/otNumero';
 
 import type { Id, Tarea } from '@/types';
 
@@ -80,7 +81,7 @@ const FILTRO_ESTADO_OT_VALORES = [
 
   'todos', 'activas', 'completadas', 'urgentes', 'vencidas',
 
-  'borrador', 'pendiente', 'aprobada', 'en_ejecucion', 'completada', 'rechazada', 'cancelada',
+  'borrador', 'pendiente', 'aprobada', 'completada', 'rechazada', 'cancelada',
 
 ] as const;
 
@@ -222,7 +223,7 @@ export function useOrdenesTrabajoPage() {
 
 
 
-  const [form, setForm] = useState<Omit<CrearOTInput, 'enviar'>>(() => formInicialOT(usuario?.id ?? ''));
+  const [form, setForm] = useState<CrearOTInput>(() => formInicialOT(usuario?.id ?? ''));
 
   const [borradorOTId, setBorradorOTId] = useState<Id | null>(null);
 
@@ -354,9 +355,11 @@ export function useOrdenesTrabajoPage() {
 
 
 
+          const estadoGuardado = editandoOT?.estado ?? 'borrador';
+
           const ot = otId
 
-            ? await actualizarOrdenTrabajo(formToActualizarInput(form, otId, false))
+            ? await actualizarOrdenTrabajo(formToActualizarInput(form, otId, estadoGuardado))
 
             : await crearOrdenTrabajo(payload);
 
@@ -419,11 +422,25 @@ export function useOrdenesTrabajoPage() {
 
 
   const enviarOT = useCallback(async () => {
-    const otId = editandoOT?.id ?? borradorOTIdRef.current;
+    const estadoActual: EstadoOT = editandoOT?.estado ?? 'borrador';
+    let otId = editandoOT?.id ?? borradorOTIdRef.current;
+    const payload: CrearOTInput = {
+      ...form,
+      creado_por: usuario!.id,
+      descripcion: form.descripcion.trim(),
+      area_destino: form.area_destino.trim(),
+    };
+    let ot: OrdenTrabajo;
+
     if (otId) {
-      return actualizarOrdenTrabajo(formToActualizarInput(form, otId, true));
+      ot = await actualizarOrdenTrabajo(formToActualizarInput(payload, otId, estadoActual));
+    } else {
+      ot = await crearOrdenTrabajo(payload);
+      otId = ot.id;
     }
-    return crearOrdenTrabajo({ ...form, creado_por: usuario!.id, enviar: true });
+
+    if (estadoActual === 'pendiente') return ot;
+    return enviarOTAlJefe(otId, usuario!.id);
   }, [form, editandoOT, usuario]);
 
 
@@ -466,7 +483,7 @@ export function useOrdenesTrabajoPage() {
 
       resetFormularioOT();
 
-      toast.success(`${ot.numero} enviada al jefe`);
+      toast.success(`${labelNumeroOT(ot.numero)} enviada al jefe`);
 
     },
 
@@ -480,7 +497,7 @@ export function useOrdenesTrabajoPage() {
 
     mutationFn: enviarOT,
 
-    onSuccess: async () => {
+    onSuccess: async (ot) => {
 
       await invalidarOTs();
 
@@ -492,7 +509,11 @@ export function useOrdenesTrabajoPage() {
 
       resetFormularioOT();
 
-      toast.success('OT enviada al jefe');
+      toast.success(
+        editandoOT?.estado === 'pendiente'
+          ? 'Cambios guardados'
+          : `${labelNumeroOT(ot.numero)} enviada al jefe`,
+      );
 
     },
 
@@ -526,7 +547,7 @@ export function useOrdenesTrabajoPage() {
 
           otId:      ot.id,
 
-          numero:    ot.numero,
+          numero:    labelNumeroOT(ot.numero),
 
         });
 
@@ -566,7 +587,7 @@ export function useOrdenesTrabajoPage() {
 
           otId:      ot.id,
 
-          numero:    ot.numero,
+          numero:    labelNumeroOT(ot.numero),
 
           motivo,
 
@@ -577,18 +598,6 @@ export function useOrdenesTrabajoPage() {
     },
 
     onError: (err) => { console.error('[mutRechazarOT]', err); toast.error('No se pudo rechazar la OT.'); },
-
-  });
-
-
-
-  const mutIniciar = useMutation({
-
-    mutationFn: (otId: Id) => iniciarEjecucionOT(otId, usuario!.id),
-
-    onSuccess: async () => { await invalidarOTs(); toast.success('OT en ejecución'); },
-
-    onError: (err) => { console.error('[mutIniciarOT]', err); toast.error('No se pudo iniciar la OT.'); },
 
   });
 
@@ -774,7 +783,7 @@ export function useOrdenesTrabajoPage() {
 
 
 
-  const ESTADOS_OT_ACTIVAS: EstadoOT[] = ['borrador', 'pendiente', 'aprobada', 'en_ejecucion'];
+  const ESTADOS_OT_ACTIVAS: EstadoOT[] = ['borrador', 'pendiente', 'aprobada'];
 
   const ordenesFiltradas = (() => {
 
@@ -870,7 +879,7 @@ export function useOrdenesTrabajoPage() {
 
     mutCrear, mutActualizar, mutAprobar, mutRechazar,
 
-    mutIniciar, mutCompletar, mutCancelar,
+    mutCompletar, mutCancelar,
 
     mutCrearTipo, mutToggleTipo,
 

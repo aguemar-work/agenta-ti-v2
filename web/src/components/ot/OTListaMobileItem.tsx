@@ -1,6 +1,7 @@
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { otVencida } from '@/lib/otHelpers';
+import { labelNumeroOT } from '@/lib/otNumero';
 
 type Props = {
   ot: OrdenTrabajo;
@@ -26,7 +27,7 @@ export function OTListaMobileItem({ ot, hoy, selected, onSelect }: Props) {
       onClick={onSelect}
     >
       <div className="mc-ot-mobile-row__top">
-        <span className="mc-ot-mobile-row__numero">{ot.numero}</span>
+        <span className="mc-ot-mobile-row__numero">{labelNumeroOT(ot.numero)}</span>
         <span className={`mc-badge ${ESTADO_OT_BADGE[ot.estado]}`} style={{ fontSize: 9 }}>
           {ESTADO_OT_LABEL[ot.estado]}
         </span>

@@ -1,6 +1,7 @@
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { otVencida } from '@/lib/otHelpers';
+import { labelNumeroOT } from '@/lib/otNumero';
 
 const GRID_COLS = 'minmax(128px, 150px) 1fr 96px';
 
@@ -26,7 +27,7 @@ export function OTTablaFila({ ot, hoy, selected, onSelect }: Props) {
       onClick={onSelect}
     >
       <div className="mc-ot-row__numero">
-        <span className="mc-ot-row__numero-text">{ot.numero}</span>
+        <span className="mc-ot-row__numero-text">{labelNumeroOT(ot.numero)}</span>
         <span className={`mc-badge ${ESTADO_OT_BADGE[ot.estado]}`} style={{ fontSize: 9 }}>
           {ESTADO_OT_LABEL[ot.estado]}
         </span>

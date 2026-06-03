@@ -6,7 +6,6 @@ import { conicGradientDonut } from '@/lib/metricasHelpers';
 
 const OT_DONUT_COLORS: Partial<Record<EstadoOT, string>> = {
   completada: 'var(--mc-color-success)',
-  en_ejecucion: 'var(--mc-color-info)',
   aprobada: 'var(--mc-color-accent)',
   pendiente: 'var(--mc-color-warning)',
   borrador: 'var(--mc-color-neutral-soft)',
@@ -16,7 +15,6 @@ const OT_DONUT_COLORS: Partial<Record<EstadoOT, string>> = {
 
 const OT_DONUT_ORDER: EstadoOT[] = [
   'completada',
-  'en_ejecucion',
   'aprobada',
   'pendiente',
   'borrador',
