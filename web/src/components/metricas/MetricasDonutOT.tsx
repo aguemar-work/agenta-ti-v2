@@ -27,9 +27,10 @@ const OT_DONUT_ORDER: EstadoOT[] = [
 type Props = {
   counts: OtEstadoCount | undefined;
   loading: boolean;
+  embedded?: boolean;
 };
 
-export function MetricasDonutOT({ counts, loading }: Props) {
+export function MetricasDonutOT({ counts, loading, embedded = false }: Props) {
   const { total, segments, gradient } = useMemo(() => {
     const c = counts ?? {};
     const totalN = Object.values(c).reduce((a, n) => a + (n ?? 0), 0);
@@ -49,9 +50,10 @@ export function MetricasDonutOT({ counts, loading }: Props) {
     return { total: totalN, segments, gradient };
   }, [counts]);
 
-  return (
-    <section className="mc-card mc-metricas-donut-ot" aria-label="Órdenes de trabajo por estado">
-      <h2 className="mc-metricas-section-title">OTs del período</h2>
+  const className = embedded ? 'mc-metricas-donut-ot mc-metricas-embedded' : 'mc-card mc-metricas-donut-ot';
+  const content = (
+    <>
+      {!embedded ? <h2 className="mc-metricas-section-title">OTs del período</h2> : null}
       {loading ? (
         <p className="text-xs text-[var(--mc-color-text-secondary)]">Cargando…</p>
       ) : total === 0 ? (
@@ -80,6 +82,19 @@ export function MetricasDonutOT({ counts, loading }: Props) {
           </ul>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={className} aria-label="Órdenes de trabajo por estado">
+        {content}
+      </div>
+    );
+  }
+  return (
+    <section className={className} aria-label="Órdenes de trabajo por estado">
+      {content}
     </section>
   );
 }

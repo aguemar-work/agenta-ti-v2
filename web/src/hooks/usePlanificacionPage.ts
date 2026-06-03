@@ -11,8 +11,9 @@ import { toast } from 'sonner';
 import {
   getActividadEquipoSemana,
   getHistorialLogs,
+  aceptarJustificacionJefe,
+  devolverJustificacionJefe,
   getJustificacionesPendientesJefe,
-  marcarLogLeidoPorJefe,
   type FiltrosHistorialLog,
 } from '@/api/audit';
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
@@ -150,13 +151,28 @@ export function usePlanificacionPage() {
   }
 
   // ── Mutaciones ────────────────────────────────────────────────────────────
-  const mutLeerLog = useMutation({
-    mutationFn: (id: string) => marcarLogLeidoPorJefe(id),
+  async function invalidarTrasRevisionJustificacion() {
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_LOGS] });
+    await invalidateRelatedQueries(qc, ['planificacion', 'semana', 'tablero']);
+  }
+
+  const mutAceptarJustificacion = useMutation({
+    mutationFn: (logId: string) => aceptarJustificacionJefe(logId),
     onSuccess: async () => {
-      await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_LOGS] });
-      toast.success('Marcada como leído');
+      await invalidarTrasRevisionJustificacion();
+      toast.success('Justificación aceptada');
     },
-    onError: () => toast.error('No se pudo actualizar el registro.'),
+    onError: () => toast.error('No se pudo aceptar la justificación.'),
+  });
+
+  const mutDevolverJustificacion = useMutation({
+    mutationFn: ({ logId, nota }: { logId: string; nota: string }) =>
+      devolverJustificacionJefe(logId, nota),
+    onSuccess: async () => {
+      await invalidarTrasRevisionJustificacion();
+      toast.success('Tarea devuelta a pendiente');
+    },
+    onError: () => toast.error('No se pudo devolver la tarea.'),
   });
 
   // ── Datos derivados ───────────────────────────────────────────────────────
@@ -188,7 +204,7 @@ export function usePlanificacionPage() {
       atrasadas,
       otsPendientes: otsPendientes.length,
       incidenciasActivas: incidencias.length + bloqueadas.length,
-      justificacionesSinLeer: logsPend.length,
+      justificacionesPendientes: logsPend.length,
     };
   }, [carga, hoyYmd, diasLab, otsPendientes, incidencias.length, logsPend.length]);
 
@@ -332,8 +348,9 @@ export function usePlanificacionPage() {
     bloqueadasSemana,
     totalDiaEquipo,
 
-    // Mutaciones
-    mutLeerLog,
+    // Mutaciones justificaciones
+    mutAceptarJustificacion,
+    mutDevolverJustificacion,
 
     // Modales
     modal, setModal,

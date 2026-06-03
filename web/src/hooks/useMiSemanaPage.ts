@@ -9,29 +9,33 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
-import { useIncidenciasDelDia, useNotasBitacoraHoy, Q_INC_HOY } from '@/hooks/useHoyColumnas';
+import { useIncidenciasDelDia, useNotasBitacoraHoy, Q_INC_HOY, Q_NOTAS_HOY } from '@/hooks/useHoyColumnas';
 import { useJefesNotificacion } from '@/hooks/useUsuarios';
 import { useSemanaDnD } from '@/hooks/useSemanaDnD';
 import { useSemanaModales } from '@/hooks/useSemanaModales';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
 import {
+  convertirNotaEnEvento as convertirNotaEnEventoApi,
+  convertirNotaEnTarea as convertirNotaEnTareaApi,
   crearIncidencia,
   getIncidenciasRangoUsuario,
   insertarNotaBitacoraRapida,
 } from '@/api/hoyColumnas';
-import { getOrdenesPorTareaIds, type OrdenTrabajo } from '@/api/ordenTrabajo';
+import { getOrdenesPorTareaIds, crearOtDesdeTarea, type OrdenTrabajo } from '@/api/ordenTrabajo';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { puedeGestionarTarea } from '@/lib/permisos';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import type { Tarea } from '@/types';
+import type { NotaBitacora, Tarea, TipoEvento } from '@/types';
 
 export function useMiSemanaPage() {
+  const navigate = useNavigate();
   const nav = useSemanaNavegacion();
   const {
     usuario, esJefe,
@@ -114,7 +118,7 @@ export function useMiSemanaPage() {
 
   // ── Incidencias de hoy (registro rápido) y notas ─────────────────────────
   const { data: incidenciasHoy = [] } = useIncidenciasDelDia(uid, hoyYmd);
-  const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid);
+  const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid, esJefe);
 
   const { data: jefesNotificacion = [] } = useJefesNotificacion({
     enabled: Boolean(usuario && !esJefe),
@@ -122,6 +126,12 @@ export function useMiSemanaPage() {
 
   const [modalInc,   setModalInc]   = useState(false);
   const [notaRapida, setNotaRapida] = useState('');
+  const [notaConvertir, setNotaConvertir] = useState<NotaBitacora | null>(null);
+
+  async function invalidarNotasYSemana() {
+    await invalidateRelatedQueries(qc, ['semana', 'bitacora']);
+    await qc.invalidateQueries({ queryKey: [Q_NOTAS_HOY], exact: false });
+  }
 
   async function crearIncidenciaHoy(input: {
     titulo:       string;
@@ -166,11 +176,56 @@ export function useMiSemanaPage() {
     try {
       await insertarNotaBitacoraRapida({ usuario_id: uid, contenido: notaRapida.trim() });
       setNotaRapida('');
+      await invalidarNotasYSemana();
       toast.success('Nota guardada');
     } catch (err) {
       console.error('[guardarNotaRapida]', err);
       toast.error('No se pudo guardar la nota.');
     }
+  }
+
+  async function confirmarConvertirNotaTarea(input: {
+    titulo: string;
+    prioridad: Tarea['prioridad'];
+    descripcion: string;
+    fecha_planificada: string;
+    asignado_a: string;
+  }) {
+    if (!usuario || !notaConvertir) return;
+    await convertirNotaEnTareaApi({
+      notaId: notaConvertir.id,
+      titulo: input.titulo,
+      descripcion: input.descripcion,
+      prioridad: input.prioridad,
+      fecha_planificada: input.fecha_planificada,
+      asignado_a: input.asignado_a,
+      creado_por: usuario.id,
+    });
+    setNotaConvertir(null);
+    await invalidarNotasYSemana();
+    toast.success('Nota convertida en tarea');
+  }
+
+  async function confirmarConvertirNotaEvento(input: {
+    titulo: string;
+    tipo: TipoEvento;
+    fecha_dia: string;
+    hora_inicio: string;
+    hora_fin: string;
+  }) {
+    if (!usuario || !notaConvertir) return;
+    await convertirNotaEnEventoApi({
+      notaId: notaConvertir.id,
+      titulo: input.titulo,
+      tipo: input.tipo,
+      fecha_dia: input.fecha_dia,
+      hora_inicio: input.hora_inicio,
+      hora_fin: input.hora_fin,
+      usuario_id: usuario.id,
+    });
+    setNotaConvertir(null);
+    await invalidarNotasYSemana();
+    toast.success('Nota convertida en evento');
   }
 
   // ── DnD ───────────────────────────────────────────────────────────────────
@@ -194,6 +249,29 @@ export function useMiSemanaPage() {
     return puedeGestionarTarea(t, usuario);
   }
 
+  async function generarOtDesdeTarea(t: Tarea) {
+    if (!usuario || !puedeGestionar(t)) return;
+    if (t.es_imprevisto || ['completada', 'cancelada'].includes(t.estado)) return;
+    if (ordenesPorTarea.has(t.id)) {
+      const ot = ordenesPorTarea.get(t.id)!;
+      navigate('/ordenes-trabajo', { state: { abrirOtId: ot.id } });
+      return;
+    }
+    try {
+      const otId = await crearOtDesdeTarea({
+        tareaId:       t.id,
+        fechaEstimada: t.fecha_planificada ?? hoyYmd,
+      });
+      await invalidateRelatedQueries(qc, ['ordenes-trabajo', 'semana']);
+      modales.setDetalleTareaId(null);
+      navigate('/ordenes-trabajo', { state: { abrirOtId: otId } });
+      toast.success('OT creada en borrador');
+    } catch (err) {
+      console.error('[generarOtDesdeTarea]', err);
+      toast.error('No se pudo crear la OT.');
+    }
+  }
+
   return {
     usuario, esJefe,
     lunes, setLunes, sabado, diasSemana, semanaISO,
@@ -205,7 +283,9 @@ export function useMiSemanaPage() {
     ocultarCompletadas, toggleOcultarCompletadas,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
+    notaConvertir, setNotaConvertir,
     crearIncidenciaHoy, guardarNotaRapida,
+    confirmarConvertirNotaTarea, confirmarConvertirNotaEvento,
     objetivosActivos, usuariosAsignables,
     tareaDetalle:   modales.tareaDetalle,
     tareaCompletar: modales.tareaCompletar,
@@ -237,5 +317,6 @@ export function useMiSemanaPage() {
     guardarDetalle:        modales.guardarDetalle,
     eliminarDesdeDetalle:  modales.eliminarDesdeDetalle,
     iniciarDesdeDetalle:   modales.iniciarDesdeDetalle,
+    generarOtDesdeTarea,
   };
 }

@@ -4,12 +4,15 @@ import { colorCumplimiento, inicialesNombre, pct } from '@/lib/metricasHelpers';
 type Props = {
   comparativa: KpisComparativaMiembro[];
   loading: boolean;
+  embedded?: boolean;
 };
 
-export function MetricasComparativa({ comparativa, loading }: Props) {
-  return (
-    <section className="mc-card mc-metricas-comparativa">
-      <h2 className="mc-metricas-section-title">Comparativa por miembro</h2>
+export function MetricasComparativa({ comparativa, loading, embedded = false }: Props) {
+  const className = embedded ? 'mc-metricas-comparativa mc-metricas-embedded' : 'mc-card mc-metricas-comparativa';
+
+  const content = (
+    <>
+      {!embedded ? <h2 className="mc-metricas-section-title">Comparativa por miembro</h2> : null}
       {loading ? (
         <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
       ) : comparativa.length === 0 ? (
@@ -72,6 +75,11 @@ export function MetricasComparativa({ comparativa, loading }: Props) {
           </table>
         </div>
       )}
-    </section>
+    </>
   );
+
+  if (embedded) {
+    return <div className={className}>{content}</div>;
+  }
+  return <section className={className}>{content}</section>;
 }

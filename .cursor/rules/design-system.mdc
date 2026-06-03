@@ -1,3 +1,413 @@
+# Agenda TI — Reglas Obligatorias del Design System
+**Meta Canvas Design System · Post-Fase 0 · Mayo 2026**
+
+> Este documento es la fuente única de verdad para todos los desarrolladores y agentes.  
+> Cada regla es una **norma de code review, no una sugerencia**.
+
 ---
-alwaysApply: true
+
+## ESTADO DE CONVERGENCIA (Plan V4)
+
+| Fase | Estado | Descripción |
+|---|---|---|
+| **0** | ✅ Completa | `--ds-*` eliminados como hex; `design-tokens.css` borrado |
+| **1** | 🔄 Activa | Todo código nuevo: solo `--mc-*`, `.mc-*`, `TAREA_BADGE` / `STATE_TOKENS` |
+| **2** | ✅ Completa | `StatusBadge.tsx` y `.ds-status-badge` eliminados |
+| **3** | ✅ Completa | `@import design-tokens.css` eliminado de `index.css` |
+
+**Regla para agentes y desarrolladores:**
+- ❌ No añadir `--ds-*` en TSX/CSS nuevos.
+- ❌ No volver a poner hex en `design-tokens.css` (el archivo fue eliminado).
+- ❌ No importar ni usar `StatusBadge` (marcado `@deprecated`, sin referencias activas).
+- ✅ Solo `--mc-*` / `.mc-*` / `TAREA_BADGE` / `STATE_TOKENS` de `lib/estadoConfig.ts`.
+
 ---
+
+## 1. TOKENS: La única fuente de color
+
+### 1.1 Prefijo activo: `--mc-*`
+
+`tokens.css` es la **única fuente de color**. El prefijo `--ds-*` fue eliminado en Fase 0.
+
+```css
+/* ✅ CORRECTO */
+color: var(--mc-color-text);
+background: var(--mc-color-accent);
+border-color: var(--mc-state-atrasada-border);
+
+/* ❌ INCORRECTO — prohibido en cualquier archivo nuevo */
+color: #050505;
+background: #0064e0;
+
+/* ❌ INCORRECTO — prefijo eliminado */
+color: var(--ds-color-text);
+```
+
+### 1.2 Tokens de estado de tarea (solo leer vía `STATE_TOKENS`)
+
+Definidos en `tokens.css` bajo "Estado de tarea". **Nunca usarlos directamente en componentes** — siempre a través de `STATE_TOKENS` en `lib/estadoConfig.ts`.
+
+| Token grupo | Propiedades |
+|---|---|
+| `--mc-state-atrasada-*` | bg, fg, border, meta |
+| `--mc-state-bloqueada-*` | bg, fg, border, meta |
+| `--mc-state-progreso-*` | bg, fg, border |
+| `--mc-state-completada-*` | bg, fg, border |
+| `--mc-state-reprogramada-*` | bg, fg, border |
+| `--mc-state-precaucion-*` | bg, fg, border (urgencia horaria) |
+| `--mc-state-urgente-*` | bg, fg, border, badge-bg, badge-fg |
+| `--mc-state-vencida-*` | bg, fg, border, badge-bg, badge-fg |
+
+---
+
+## 2. BADGES DE ESTADO — Sistema unificado
+
+### 2.1 Forma válida de renderizar un badge de estado
+
+```tsx
+import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
+
+// ✅ CORRECTO
+<span className={`mc-badge ${TAREA_BADGE[tarea.estado]}`}>
+  {TAREA_LABEL[tarea.estado]}
+</span>
+
+// ❌ INCORRECTO — componente deprecated
+<StatusBadge estado={tarea.estado} />
+
+// ❌ INCORRECTO — clase eliminada en Fase 2
+<span className="ds-status-badge ds-status-badge--atrasada">...</span>
+```
+
+### 2.2 Mapa completo de badge por estado (fuente: `TAREA_BADGE` en `estadoConfig.ts`)
+
+| Estado | Clase badge | Color | Nota |
+|---|---|---|---|
+| `pendiente` | `mc-badge-neutral` | Gris neutro | |
+| `en_progreso` | `mc-badge-info` | Azul info | Usa `--mc-color-info`, **no** brand/accent |
+| `completada` | `mc-badge-success` | Verde | |
+| `bloqueada` | `mc-badge-warning` | Ámbar | |
+| `atrasada` | `mc-badge-danger` | Rojo | |
+| `reprogramada` | `mc-badge-neutral` | Gris neutro | Badge es neutral; `TAREA_PILL` usa violeta — ver §2.5 |
+| `cancelada` | `mc-badge-neutral` | Gris neutro | |
+
+### 2.3 Badges de objetivo (`OBJETIVO_BADGE`)
+
+```tsx
+import { OBJETIVO_BADGE, OBJETIVO_LABEL } from '@/lib/estadoConfig';
+
+<span className={`mc-badge ${OBJETIVO_BADGE[objetivo.estado]}`}>
+  {OBJETIVO_LABEL[objetivo.estado]}
+</span>
+```
+
+| Estado | Clase |
+|---|---|
+| `activo` | `mc-badge-accent` |
+| `completado` | `mc-badge-success` |
+| `cancelado` | `mc-badge-neutral` |
+
+### 2.4 Badges de urgencia horaria (`URGENCIA_BADGE`)
+
+```tsx
+import { URGENCIA_BADGE, URGENCIA_LABEL } from '@/lib/estadoConfig';
+
+{urgencia !== 'normal' && (
+  <span className={`mc-badge ${URGENCIA_BADGE[urgencia]}`}>
+    {URGENCIA_LABEL[urgencia]}
+  </span>
+)}
+```
+
+### 2.5 Badges de prioridad (`PRIORIDAD_BADGE`)
+
+```tsx
+import { PRIORIDAD_BADGE, PRIORIDAD_LABEL } from '@/lib/estadoConfig';
+
+// PRIORIDAD_BADGE ya incluye 'mc-badge' en la clase — no duplicar
+<span className={PRIORIDAD_BADGE[tarea.prioridad]}>
+  {PRIORIDAD_LABEL[tarea.prioridad]}
+</span>
+```
+
+### 2.6 `TAREA_PILL` — diferencia con `TAREA_BADGE`
+
+`TAREA_PILL` existe para tablas y Planificación donde los badges necesitan Tailwind inline (sin acceso directo a `style={{}}`). A diferencia de `TAREA_BADGE`:
+
+- `reprogramada` en `TAREA_PILL` usa **violeta** (`bg-[#EEEDFE] text-[#3C3489]`).
+- `TAREA_PILL` tiene hex directos — **deuda de Fase 1**, no extender este patrón.
+- Solo usar `TAREA_PILL` en los contextos donde ya se usa actualmente.
+
+### 2.7 Clases de badge disponibles en `components.css`
+
+```
+mc-badge                  — base
+mc-badge-neutral          — gris
+mc-badge-accent           — brand azul
+mc-badge-success          — verde
+mc-badge-warning          — ámbar
+mc-badge-danger           — rojo
+mc-badge-info             — azul info
+mc-badge-prioridad-alta
+mc-badge-prioridad-media
+mc-badge-prioridad-baja
+```
+
+No crear clases `mc-badge-*` nuevas sin añadirlas a `components.css` y a este documento.
+
+---
+
+## 3. COLORES DE ESTADO EN TARJETAS DE TAREA
+
+```tsx
+import { STATE_TOKENS } from '@/lib/estadoConfig';
+
+const t = STATE_TOKENS[tarea.estado];
+
+<div style={{
+  background: t.bg,
+  borderLeft: `3px solid ${t.border}`,
+  color:      t.fg,
+}}>
+  <span style={{ color: t.meta }}>meta info</span>
+</div>
+```
+
+Para urgencia horaria (solo en `pendiente` / `en_progreso`):
+
+```tsx
+import { URGENCIA_TOKENS } from '@/lib/estadoConfig';
+
+const u = URGENCIA_TOKENS[urgenciaHoraria];
+// u.bg, u.fg, u.border, u.badgeBg, u.badgeFg
+```
+
+---
+
+## 4. BOTONES — Jerarquía y uso
+
+### 4.1 Los seis tipos
+
+| Variante | Cuándo | Máximo |
+|---|---|---|
+| `primary` | Acción principal única | **1 por sección/modal** |
+| `secondary` | Alternativa directa (Reprogramar, Exportar) | Sin límite |
+| `tertiary` | Baja urgencia, consecuencia visible | Sin límite |
+| `ghost` | Cancelar en par horizontal con primary (Patrón A) | Solo en par |
+| `danger` | Destructivas: Eliminar, Descartar | Solo en zona separada |
+| `quaternary` | Links de texto: Ver historial, Limpiar filtros | Sin límite |
+
+### 4.2 Tamaños por contexto
+
+| Prop | Cuándo |
+|---|---|
+| `size="lg"` | CTA principal de modal (siempre con `fullWidth`) |
+| `size="default"` | Headers de página, acciones principales |
+| `size="sm"` | Acciones secundarias en tarjetas, listas |
+| `size="xs"` | Vistas densas: Planificación, tablas. Solo desktop |
+
+### 4.3 Patrón A (fila) vs Patrón B (stack)
+
+**Patrón A — Confirmación simple:**
+```tsx
+<div className="mc-modal-footer">
+  <Button variant="ghost">Cancelar</Button>
+  <Button variant="primary">Confirmar</Button>
+</div>
+```
+
+**Patrón B — Modal con formulario:**
+```tsx
+<div className="mc-modal-footer mc-modal-footer--stack">
+  <Button variant="primary" size="lg" fullWidth>Guardar</Button>
+  <CancelButton onClick={onClose} />
+</div>
+```
+
+### 4.4 Zona destructiva (separación obligatoria)
+
+```tsx
+<Button variant="primary" size="lg" fullWidth>Acción principal</Button>
+<CancelButton onClick={onClose} />
+<div style={{ borderTop: '1px solid var(--mc-color-border)', paddingTop: 12, marginTop: 4 }}>
+  <Button variant="danger" size="sm" fullWidth>Eliminar permanentemente</Button>
+</div>
+```
+
+### 4.5 Prohibiciones
+
+```tsx
+// ❌ Dos primary en el mismo scope
+// ❌ danger sin zona separada por border-t
+// ❌ ghost como CTA único (usar quaternary)
+// ❌ className que sobreescriba color de variante
+```
+
+---
+
+## 5. MODALES — Estructura
+
+```tsx
+<Modal
+  open={open}
+  onClose={onClose}
+  title="Título descriptivo"           // obligatorio, nunca vacío
+  size="md"                            // sm | md | lg
+  hasUnsavedChanges={hasChanges}       // obligatorio si hay formulario
+  footer={<FooterButtons />}
+  footerClassName="mc-modal-footer--stack"   // si CTA es full-width
+  bodyClassName="mc-modal-form"              // si hay inputs
+  stackLevel={0}                       // 0 (default) | 1 | 2 — ver escala z-index
+>
+  {/* contenido */}
+</Modal>
+```
+
+### 5.4 Escala de z-index (tokens.css)
+
+| Capa | z-index | Cuándo |
+|---|---|---|
+| Bottom nav | 40 | Siempre fijo |
+| Drawer "Más" | 60 | Por encima de bottom nav |
+| Modal base (`stackLevel={0}`) | 70 | Modal estándar |
+| Modal stack (`stackLevel={1}`) | 80 | Modal secundario sobre otro modal — completar tarea, rechazar OT |
+| Modal top (`stackLevel={2}`) | 90 | Diálogos de alerta crítica |
+
+**Regla:** El drawer (z-60) nunca debe quedar por encima de un modal abierto (z-70+). La escala garantiza esto. No hardcodear valores de z-index en componentes — usar `stackLevel` en `<Modal>` o las clases `.mc-modal-overlay--stack` / `--top`.
+
+> Si en el futuro se necesitan modales verdaderamente apilados (sin cerrar el padre), implementar un `ModalStackProvider` que incremente `stackLevel` automáticamente.
+
+| Size | max-width | Cuándo |
+|---|---|---|
+| `sm` | 384px | Confirmaciones, un solo campo |
+| `md` | 448px | Formularios estándar (default) |
+| `lg` | 512px | Formularios complejos, detalle OT |
+
+**Reglas críticas:**
+- No crear overlays custom ad hoc — solo `<Modal>`.
+- `hasUnsavedChanges` obligatorio en cualquier modal con campos controlados.
+- Modales secundarios (abrir desde otro modal) usan `stackLevel={1}`.
+- No hardcodear z-index — usar `stackLevel` o las clases generadas.
+- El unsaved-changes dialog lo gestiona el componente automáticamente.
+
+---
+
+## 6. MÓDULOS DE PÁGINA
+
+### 6.1 Esqueleto estándar
+
+```tsx
+export function MiPagina() {
+  return (
+    <div className={APP_PAGE_CLASS}>
+      <PageHeader titulo="…" subtitulo="…" actions={<Button>…</Button>} />
+      <div className="mc-kpi-grid"><KpiCard … /></div>
+      <div className="mc-module">
+        <div className="mc-card">{/* contenido */}</div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 6.2 Clases por elemento
+
+| Elemento | Clase |
+|---|---|
+| Página | `APP_PAGE_CLASS` — no padding inline |
+| Card / panel | `.mc-card` |
+| Módulo wrapper | `.mc-module` |
+| Grilla KPI | `.mc-kpi-grid` |
+| Tarjeta KPI | `.mc-kpi-card` (valor: `.mc-kpi-value`, label: `.mc-kpi-label`) |
+| Tabla | `.mc-table` |
+| Header de sección | `.mc-section-header` |
+| Separador | `.mc-divider` |
+| Estado vacío | `.mc-empty` + `.mc-empty-title` + `.mc-empty-desc` (o `<EmptyState>`) |
+
+### 6.3 Clases de tarjeta de tarea por contexto
+
+| Contexto | Clase |
+|---|---|
+| Lista / backlog | `.mc-task-item` |
+| Kanban | `.mc-task-kanban` |
+| Card suelta | `.mc-task-card` |
+| OT / objetivo / entidad | `.mc-entity-card` |
+
+---
+
+## 7. INPUTS Y FORMULARIOS
+
+```html
+<div class="mc-field">
+  <label class="mc-field-label">Etiqueta</label>
+  <input class="mc-input" />
+  <span class="mc-field-error">Error</span>   <!-- si aplica -->
+  <span class="mc-field-hint">Ayuda</span>    <!-- si aplica -->
+</div>
+```
+
+- Inputs en modal con `mc-modal-form`: **36px**.
+- Inputs fuera de modal: **40px** (base).
+- Textarea: `min-height: 80px`, `resize: vertical`.
+
+---
+
+## 8. TIPOGRAFÍA Y ESPACIADO
+
+**Fuentes:** `--mc-text-xs` (11px) · `--mc-text-sm` (13px, base) · `--mc-text-base` (14px) · `--mc-text-md` (16px) · `--mc-text-lg` (18px, título página) · `--mc-text-xl` (22px) · `--mc-text-2xl` (28px)
+
+**Espaciado — solo tokens o múltiplos de 4px:**  
+`--mc-space-1` (4) · `--mc-space-2` (8) · `--mc-space-3` (12) · `--mc-space-4` (16) · `--mc-space-5` (20) · `--mc-space-6` (24) · `--mc-space-8` (32) · `--mc-space-10` (40)
+
+---
+
+## 9. ICONOS, SOMBRAS Y ANIMACIONES
+
+**Iconos:** Lucide React principal. Tabler Icons solo si el ícono no existe en Lucide. Color siempre `currentColor`. Tamaños: 14 / 16 / 20 / 24px.
+
+**Sombras:** `--mc-card-shadow` (cards) · `--mc-dropdown-shadow` (dropdowns) · `--mc-modal-shadow` (solo modales) · `--mc-card-shadow-drag` (arrastre DnD).
+
+**Animaciones existentes — no crear duplicados:** `mc-fade-in` · `mc-slide-up` · `mc-slide-in-right` · `mc-skeleton/mc-shimmer` · `task-precaucion`.
+
+---
+
+## 10. DEUDA TÉCNICA ACTIVA
+
+| Item | Fase | Estado |
+|---|---|---|
+| ~~`TAREA_PILL` tiene hex directos~~ | ~~1~~ | ✅ Resuelto — `.mc-tarea-pill--*` + tokens `--mc-state-pendiente/cancelada-*` |
+| ~~`.ds-status-badge` en `components.css`~~ | ~~2~~ | ✅ Eliminado en sesión anterior |
+| ~~`StatusBadge.tsx`~~ | ~~2~~ | ✅ Eliminado |
+| ~~`@tabler/icons-react`~~ | ~~1~~ | ✅ Lucide en `AppShell.tsx` |
+
+---
+
+## 10b. ACCESIBILIDAD — Patrones obligatorios
+
+`announcePolitely` desde `@/components/a11y/LiveRegion` (montada en `AppProviders`). No crear regiones `aria-live` adicionales. Estados de tarea: `<TareaEstadoIndicator>`. Modales destructivos: `description` o `descriptionElementId` (§5).
+
+---
+
+## 10c. ANALYTICS — Patrones obligatorios
+
+`analyticsId` en `<Modal>` para `modal_open` / `modal_close` + `durationMs`. `markModalCompleted(id)` antes de cerrar tras éxito. Ver lista en `DESIGN-SYSTEM.md` §10c. Env: `VITE_ANALYTICS_ENDPOINT`.
+
+---
+
+## 11. CHECKLIST DE CODE REVIEW
+
+- [ ] ¿Solo `--mc-*`? ¿Cero hex sueltos en componentes nuevos?
+- [ ] ¿Sin imports de `--ds-*` ni de `design-tokens.css`?
+- [ ] ¿Badges de estado usan `mc-badge ${TAREA_BADGE[estado]}`?
+- [ ] ¿Sin imports de `StatusBadge` ni clases `ds-status-badge-*`?
+- [ ] ¿Colores de tarjeta usan `STATE_TOKENS[estado]`?
+- [ ] ¿Máximo 1 botón `primary` por modal/sección?
+- [ ] ¿Botones `danger` separados por `border-t`?
+- [ ] ¿Modales con formulario tienen `hasUnsavedChanges` + `bodyClassName="mc-modal-form"`?
+- [ ] ¿Inputs con wrapper `.mc-field` y `.mc-field-label`?
+- [ ] ¿Iconos de Lucide con `currentColor`?
+- [ ] ¿Espaciado con `--mc-space-*` o múltiplos de 4px?
+- [ ] ¿Estados de tarea usan `<TareaEstadoIndicator>`?
+- [ ] ¿Notificaciones realtime + `announcePolitely()`?
+- [ ] ¿Modales destructivos con `description` / `descriptionElementId`?
+- [ ] ¿Modales críticos con `analyticsId` + `markModalCompleted()`?

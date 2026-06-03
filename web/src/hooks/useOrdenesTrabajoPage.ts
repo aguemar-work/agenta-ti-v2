@@ -16,7 +16,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 
 import { toast } from 'sonner';
 
@@ -102,6 +102,14 @@ export function useOrdenesTrabajoPage() {
   const usuario = useAuthStore((s) => s.usuario);
 
   const esJefe = usuario?.rol === 'jefe';
+
+  const location = useLocation();
+
+  const navigate = useNavigate();
+
+  const pendingAbrirOtIdRef = useRef<string | null>(
+    (location.state as { abrirOtId?: string } | null)?.abrirOtId ?? null,
+  );
 
 
 
@@ -740,6 +748,28 @@ export function useOrdenesTrabajoPage() {
     setEditandoOT(null);
 
   }
+
+
+
+  useEffect(() => {
+
+    const otId = pendingAbrirOtIdRef.current;
+
+    if (!otId || isLoading) return;
+
+    const ot = ordenes.find((o) => o.id === otId);
+
+    if (ot) {
+
+      pendingAbrirOtIdRef.current = null;
+
+      abrirEditarOT(ot);
+
+      navigate('.', { replace: true, state: null });
+
+    }
+
+  }, [ordenes, isLoading, navigate]);
 
 
 

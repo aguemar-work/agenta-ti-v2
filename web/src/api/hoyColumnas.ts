@@ -6,7 +6,23 @@
 import { getInsforge } from '@/lib/insforge';
 import { parseEvento, parseNota, parseTarea } from '@/lib/schemas';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
-import type { Evento, NotaBitacora, Tarea, VisibilidadBitacora } from '@/types';
+import type { Evento, NotaBitacora, Tarea, TipoEvento, VisibilidadBitacora } from '@/types';
+
+function toIsoLocal(fechaDia: string, hora: string): string {
+  const [h, m] = hora.split(':').map(Number);
+  const d = new Date(`${fechaDia}T00:00:00`);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d.toISOString();
+}
+
+function ordenarNotasBitacora(notas: NotaBitacora[]): NotaBitacora[] {
+  return [...notas].sort((a, b) => {
+    const aConv = a.convertida_en ? 1 : 0;
+    const bConv = b.convertida_en ? 1 : 0;
+    if (aConv !== bConv) return aConv - bConv;
+    return b.created_at.localeCompare(a.created_at);
+  });
+}
 
 const estadosActivos: Tarea['estado'][] = ['pendiente', 'en_progreso', 'bloqueada', 'atrasada'];
 
@@ -101,16 +117,27 @@ export async function getEventosDelDia(usuarioId: string, ymd: string): Promise<
   return (data ?? []).map((r) => parseEvento(r as Record<string, unknown>));
 }
 
-export async function getNotasBitacoraRecientes(usuarioId: string, limit = 8): Promise<NotaBitacora[]> {
+/**
+ * Notas recientes para el panel lateral de Mi Semana.
+ * Miembro: propias + visibilidad `todos` (RLS 031). Jefe: todas (RLS FOR ALL).
+ */
+export async function getNotasBitacoraRecientes(
+  usuarioId: string,
+  limit = 8,
+  esJefe = false,
+): Promise<NotaBitacora[]> {
   const insforge = getInsforge();
-  const { data, error } = await insforge.database
-    .from('nota_bitacora')
-    .select('*')
-    .eq('usuario_id', usuarioId)
+  let query = insforge.database.from('nota_bitacora').select('*');
+  if (!esJefe) {
+    query = query.or(`usuario_id.eq.${usuarioId},visibilidad.eq.todos`);
+  }
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []).map((r) => parseNota(r as Record<string, unknown>));
+  return ordenarNotasBitacora(
+    (data ?? []).map((r) => parseNota(r as Record<string, unknown>)),
+  );
 }
 
 export type CrearIncidenciaInput = {
@@ -177,4 +204,58 @@ export async function insertarNotaBitacoraRapida(input: {
     .single();
   if (error) throw error;
   return parseNota(inserted as Record<string, unknown>);
+}
+
+export type ConvertirNotaEnTareaInput = {
+  notaId:            string;
+  titulo:            string;
+  descripcion?:      string | null;
+  prioridad:         Tarea['prioridad'];
+  fecha_planificada: string;
+  asignado_a:        string;
+  creado_por:        string;
+};
+
+/** Convierte nota en tarea planificada (RPC atómica + nota_origen_id). */
+export async function convertirNotaEnTarea(input: ConvertirNotaEnTareaInput): Promise<string> {
+  const insforge = getInsforge();
+  const semana = semanaIsoDesdeFecha(new Date(`${input.fecha_planificada}T12:00:00`));
+  const { data, error } = await insforge.database.rpc('sgtd_convertir_nota_en_tarea', {
+    p_nota_id:           input.notaId,
+    p_titulo:            input.titulo.trim(),
+    p_descripcion:       input.descripcion?.trim() ?? '',
+    p_prioridad:         input.prioridad,
+    p_fecha_planificada: input.fecha_planificada,
+    p_semana:            semana,
+    p_asignado_a:        input.asignado_a,
+    p_creado_por:        input.creado_por,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export type ConvertirNotaEnEventoInput = {
+  notaId:      string;
+  titulo:      string;
+  tipo:        TipoEvento;
+  fecha_dia:   string;
+  hora_inicio: string;
+  hora_fin:    string;
+  usuario_id:  string;
+};
+
+/** Convierte nota en evento (RPC atómica). */
+export async function convertirNotaEnEvento(input: ConvertirNotaEnEventoInput): Promise<string> {
+  const insforge = getInsforge();
+  const { data, error } = await insforge.database.rpc('sgtd_convertir_nota_en_evento', {
+    p_nota_id:       input.notaId,
+    p_titulo:        input.titulo.trim(),
+    p_tipo:          input.tipo,
+    p_fecha_inicio:  toIsoLocal(input.fecha_dia, input.hora_inicio),
+    p_fecha_fin:     toIsoLocal(input.fecha_dia, input.hora_fin),
+    p_usuario_id:    input.usuario_id,
+    p_es_recurrente: false,
+  });
+  if (error) throw error;
+  return data as string;
 }

@@ -1,21 +1,99 @@
 ---
-description: SGTD — módulos, alcance v1.2 y restricciones de producto
+description: Nexora/SGTD — módulos activos V4, rutas y restricciones de producto
 alwaysApply: true
 ---
 
-# SGTD v1.2 — producto y alcance
+# Nexora V4 — Módulos y producto
 
 ## Misión
 
-Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejecución diaria, gestión de imprevistos y métricas ponderadas por prioridad.
-
-Roles: **Jefe** y **Miembro**.
+Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejecución diaria, gestión de imprevistos y métricas. Roles: **Jefe** y **Miembro**.
 
 ---
 
-## Módulos (arquitectura funcional)
+## Módulos ACTIVOS en V4
 
-Cada módulo debe implementarse como **feature independiente**:
+### Mi Semana (`/semana`) — index de la app
+- Grilla Lun–Sáb (6 columnas). Sin panel "Ahora" (eliminado en V4).
+- DnD entre días con @dnd-kit.
+- Columna del día actual incluye bloque **Incidencias** (`ZonaIncidencias`).
+- **Panel lateral de notas** (`PanelNotas`): visible en `xl+`, nota rápida + notas recientes.
+- Hooks: `useMiSemanaPage`, `useMiSemana`, `useSemanaDnD`, `useSemanaModales`, `useSemanaNavegacion`, `useHoyColumnas`
+- APIs: `semana.ts`, `tablero.ts`, `recurrencia.ts`, `hoyColumnas.ts`
 
-```bash
-src/features/<modulo>/
+### Planificación (`/planificacion`) — Solo Jefe
+- Vista multi-miembro: carga semanal de todos los miembros activos.
+- Asignación de tareas por miembro y día.
+- Log de acciones con "Marcar como leído".
+- **Solo lectura** — no permite crear ni editar tareas desde aquí.
+- Hook: `usePlanificacionPage` · API: `planificacion.ts`
+
+### Objetivos (`/objetivos`)
+- CRUD de objetivos con responsable asignable.
+- Progreso calculado. Vista de tareas vinculadas por objetivo.
+- Jefe: asigna a cualquiera. Miembro: solo auto-responsable.
+- Hooks: `useObjetivosPage` · APIs: `objetivos.ts`, `objetivosMetricas.ts`
+
+### Órdenes de Trabajo (`/ordenes-trabajo`)
+- Flujo formal con estados y número correlativo.
+- Tipos de trabajo gestionados por el jefe.
+- Impresión de OT: `OTImpresion.tsx`.
+- Hook: `useOrdenesTrabajoPage` · API: `ordenTrabajo.ts`
+
+### Métricas (`/metricas`) — Solo Jefe
+- KPIs por usuario: activas, completadas 7d, objetivos activos, atrasadas.
+- Comparativa entre miembros. Métricas ponderadas por prioridad.
+- Hooks: `useMetricas`, `useObjetivosMetricas` · API: `objetivosMetricas.ts`
+
+---
+
+## Módulos ELIMINADOS en V4
+
+**No recrear** sin orden explícita. Referencias en código son legacy.
+
+| Módulo | Ruta | Estado |
+|--------|------|--------|
+| Hoy (vista dedicada) | `/hoy` | Eliminado — incidencias integradas en Mi Semana |
+| Tablero Kanban | `/tablero` | Eliminado en V4 |
+| Bitácora | `/bitacora` | Eliminado — notas accesibles desde `PanelNotas` en Mi Semana |
+
+---
+
+## Patrón de implementación obligatorio
+
+```
+Page (componente visual)
+  └→ useXxxPage (hook: React Query + estado UI)
+       └→ api/xxx.ts (InsForge SDK + parsers Zod)
+            └→ InsForge PostgREST / RPC
+```
+
+Nunca poner lógica de negocio en el componente de página.
+Nunca llamar al SDK directamente desde un componente.
+
+---
+
+## Rutas completas
+
+| Ruta | Componente | Guardia |
+|------|-----------|---------|
+| `/login` | `Login` | Público |
+| `/forgot-password` | `ForgotPassword` | Público |
+| `/verify-reset-code` | `VerifyResetCode` | Público |
+| `/reset-password` | `ResetPassword` | Público |
+| `/semana` (index) | `MiSemana` | `ProtectedRoute` |
+| `/objetivos` | `Objetivos` | `ProtectedRoute` |
+| `/ordenes-trabajo` | `OrdenesTrabajo` | `ProtectedRoute` |
+| `/planificacion` | `Planificacion` | `JefeRoute` |
+| `/metricas` | `Metricas` | `JefeRoute` |
+
+Catch-all → redirige a `/semana`.
+
+---
+
+## Restricciones de producto
+
+- No crear páginas nuevas sin actualizar `web/CONTEXT/CONTEXT.md` y este archivo
+- No recrear `/hoy`, `/tablero`, `/bitacora` sin decisión de producto explícita
+- Cualquier cambio de schema de BD requiere migración en `db/migrations/` (la próxima sería 027)
+- La app es interna — sin SEO, sin SSR, sin páginas públicas más allá de auth

@@ -1,0 +1,116 @@
+---
+alwaysApply: true
+---
+---
+description: Reglas globales del proyecto Nexora (SGTD Agenda TI v3) — aplica siempre
+alwaysApply: true
+---
+
+# Reglas globales — Nexora / SGTD v4
+
+## 0. Fuente de verdad
+
+Antes de modificar cualquier cosa, leer:
+- `web/CONTEXT/CONTEXT.md` — estado actual del proyecto (stack, rutas, módulos, schema, convenciones)
+- `.cursor/rules/*.mdc` — reglas de stack, UI, RBAC, negocio
+
+Si hay conflicto entre el código existente y el CONTEXT.md, el CONTEXT.md gana.
+**Nunca asumir columnas, tablas o rutas nuevas** sin que estén documentadas en CONTEXT.md.
+
+---
+
+## 1. Stack obligatorio
+
+- React 19 + TypeScript + **Vite 8** (SPA, no SSR)
+- React Router 7
+- TanStack Query 5 — todo el estado de servidor
+- Zustand 5 — solo auth (`authStore`)
+- Zod 4 — schemas en `src/lib/schemas.ts`
+- InsForge SDK 1.2 — nunca llamar fetch directo a InsForge; usar el SDK
+- **Tailwind 3.4** — NO actualizar a v4, incompatibilidad con InsForge
+- lucide-react con `aria-hidden` en todos los iconos
+
+---
+
+## 2. Patrón de capas (no romper)
+
+```
+Page → useXxxPage (hook) → api/xxx.ts (SDK + Zod) → InsForge
+```
+
+- Nunca poner lógica de negocio en el componente de página
+- Nunca llamar al SDK directamente desde un componente
+- Cada api/*.ts debe parsear con Zod usando `safeParse` (fallback silencioso, no romper UI)
+
+---
+
+## 3. Design system Meta Canvas
+
+- **Tokens CSS**: usar siempre `var(--mc-color-*)` y `var(--mc-state-*)`. Prohibido hardcodear hex.
+- **Estados de tarea**: usar `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `lib/estadoConfig.ts`
+- **`--mc-color-warning`**: SOLO para urgencia/atraso/alertas sin atender. Incidencias → `--mc-state-incidencia-*` (apunta a info/cyan)
+- **Acciones primarias**: `<Button variant="primary">` para el CTA principal de cada página
+- **Modales**: siempre usar `<Modal>` de `components/ui/Modal.tsx`
+- **Justificación obligatoria**: `<JustificacionField>` con mínimo ≥10 chars para: bloquear, cancelar, reprogramar, eliminar tarea
+- **Errores por sección**: envolver con `<SectionErrorBoundary label="...">`
+
+---
+
+## 4. Rutas activas (V4)
+
+Solo existen: `/semana`, `/objetivos`, `/ordenes-trabajo`, `/planificacion` (jefe), `/metricas` (jefe)
+
+**NO recrear** sin orden explícita: `/tablero`, `/bitacora`, `/hoy` como página dedicada.
+Referencias a estas rutas en código son legacy.
+
+---
+
+## 5. RBAC
+
+- `JefeRoute` para `/planificacion` y `/metricas`
+- `ProtectedRoute` para todas las rutas autenticadas
+- Usar `selectEsJefe(authStore)` para ocultar acciones en UI
+- RLS en BD es el enforcement real — el frontend es solo UX
+
+---
+
+## 6. Base de datos
+
+- **No modificar schema sin migración** en `db/migrations/`
+- Migraciones ya aplicadas: 002–026. La siguiente sería 027.
+- Nombrar RPCs con prefijo `sgtd_`
+- Usar RPCs atómicas para operaciones que requieren log: `sgtd_bloquear_tarea_con_log`, `sgtd_reprogramar_tarea_con_log`, etc.
+- Estado `atrasada` es calculado por trigger (migración 015) — no calcularlo en frontend
+
+---
+
+## 7. Convenciones de código
+
+- **Semanas**: formato `YYYYWW` con `semanaIsoDesdeFecha()` de `lib/semanas.ts`
+- **Fechas locales**: `YYYY-MM-DD` para `fecha_planificada`
+- **Fechas UTC**: ISO string para timestamps
+- **Idioma**: español en dominio (nombres de tablas, columnas, labels, tipos)
+- **Path alias**: `@/` → `web/src/`
+- **Imports Zod**: parsear todo lo que venga del servidor
+
+---
+
+## 8. Seguridad
+
+- **Variables de entorno**: solo con prefijo `VITE_`, nunca exponer secretos
+- **Whitelist de dominios**: validada en cliente antes de INSERT, configurable via `VITE_ALLOWED_EMAIL_DOMAINS`
+- **Fetch interceptor**: no modificar `insforgeFetchInterceptor.ts` sin entender el flujo de refresh
+- **Verificación de sesión**: cada 4 min en `AuthProvider`
+
+---
+
+## 9. Qué NO hacer
+
+- No usar Tailwind v4
+- No llamar directamente a InsForge con fetch (usar SDK)
+- No hardcodear URLs de InsForge (usar `VITE_INSFORGE_URL`)
+- No hardcodear colores hex en JSX/TSX (usar tokens CSS)
+- No recrear módulos eliminados en V4 sin discusión
+- No modificar schema de BD sin migración versionada
+- No crear rutas nuevas sin actualizar CONTEXT.md
+- No romper el patrón Page → Hook → API → InsForge

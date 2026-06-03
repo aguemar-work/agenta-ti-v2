@@ -1,5 +1,7 @@
 import type { LogActividadItem } from '@/api/audit';
+import { PlanificacionPanel } from '@/components/planificacion/PlanificacionPanel';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { inicialesNombre } from '@/lib/metricasHelpers';
 
 const MAX_VISIBLE = 7;
 
@@ -24,38 +26,43 @@ export function PlanificacionActividadReciente({ actividad, loading, onVerToda }
   const visible = actividad.slice(0, MAX_VISIBLE);
 
   return (
-    <section className="mc-card mc-plan-seccion" aria-labelledby="plan-actividad-title">
-      <h2 id="plan-actividad-title" className="mc-plan-seccion__title">
-        Actividad del equipo
-      </h2>
+    <PlanificacionPanel title="Actividad del equipo" titleId="plan-actividad-title" fill>
       {loading ? (
         <p className="m-0 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
       ) : visible.length === 0 ? (
         <EmptyState compact title="Sin actividad reciente" desc="No hay acciones registradas esta semana." />
       ) : (
-        <ul className="mc-plan-feed">
+        <ul className="mc-plan-row-list">
           {visible.map((item) => (
-            <li key={item.id} className="mc-plan-feed__item">
-              <div className="mc-plan-feed__meta">
-                <span className="mc-plan-feed__autor">{item.usuario_nombre}</span>
-                <span className="mc-plan-feed__hora">
-                  {new Date(item.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}
-                </span>
+            <li key={item.id} className="mc-plan-row">
+              <span className="mc-metricas-avatar" aria-hidden>
+                {inicialesNombre(item.usuario_nombre)}
+              </span>
+              <div className="mc-plan-row__body">
+                <div className="mc-plan-row__meta">
+                  <span className="mc-plan-row__autor">{item.usuario_nombre}</span>
+                  <time className="mc-plan-row__hora" dateTime={item.created_at}>
+                    {new Date(item.created_at).toLocaleString('es', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
+                  </time>
+                </div>
+                <p className="mc-plan-row__texto">
+                  {labelActividad(item.tipo_accion)}
+                  {item.tarea_titulo ? `: ${item.tarea_titulo}` : ''}
+                </p>
               </div>
-              <p className="mc-plan-feed__texto">
-                {labelActividad(item.tipo_accion)}
-                {item.tarea_titulo ? `: ${item.tarea_titulo}` : ''}
-              </p>
             </li>
           ))}
         </ul>
       )}
       {actividad.length > 0 && (
-        <button type="button" className="mc-plan-seccion__link" onClick={onVerToda}>
+        <button type="button" className="mc-plan-panel__link" onClick={onVerToda}>
           Ver toda la actividad
           <span aria-hidden> →</span>
         </button>
       )}
-    </section>
+    </PlanificacionPanel>
   );
 }

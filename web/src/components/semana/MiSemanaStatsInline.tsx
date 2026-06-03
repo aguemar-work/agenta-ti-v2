@@ -5,6 +5,8 @@ type StatItem = {
   active?: boolean;
   disabled?: boolean;
   onClick?: (() => void) | undefined;
+  /** Énfasis del valor (p. ej. alertas en Planificación). */
+  tone?: 'default' | 'warning' | 'danger';
 };
 
 type Props = {
@@ -28,7 +30,16 @@ export function MiSemanaStatsInline({ items, ariaLabel = 'Resumen de tareas de l
           {i > 0 ? <span className="mc-misemana-stats__sep" aria-hidden>·</span> : null}
           {readOnly ? (
             <span className="mc-misemana-stats__readonly">
-              <span className="mc-misemana-stats__value tabular-nums">{item.value}</span>
+              <span
+                className={[
+                  'mc-misemana-stats__value',
+                  'tabular-nums',
+                  item.tone === 'warning' ? 'mc-misemana-stats__value--warning' : '',
+                  item.tone === 'danger' ? 'mc-misemana-stats__value--danger' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                {item.value}
+              </span>
               <span className="mc-misemana-stats__label">{item.label}</span>
             </span>
           ) : (
@@ -43,7 +54,16 @@ export function MiSemanaStatsInline({ items, ariaLabel = 'Resumen de tareas de l
               aria-pressed={item.active}
               onClick={item.disabled ? undefined : item.onClick}
             >
-              <span className="mc-misemana-stats__value tabular-nums">{item.value}</span>
+              <span
+                className={[
+                  'mc-misemana-stats__value',
+                  'tabular-nums',
+                  item.tone === 'warning' ? 'mc-misemana-stats__value--warning' : '',
+                  item.tone === 'danger' ? 'mc-misemana-stats__value--danger' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                {item.value}
+              </span>
               <span className="mc-misemana-stats__label">{item.label}</span>
             </button>
           )}

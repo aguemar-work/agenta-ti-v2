@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { moverTareaColumna } from '@/api/tablero';
 import {
   actualizarTarea,
+  completarTareaConResumen,
   crearEventoUsuario,
   crearTareaPlanificada,
   eliminarTareaConMotivo,
@@ -12,7 +13,6 @@ import {
   moverTareaEntreDias,
 } from '@/api/semana';
 import { Q_KPIS, Q_OBJ_PROG } from '@/hooks/useObjetivosMetricas';
-import { completarTareaConResumen } from '@/hooks/useTareas';
 import type { CrearEventoUsuarioInput, CrearTareaPlanificadaInput } from '@/api/semana';
 import type { Tarea } from '@/types';
 
@@ -56,6 +56,8 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
       qc.invalidateQueries({ queryKey: [Q_OBJ_PROG], exact: false }),
       qc.invalidateQueries({ queryKey: [Q_KPIS], exact: false }),
+      qc.invalidateQueries({ queryKey: ['ordenes-trabajo'], exact: false }),
+      qc.invalidateQueries({ queryKey: ['semana', 'ot-por-tarea'], exact: false }),
     ]);
   };
 

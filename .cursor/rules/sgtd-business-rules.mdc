@@ -1,106 +1,127 @@
 ---
-description: SGTD — reglas de negocio obligatorias (tareas, métricas, log)
+description: Nexora/SGTD — reglas de negocio obligatorias (tareas, OT, métricas, log)
 alwaysApply: true
 ---
 
-# Reglas de negocio SGTD
+# Reglas de negocio Nexora V4
 
 ## Fuente de verdad
 
-- Estados, tipos y enums deben coincidir con el schema de base de datos.
-- No crear valores nuevos en UI ni en lógica.
+- Estados, tipos y enums deben coincidir exactamente con el schema de BD (`web/CONTEXT/CONTEXT.md`)
+- No crear valores nuevos en UI ni en lógica sin migración correspondiente
 
 ---
 
-## Reglas obligatorias
+## 1. Estados de tarea
 
-### 1. Tareas atrasadas
+Valores permitidos (enum en BD):
+`pendiente` · `en_progreso` · `reprogramada` · `completada` · `bloqueada` · `atrasada` · `cancelada`
 
-- Si:
-  - `fecha_planificada < hoy`
-  - `estado IN ('pendiente','en_progreso','bloqueada')`
-
-- Entonces:
-  - `estado = 'atrasada'`
-
-- Esta lógica debe existir en backend (job, trigger o RPC).
-- La UI debe reflejar este estado de forma consistente.
+**No inventar estados adicionales.**
 
 ---
 
-### 2. Tarea LIBRE (backlog)
+## 2. Tarea atrasada
 
-- `tipo = 'libre'`
-- No debe tener:
-  - `fecha_planificada`
-  - `semana_planificada`
-
-- Al asignarse a un día:
-  - `tipo = 'planificada'`
-  - se define `fecha_planificada`
+- Calculado por **trigger en BD** (migración 015) — no en frontend
+- Condición: `fecha_planificada < hoy` AND `estado IN ('pendiente', 'reprogramada')` en trigger (migración 027); `en_progreso` se respeta si el usuario ya la inició
+- La UI solo refleja el valor que viene de BD, no lo calcula
 
 ---
 
-### 3. Imprevistos
+## 3. Tipos de tarea
 
-Toda tarea imprevista debe crearse como:
+| Tipo | `fecha_planificada` | `semana_planificada` |
+|------|--------------------|--------------------|
+| `planificada` | obligatoria | obligatoria |
+| `no_planificada` | = hoy | = semana actual |
+| `libre` (backlog) | null | null |
 
+Al arrastrar una tarea `libre` a un día en Mi Semana:
+- `tipo → 'planificada'`
+- `fecha_planificada` = fecha del día destino
+- `semana_planificada` = semana ISO del día destino
+
+---
+
+## 4. Imprevistos
+
+Toda tarea imprevista se crea con:
 - `tipo = 'no_planificada'`
 - `estado = 'completada'`
 - `es_imprevisto = true`
 - `fecha_planificada = hoy`
 
----
-
-### 4. Log obligatorio
-
-Se debe registrar en `log_accion` con `justificacion` obligatoria al:
-
-- reprogramar fecha
-- cancelar
-- bloquear
-- eliminar tarea
-
-No permitir estas acciones sin justificación.
+Se registran desde la columna del día actual en Mi Semana (`ZonaIncidencias`).
 
 ---
 
-### 5. Métricas ponderadas
+## 5. Log obligatorio con justificación
 
-- pesos:
-  - alta = 3
-  - media = 2
-  - baja = 1
+Registrar en `log_accion` con `justificacion` (≥10 caracteres obligatorio) al:
+- Reprogramar fecha
+- Cancelar tarea
+- Bloquear tarea
+- Eliminar tarea
 
-- cálculo:
+Usar las RPCs atómicas correspondientes:
+- `sgtd_reprogramar_tarea_con_log`
+- `sgtd_bloquear_tarea_con_log`
+- `sgtd_desbloquear_tarea_con_log`
+- `sgtd_eliminar_tarea_con_motivo`
 
-  % cumplimiento ponderado =
-  suma(pesos de tareas completadas planificadas) /
-  suma(pesos de tareas planificadas) × 100
-
----
-
-### 6. Permisos en tareas (Tablero y general)
-
-- Miembro:
-  - puede ver todas las tareas
-  - solo puede modificar las propias
-
-- Las tareas ajenas:
-  - son solo lectura en UI
-  - deben estar restringidas por RLS en backend
+**No permitir estas acciones sin justificación — validar en frontend Y en RPC.**
 
 ---
 
-### 7. Vista PLANIFICACIÓN
+## 6. Métricas ponderadas
 
-- Solo accesible por rol Jefe
-- Es estrictamente de solo lectura
-- No permite crear, editar ni eliminar tareas
+Pesos por prioridad: `alta = 3`, `media = 2`, `baja = 1`
+
+```
+% cumplimiento ponderado =
+  Σ(peso de tareas completadas planificadas) /
+  Σ(peso de tareas planificadas) × 100
+```
+
+Solo se cuentan tareas `planificadas` — no `no_planificadas` ni `libres`.
 
 ---
 
-## Regla UI crítica
+## 7. Flujo de Órdenes de Trabajo (OT)
 
-- Los estados visuales (badges, columnas, etiquetas) deben coincidir exactamente con los valores de base de datos.
-- No inventar estados adicionales.
+```
+borrador → pendiente → aprobada → en_ejecucion → completada
+                  ↓ rechazada (jefe)
+         (cualquier estado pre-completada) → cancelada
+```
+
+- Solo el jefe puede aprobar/rechazar
+- Número correlativo generado por RPC `generar_numero_ot` — no calcular en frontend
+- Cierre requiere datos del receptor: nombre y DNI (obligatorios); cargo opcional (CHECK migración 028)
+
+---
+
+## 8. Objetivos
+
+- Progreso = % tareas completadas / total tareas no canceladas vinculadas
+- Jefe puede asignar responsable a cualquier miembro
+- Miembro solo puede crear objetivos con `responsable_id = su propio id`
+- Completar objetivo via RPC `sgtd_completar_objetivo`
+
+---
+
+## 9. Notas de bitácora (dentro de Mi Semana)
+
+- Panel lateral (`PanelNotas`), visible en `xl+`
+- Visibilidad: `todos`, `solo_jefe`, `privado`
+- Pueden convertirse en tarea o evento (`convertida_en`)
+- No hay página `/bitacora` dedicada en V4 — acceso solo desde Mi Semana
+
+---
+
+## 10. Permisos en edición de tareas
+
+- Miembro: puede ver todas las tareas del equipo, solo modificar las propias
+- Jefe: puede modificar cualquier tarea
+- Tareas ajenas al miembro: solo lectura en UI + reforzado por RLS en BD

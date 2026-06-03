@@ -2,7 +2,7 @@
  * components/semana/RecurrenciaForm.tsx
  *
  * Subcomponente reutilizable para configurar la regla de recurrencia de un evento.
- * Se muestra dentro de ModalMiSemana y ModalConvertirEvento cuando el usuario
+ * Se muestra dentro de ModalMiSemana y ModalConvertirNota cuando el usuario
  * activa el toggle "Recurrente".
  */
 

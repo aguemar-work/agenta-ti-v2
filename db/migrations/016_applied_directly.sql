@@ -1,0 +1,24 @@
+-- =============================================================================
+-- SGTD — Migración 016
+-- Archivo: 016_applied_directly.sql
+--
+-- ESTADO: Aplicada directamente en InsForge sin pasar por este repositorio.
+--
+-- Esta migración fue ejecutada manualmente en el SQL Editor de InsForge
+-- entre las migraciones 015 y 017. El contenido exacto no fue commiteado
+-- al repositorio en su momento.
+--
+-- Por consistencia de numeración, este archivo actúa como placeholder
+-- para que la secuencia 015 → 016 → 017 sea explícita y rastreable.
+--
+-- QUÉ HACER si necesitas reconstruir la BD desde cero:
+--   1. Aplica todas las migraciones en orden (001 → 022).
+--   2. Omite este archivo (no contiene DDL ejecutable).
+--   3. La migración 017 (017_fix_todos_enum_estado.sql) consolida los
+--      fixes del enum estado_tarea, incluyendo lo que haya hecho 016.
+--
+-- Si en algún momento recuperas el contenido de 016, reemplaza este
+-- archivo con el SQL real y elimina este comentario.
+-- =============================================================================
+
+-- (sin sentencias ejecutables — solo documentación)

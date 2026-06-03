@@ -1,0 +1,182 @@
+# QA Manual Checklist — Nexora V4
+
+> **Propósito:** Registrar los escenarios que no pueden verificarse con tests automáticos
+> por depender de entorno de producción, hardware externo, o interacción humana real.
+>
+> Ejecutar antes de cada release. Marcar cada ítem con ✅ PASS / ❌ FAIL / ⏭ N/A.
+>
+> **Versión:** V4 · Actualizado 2026-05-16
+> **Eliminado en V4:** Tablero Kanban (`/tablero`), Bitácora como página (`/bitacora`), vista Hoy dedicada (`/hoy`).
+> Los escenarios D3, D4, B1–B4 y P2 del checklist anterior fueron retirados.
+
+---
+
+## 1. Autenticación y auto-provisioning
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| A1 | Login con usuario nuevo del dominio autorizado | 1. Ingresar email con dominio autorizado + contraseña válida. 2. Clic en "Iniciar sesión". | Usuario creado automáticamente con `rol = miembro`. Redirigido a `/semana`. | |
+| A2 | Login con dominio NO autorizado | Ingresar email de dominio externo (ej: `gmail.com`). | Sistema rechaza el acceso. Mensaje de error claro, sin exponer detalles técnicos. | |
+| A3 | Renovación automática de sesión | Mantener sesión activa >4 horas. Realizar alguna acción. | La app renueva el token automáticamente. El usuario no ve ningún corte ni "Invalid Token". | |
+| A4 | Sesión revocada desde BD | Desactivar usuario en `public.usuario`. Realizar acción desde su sesión activa. | La app cierra sesión y redirige a `/login`. Sin mensajes técnicos visibles. | |
+| A5 | Verificación periódica de sesión | Dejar app abierta >4 min sin actividad. Revocar sesión desde BD. Interactuar. | La app detecta la sesión inválida en el siguiente ciclo (≤4 min) y redirige a login. | |
+| A6 | Flujo "Olvidé mi contraseña" completo | Email → recibir código → ingresar código → nueva contraseña → login. | Flujo completo funciona. Email llega en <2 min. La nueva contraseña permite acceso. | |
+
+---
+
+## 2. Mi Semana — grilla y drag & drop
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| S1 | Navegar entre semanas | Clic en flechas `ChevronLeft` / `ChevronRight` del header. | La grilla cambia de semana. El subtítulo del header muestra el rango correcto (`dd/MM/AAAA – dd/MM/AAAA`). | |
+| S2 | Arrastrar tarea a otro día | En Mi Semana, arrastrar tarjeta de Lunes a Miércoles. | Tarea se mueve visualmente. `fecha_planificada` y `semana_planificada` actualizadas en BD. | |
+| S3 | Arrastrar tarea atrasada a hoy | Tarea con `estado = atrasada`, arrastrar a la columna de hoy. | `fecha_planificada` actualizada a hoy. `semana_planificada` actualizada. Toast de confirmación. | |
+| S4 | Arrastrar en móvil (touch) | Ejecutar S2 en dispositivo móvil o tablet. | El DnD táctil funciona con `@dnd-kit` (`TouchSensor` + `PointerSensor`). La tarea se mueve y persiste en BD. Ver **D5** para regresión formal iOS/Android. | |
+| S5 | Crear tarea planificada desde header | Clic en botón primario "+ Nueva tarea" del `PageHeader`. Completar formulario (pestaña Tarea). | Modal abre con pestaña "Tarea" activa. Tarea creada aparece en la columna del día seleccionado. | |
+| S6 | Crear evento desde modal | Clic en "+ Nueva tarea". Seleccionar pestaña "Evento". Completar. | Evento creado aparece en la columna del día correspondiente con su badge de tipo. | |
+| S7 | Completar tarea con justificación | Abrir detalle de tarea → "Completar". | Estado cambia a `completada`. Log registrado. Tarea muestra `opacity-60` y tachado en título. | |
+| S8 | Reprogramar tarea (justificación obligatoria) | Abrir opciones de tarea → "Reprogramar". Intentar sin justificación. | Sin justificación (< 10 chars): formulario no envía. Con justificación válida: fecha actualizada, log registrado. | |
+| S9 | Bloquear tarea (justificación obligatoria) | Abrir opciones de tarea → "Bloquear". | Sin justificación (< 10 chars): rechazado. Con justificación válida: estado `bloqueada`, log registrado. | |
+| S10 | Cancelar tarea (justificación obligatoria) | Abrir opciones de tarea → "Cancelar". | Sin justificación (< 10 chars): rechazado. Con justificación válida: estado `cancelada`, log registrado. | |
+| S11 | Eliminar tarea (motivo obligatorio) | Abrir opciones de tarea → "Eliminar". | Sin motivo (< 5 chars): rechazado. Con motivo válido: tarea eliminada, log registrado antes de DELETE. | |
+| S12 | **Regresión visual — columna densa (>8 tareas)** | En un día con ≥8 tareas planificadas (seed o datos reales), viewport escritorio `md+`. | La columna del día hace scroll vertical interno (`mc-semana-dia-drop`). La grilla de 6 columnas no desborda ni rompe el layout de la página. Cabecera del día y botón "+ Tarea / evento" siguen visibles. | |
+| D5 | **Regresión táctil — DnD entre días (iOS + Android)** | En **un dispositivo iOS** y **uno Android** (o emulador fiable): 1) Abrir `/semana`. 2) En columna con ≥3 tareas, **scroll vertical** dentro del día (debe funcionar sin activar drag). 3) Mantener presionado ~250 ms sobre una tarea y arrastrar a otro día. 4) Confirmar toast/estado en BD. | Scroll de columna fluido. Drag solo tras press-and-hold (`TouchSensor` delay 250 ms, tolerance 5). Overlay visible al arrastrar. Tarea persiste en el día destino. Registrar PASS/FAIL por plataforma en la tabla de ejecución. | |
+
+---
+
+## 3. Mi Semana — Incidencias (ZonaIncidencias)
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| I1 | Registrar incidencia en columna de hoy | En la columna del día actual, clic en "+ Registrar incidencia". Completar título. | Incidencia creada con `tipo = no_planificada`, `es_imprevisto = true`, `estado = completada`, `fecha = hoy`. Aparece en `ZonaIncidencias`. | |
+| I2 | Color de ZonaIncidencias | Verificar visualmente la zona de incidencias. | El borde y color usan `--mc-state-incidencia-*` (cyan/info). **NO debe ser amarillo** (`--mc-color-warning`). | |
+| I3 | ZonaIncidencias solo en día actual | Navegar a otras columnas de la semana. | El bloque de incidencias solo aparece en la columna del día actual (hoy). | |
+| I4 | Incidencias no visibles en columnas de otros días | Ir a semana pasada o semana siguiente. | Sin bloque de incidencias en ninguna columna (es exclusivo del día actual). | |
+
+---
+
+## 4. Mi Semana — Panel de notas (PanelNotas)
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| N1 | Panel visible en pantalla grande | Abrir Mi Semana en viewport `xl+` (≥1280px). | `PanelNotas` visible a la derecha de la grilla. | |
+| N2 | Panel oculto en pantalla pequeña | Abrir Mi Semana en viewport < 1280px. | `PanelNotas` no visible. No hay scroll horizontal. | |
+| N3 | Crear nota rápida | En `PanelNotas`, escribir texto en el textarea y guardar. | Nota creada en `nota_bitacora` con `visibilidad = todos` por defecto. Aparece en la lista de notas recientes. | |
+| N4 | Nota privada no visible para otros miembros | Miembro A crea nota con `visibilidad = privado`. Miembro B abre Mi Semana. | Miembro B no ve la nota de A. Jefe sí la ve. Verificado por RLS en BD. | |
+| N5 | Nota solo_jefe | Crear nota con `visibilidad = solo_jefe`. Verificar desde sesión de Miembro. | Miembro no la ve. Jefe sí. | |
+
+---
+
+## 5. Planificación (solo Jefe)
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| PL1 | Acceso denegado a Miembro | Miembro intenta navegar a `/planificacion` directamente. | Redirigido a `/semana`. La ruta está protegida por `JefeRoute`. | |
+| PL2 | Carga multi-miembro | Jefe abre Planificación con ≥3 miembros activos. | Tabla muestra una fila por miembro, columnas por día de la semana. Datos cargados correctamente. | |
+| PL3 | Solo lectura — sin crear ni editar | Jefe verifica que no hay botones de "Nueva tarea" o "Editar" en la vista. | La vista es estrictamente de solo lectura. Ningún elemento interactivo crea o modifica tareas. | |
+| PL4 | Scroll horizontal con columna sticky | Reducir viewport para activar scroll horizontal en la tabla. | La columna de nombres de miembros permanece fija (`sticky left-0`). El resto de columnas hace scroll. | |
+| PL5 | Color de celdas por carga | Miembro con >8 tareas en un día; otro con >5. | Celda >8: fondo `danger/0.05`. Celda >5: fondo `warning/0.05`. Celda normal: sin color de fondo especial. | |
+| PL6 | Log de acciones — marcar como leído | Jefe ve log con acciones sin leer. Clic en "Marcar como leído". | `leido_por_jefe = true` en BD. El indicador de no leído desaparece. | |
+| PL7 | **Regresión visual — >5 miembros + scroll horizontal** | Equipo con ≥6 miembros activos; reducir ancho hasta scroll horizontal en la tabla de carga. | Cada fila conserva el nombre visible (`planificacion-celda-miembro` sticky). Scroll horizontal fluido; sombra sutil en la columna fija. Sin solapamiento ilegible de celdas. | |
+
+---
+
+## 6. Objetivos
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| OB1 | Jefe crea objetivo y asigna a cualquier miembro | Jefe crea objetivo → selecciona responsable del dropdown. | Objetivo creado con `responsable_id` del miembro seleccionado. | |
+| OB2 | Miembro crea objetivo (solo auto-responsable) | Miembro intenta crear objetivo con responsable diferente a sí mismo. | RLS rechaza la operación. Solo puede crearse con `responsable_id = self`. | |
+| OB3 | Progreso calculado correctamente | Objetivo con 4 tareas: 2 completadas, 1 pendiente, 1 cancelada. | Progreso: 2/3 = 67% (cancelada no cuenta). Barra de progreso refleja ese valor. | |
+| OB4 | Panel de tareas sin tope de altura | Objetivo con >6 tareas vinculadas. | Panel muestra **todas** las tareas sin scroll interno cortado. El scroll lo hace `mc-main`. | |
+| OB5 | Completar objetivo — Jefe siempre puede | Jefe completa objetivo con progreso < 100%. | RPC `sgtd_completar_objetivo` ejecuta. Estado → `completado`. | |
+| OB6 | Completar objetivo — Miembro solo si 100% | Miembro responsable intenta completar con progreso < 100%. | Error visible: "Solo puedes completar el objetivo cuando todas las tareas estén completadas". | |
+| OB7 | Completar objetivo — Miembro con 100% | Miembro responsable con todas las tareas completadas. | Operación permitida. Estado → `completado`. | |
+
+---
+
+## 7. Órdenes de Trabajo (OT)
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| O1 | Ciclo completo borrador → completada | 1. Miembro crea OT. 2. Envía. 3. Jefe aprueba. 4. Miembro inicia ejecución. 5. Miembro completa con receptor (nombre, DNI, cargo). | Cada transición refleja el nuevo estado. OT completada muestra datos del receptor. Número correlativo generado por RPC. | |
+| O2 | Rechazo de OT por Jefe | Miembro envía OT → Jefe rechaza con motivo. | OT queda en `rechazada`. Motivo visible. Miembro no puede realizar más transiciones. | |
+| O3 | Cancelar OT en cualquier estado pre-completada | Cualquier estado anterior a `completada` → cancelar. | OT queda en `cancelada`. Log_ot registrado. | |
+| O4 | Fecha estimada no puede ser pasada | Intentar crear OT con `fecha_estimada` anterior a hoy. | Formulario muestra error de validación antes de enviar. BD también rechaza por trigger. | |
+| O5 | Impresión de OT completada | En OT completada, clic en "Imprimir". | Vista de impresión abre con formato correcto. Número OT, datos del receptor y firma visibles. | |
+| O6 | Miembro intenta aprobar OT (bypass) | Miembro accede a OT pendiente e intenta aprobar via API directa o manipulando URL. | Operación rechazada. RLS en BD impide la acción. | |
+| O7 | Tipos de trabajo — solo Jefe puede gestionar | Miembro accede a CRUD de tipos de trabajo. | Acciones de crear/editar/desactivar no están disponibles para Miembro. | |
+
+---
+
+## 8. Métricas (solo Jefe)
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| M1 | Acceso denegado a Miembro | Miembro intenta navegar a `/metricas` directamente. | Redirigido a `/semana`. Ruta protegida por `JefeRoute`. | |
+| M2 | KPIs por miembro correctos | Verificar KPIs de un miembro conocido (activas, completadas 7d, atrasadas). | Los valores coinciden con lo que se ve en Planificación y Mi Semana para ese miembro. | |
+| M3 | Cumplimiento ponderado | Miembro con: 1 tarea alta completada (peso 3) + 1 media pendiente (peso 2). | Cumplimiento = 3/(3+2) = 60%. La barra muestra ese porcentaje. | |
+| M4 | Comparativa al 100% | Todos los miembros con cumplimiento al 100%. | La barra comparativa se muestra igual para todos. **No debe ocultarse ni quedar vacía**. | |
+| M5 | Métricas con >3 meses de datos | Filtrar rango amplio (90+ días). | Gráficas renderizan sin bloquear el hilo principal (<3s). Sin congelamiento de UI. | |
+
+---
+
+## 9. Notificaciones en tiempo real
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| R1 | Tarea actualizada por Jefe visible para Miembro | Jefe edita tarea asignada al Miembro desde otra sesión. | En la sesión del Miembro, la lista se actualiza automáticamente sin recargar la página. | |
+| R2 | Nueva OT visible para Jefe en tiempo real | Miembro crea OT. Jefe tiene `/ordenes-trabajo` abierto. | OT aparece en la lista del Jefe sin recargar. | |
+| R3 | Desconexión y reconexión de red | Desactivar WiFi ~30s, luego reconectar. | App no crashea. Al reconectar, datos se sincronizan. Sin errores visibles de token. | |
+
+---
+
+## 10. Recurrencia de eventos
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| V1 | Crear evento recurrente | Crear evento con `es_recurrente = true` y configurar recurrencia semanal. | Evento generado correctamente en las semanas configuradas. Aparece en cada columna correspondiente. | |
+| V2 | Validación `fecha_fin >= fecha_inicio` | Evento recurrente: fecha fin &lt; día seleccionado en modal. | Error en `RecurrenciaForm` + botón deshabilitado; API no llama RPC (`recurrencia.api.test.ts`). | |
+| V3 | Recurrencia sin días | Activar recurrente sin marcar días L–S. | Mensaje de error; botón crear deshabilitado; sin RPC. Cubierto por tests API. | |
+
+---
+
+## 11. Rendimiento y UX
+
+| # | Escenario | Resultado esperado | Estado |
+|---|-----------|-------------------|--------|
+| P1 | Mi Semana con >20 tareas | Vista carga en <3s. Drag & Drop sin lag perceptible. | |
+| P2 | Planificación con ≥5 miembros activos | Tabla carga en <3s. Scroll horizontal fluido con columna sticky funcionando. | |
+| P3 | Métricas con >3 meses de datos | Gráficas renderizan en <3s sin bloquear el hilo principal. | |
+| P4 | Modales abren en <300ms | Abrir modal de nueva tarea, detalle de tarea, detalle de OT. | Cada modal abre sin demora perceptible. Sin layout shift. | |
+
+---
+
+## 12. Accesibilidad básica
+
+| # | Escenario | Resultado esperado | Estado |
+|---|-----------|-------------------|--------|
+| AC1 | Navegación por teclado en modales | Tab navega por todos los campos en orden. Enter confirma la acción principal. Escape cierra el modal. | |
+| AC2 | Contraste de estados de tarea | Los badges de estado (`atrasada`, `bloqueada`, `completada`, etc.) cumplen WCAG AA (ratio ≥ 4.5:1). | |
+| AC3 | Iconos con aria-hidden | Inspeccionar DOM: todos los `<svg>` de lucide-react tienen `aria-hidden="true"`. | |
+| AC4 | Botones con aria-label | Botones icon-only (menú `···`, cerrar modal, arrastrar) tienen `aria-label` descriptivo. | |
+
+---
+
+## 13. Seguridad RBAC
+
+| # | Escenario | Pasos | Resultado esperado | Estado |
+|---|-----------|-------|-------------------|--------|
+| SEC1 | Miembro no accede a Planificación | Navegar a `/planificacion` desde sesión de Miembro. | Redirigido a `/semana`. | |
+| SEC2 | Miembro no accede a Métricas | Navegar a `/metricas` desde sesión de Miembro. | Redirigido a `/semana`. | |
+| SEC3 | Miembro no modifica tarea ajena | Miembro intenta editar tarea asignada a otro usuario via API. | RLS rechaza. Error 4xx. | |
+| SEC4 | Miembro no aprueba OT | Miembro intenta llamar RPC `sgtd_aprobar_ot` directamente. | RLS rechaza. `sgtd_es_jefe()` retorna false. | |
+| SEC5 | Log inmutable | Intentar UPDATE o DELETE en `log_accion` o `log_ot` directamente desde BD. | Trigger de inmutabilidad rechaza la operación. | |
+
+---
+
+## Registro de ejecución
+
+| Fecha | Ejecutado por | Release | Pass | Fail | N/A | Observaciones |
+|-------|--------------|---------|------|------|-----|---------------|
+| | | | | | | |

@@ -13,3 +13,12 @@
 .roo
 .trae
 .windsurf
+
+# Build artifacts
+dist/
+dist-ssr/
+
+# Variables de entorno (usar .env.example como plantilla)
+.env
+.env.*
+!.env.example

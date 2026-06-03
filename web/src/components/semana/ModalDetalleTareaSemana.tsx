@@ -5,11 +5,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 
+import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import { TareaHistorialSection } from '@/components/tareas/TareaHistorialSection';
 import { TareaMetaPillRow } from '@/components/tareas/TareaMetaPillRow';
+import { ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -61,6 +63,9 @@ type Props = {
   onCompletar?: (t: Tarea) => void;
   onReprogramar?: (t: Tarea) => void;
   onBloquear?: (t: Tarea) => void;
+  ot?: OrdenTrabajo | null;
+  onGenerarOt?: (t: Tarea) => void;
+  onOtClick?: (ot: OrdenTrabajo) => void;
 };
 
 export function ModalDetalleTareaSemana({
@@ -76,6 +81,9 @@ export function ModalDetalleTareaSemana({
   onCompletar,
   onReprogramar,
   onBloquear,
+  ot,
+  onGenerarOt,
+  onOtClick,
 }: Props) {
   const [vista, setVista] = useState<Vista>('detalle');
   const [motivoEliminar, setMotivoEliminar] = useState('');
@@ -200,9 +208,19 @@ export function ModalDetalleTareaSemana({
     const puedeCompletar = tarea.estado === 'en_progreso';
     const puedeDestruir = !['completada', 'cancelada'].includes(tarea.estado);
     const puedeSecundario = puedeDestruir;
+    const puedeGenerarOt =
+      Boolean(onGenerarOt) &&
+      !tarea.es_imprevisto &&
+      !['completada', 'cancelada'].includes(tarea.estado) &&
+      !ot;
 
     return (
       <div className="mc-tarea-detalle-footer mc-tarea-detalle-footer--actions-end">
+        {puedeGenerarOt && onGenerarOt && (
+          <Button variant="ghost" onClick={() => onGenerarOt(tarea)}>
+            Generar OT
+          </Button>
+        )}
         {puedeSecundario && (
           <div className="relative" ref={menuRef}>
             <button
@@ -313,6 +331,25 @@ export function ModalDetalleTareaSemana({
             )}
 
             <TareaMetaPillRow tarea={tarea} hoyYmd={hoyYmd} />
+
+            {ot && (
+              <p className="mc-tarea-detalle__meta-line">
+                OT vinculada:{' '}
+                {onOtClick ? (
+                  <button
+                    type="button"
+                    className="mc-text-link"
+                    onClick={() => onOtClick(ot)}
+                  >
+                    {ot.numero} · {ESTADO_OT_LABEL[ot.estado]}
+                  </button>
+                ) : (
+                  <span>
+                    {ot.numero} · {ESTADO_OT_LABEL[ot.estado]}
+                  </span>
+                )}
+              </p>
+            )}
 
             {tarea.objetivo_id && (
               <p className="mc-tarea-detalle__meta-line">

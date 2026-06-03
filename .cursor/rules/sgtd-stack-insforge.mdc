@@ -1,24 +1,52 @@
 ---
-description: Stack acordado SGTD — React + InsForge (Postgres/auth/realtime)
+description: Stack acordado Nexora/SGTD — React 19 + InsForge (Postgres/auth/realtime)
 alwaysApply: true
 ---
 
-# Stack SGTD v1.2 (InsForge)
+# Stack Nexora V4 (InsForge)
 
-## Recomendación
+## Stack definitivo
 
-- **App web:** React 18 + TypeScript + **Vite** (SPA responsive; despliegue simple). Alternativa si necesitas SSR con InsForge: Next.js (ver skill InsForge auth SSR).
-- **Backend datos:** **InsForge** (`insforge.dev`) — Postgres, auth (JWT/sesión según config InsForge), **RLS** como en Supabase. Cliente: `@insforge/sdk` según skills InsForge del repo (p. ej. `.agents/skills/insforge`).
-- **Estado async:** **TanStack Query** — listas HOY/semana/tablero, invalidación tras mutaciones, updates optimistas donde aplique.
-- **Sesión / PostgREST:** además del SDK, `web/src/lib/insforgeFetchInterceptor.ts` parchea `fetch` para `/api/database/`: **401 + token inválido** → `auth.refreshSession()` y **un reintento** (ver `sgtd-auth-session.mdc`).
-- **Drag & drop:** **@dnd-kit/core** (+ sortable si hace falta) — MI SEMANA y TABLERO.
-- **Routing:** **React Router** v6.
-- **UI:** tokens y patrones en `DESIGN-SYSTEM.md` (Inter, Lucide, clases `.mc-*`).
-- **Toasts:** **Sonner** (alineado al design system).
-- **Tailwind:** **3.4.x** (PostCSS + `tailwind.config.js`); no usar Tailwind v4 en este proyecto (requisito InsForge MCP / compatibilidad).
-- **Tareas atrasadas (regla negocio):** no solo en cliente; usar **función programada / cron en InsForge** o RPC al inicio de sesión + migraciones acordadas. Documentar el mecanismo elegido.
+| Capa | Tecnología | Versión |
+|------|------------|---------|
+| UI | React + TypeScript | React **19**, TS ~6 |
+| Bundler | Vite | **8.x** |
+| Routing | React Router | **7.x** |
+| Datos remotos | TanStack Query | **5.x** |
+| Estado global | Zustand | **5.x** — solo auth (`authStore`) |
+| Validación | Zod | **4.x** — schemas en `src/lib/schemas.ts` |
+| Estilos | Tailwind | **3.4.x** — NO usar v4 (incompatibilidad InsForge MCP) |
+| Toasts | Sonner | — |
+| Iconos | lucide-react | siempre con `aria-hidden` |
+| Drag & Drop | @dnd-kit/core | Mi Semana (días) — NO en Tablero (eliminado en V4) |
+| Backend (BaaS) | InsForge SDK | 1.2 — Postgres + Auth + RLS + Realtime |
+| Errores | @sentry/react | activo solo si `VITE_SENTRY_DSN` tiene valor |
+| Deploy | Vercel (SPA estática) | — |
+
+## Reglas de stack
+
+- **App web:** SPA sin SSR. No usar Next.js ni ninguna solución SSR.
+- **InsForge:** cliente singleton en `src/lib/insforge.ts`. Nunca llamar fetch directo a InsForge — usar siempre el SDK.
+- **Estado async:** TanStack Query para TODO el estado de servidor. Zustand únicamente para `authStore`.
+- **Tailwind 3.4:** No actualizar a v4. PostCSS + `tailwind.config.js`.
+- **React Router 7:** hooks de navegación de la v7 — no mezclar con patrones de v6.
+- **Zod 4:** `safeParse` en todos los parsers del API layer — nunca romper la UI por error de parse.
+- **@dnd-kit:** solo en Mi Semana para mover tareas entre días. El Tablero fue eliminado en V4.
+
+## Fetch interceptor
+
+`src/lib/insforgeFetchInterceptor.ts` parchea `window.fetch` para `/api/database/`:
+- 401 con error de token → `auth.refreshSession()` + un reintento
+- Si reintento falla → `signOut()` + redirect a `/login`
+- Nunca exponer errores de token al usuario
+
+## Tareas atrasadas
+
+Resuelto en backend mediante **trigger en BD** (migración 015).
+No calcular ni mutar el estado `atrasada` en frontend — es responsabilidad del servidor.
 
 ## Reglas para el agente
 
-- Consultar skills del repo: `insforge` (frontend SDK), `insforge-cli` (SQL, deploy, secrets), `insforge-debug` ante errores.
-- No asumir columnas nuevas: el esquema canónico está en `CONTEXT.md` hasta que se apruebe un cambio explícito de schema.
+- Consultar skills del repo: `.cursor/rules/` para contexto de producto; `.agents/skills/insforge` para SDK; `.agents/skills/insforge-cli` para SQL/deploy.
+- El schema canónico está en `web/CONTEXT/CONTEXT.md`. No asumir columnas ni tablas nuevas sin que estén documentadas ahí.
+- Ante errores de InsForge: leer `.agents/skills/insforge-debug/SKILL.md`.

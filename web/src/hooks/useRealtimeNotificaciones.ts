@@ -103,8 +103,10 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
 
         rt.on('tarea_asignada', (payload: EventPayload) => {
           if (cancelledRef.current) return;
+          void qc.invalidateQueries({ queryKey: ['semana'], exact: false });
           notifyIfEnabled(prefs, 'tarea_asignada', () => {
-            const msg = `Nueva tarea asignada: ${payload.titulo ?? ''}`;
+            const quien = payload.asignadoPor ? ` (${payload.asignadoPor})` : '';
+            const msg = `Nueva tarea asignada${quien}: ${payload.titulo ?? ''}`;
             toast.info(msg);
             announcePolitely(msg);
           });

@@ -1,0 +1,457 @@
+---
+alwaysApply: true
+---
+
+# CONTEXT — Nexora / SGTD (Agenda TI v3) · V4
+
+**Última actualización:** 2026-05-15
+**Fuente de verdad:** este archivo + `.cursor/rules/*.mdc`
+**Nota:** `CONTEXT_2026-04-23.md` (raíz) está **obsoleto** para V4 — lo reemplaza este documento.
+
+---
+
+## 1. Propósito del sistema
+
+**Nexora** es una SPA corporativa interna para la gestión operativa de un equipo de TI:
+
+- Planificación semanal de tareas por miembro
+- Seguimiento diario (incidencias, eventos)
+- Kanban de estado de tareas
+- Órdenes de Trabajo con flujo de aprobación formal
+- Objetivos estratégicos con trazabilidad
+- Métricas de rendimiento por rol
+
+**No es pública** — sin SEO, sin SSR. Deploy como SPA estática en Vercel.
+
+---
+
+## 2. Stack tecnológico
+
+| Capa | Tecnología | Versión |
+|------|------------|---------|
+| UI | React + TypeScript | React 19, TS ~6 |
+| Bundler | Vite | 8.x |
+| Routing | React Router | 7.x |
+| Datos remotos | TanStack Query | 5.x |
+| Estado global | Zustand | 5.x |
+| Validación | Zod | 4.x — schemas en `src/lib/schemas.ts` |
+| Estilos | Tailwind 3.4 + tokens CSS `mc-*` | — NO usar Tailwind v4 |
+| Toasts | Sonner | — |
+| Iconos | lucide-react (con `aria-hidden`) | — |
+| Drag & Drop | @dnd-kit/core | Mi Semana (días) |
+| Backend (BaaS) | InsForge (Supabase-compatible) | SDK 1.2 |
+| BD | PostgreSQL (RLS habilitado) | via InsForge |
+| Errores | @sentry/react | activo solo si `VITE_SENTRY_DSN` tiene valor |
+| Deploy | Vercel (SPA) | — |
+
+### Variables de entorno requeridas
+
+```
+VITE_INSFORGE_URL=https://<appkey>.us-east.insforge.app
+VITE_INSFORGE_ANON_KEY=<anon_key>
+VITE_ALLOWED_EMAIL_DOMAINS=empresa.com   # opcional, whitelist
+VITE_SENTRY_DSN=                         # opcional, vacío = sin Sentry
+VITE_OT_MIGRATION_028=true               # activo en dev tras migración 028 (parseo Zod estricto OT)
+```
+
+---
+
+## 3. Arquitectura del monorepo
+
+```
+agenda-ti_v3/
+├── db/
+│   ├── schema.sql          # DDL consolidado
+│   ├── seed.sql
+│   └── migrations/         # 002–026 (ver sección 9)
+└── web/                    # Esta SPA
+    ├── CONTEXT/            # Snapshots de contexto por fecha (este archivo)
+    ├── .env
+    └── src/
+        ├── api/            # Acceso a InsForge SDK (11 archivos)
+        ├── components/     # UI por dominio: layout, ui, tareas, semana, ot, routing…
+        ├── hooks/          # Lógica de negocio por página/feature
+        ├── lib/            # Utilidades: insforge, fechas, permisos, schemas, queryHelpers
+        ├── pages/          # Rutas lazy-loaded
+        ├── providers/      # AuthProvider, AppProviders
+        ├── store/          # Zustand (authStore)
+        ├── styles/         # CSS adicional (tokens, components, shell, forms)
+        └── types/          # Tipos TypeScript del dominio
+```
+
+### Patrón de capas (obligatorio, no romper)
+
+```
+Page (componente visual)
+  └→ useXxxPage (hook de orquestación: React Query + estado UI)
+       └→ api/xxx.ts (InsForge SDK + parsers Zod)
+            └→ InsForge PostgREST / RPC
+```
+
+---
+
+## 4. Rutas activas en V4
+
+| Ruta | Página | Rol |
+|------|--------|-----|
+| `/login`, `/forgot-password`, `/verify-reset-code`, `/reset-password` | Auth pages | Público |
+| `/semana` (index → aquí) | `MiSemana` | Jefe + Miembro |
+| `/objetivos` | `Objetivos` | Jefe + Miembro |
+| `/ordenes-trabajo` | `OrdenesTrabajo` | Jefe + Miembro |
+| `/planificacion` | `Planificacion` | **Solo Jefe** (`JefeRoute`) |
+| `/metricas` | `Metricas` | **Solo Jefe** (`JefeRoute`) |
+
+> **ELIMINADAS en V4** (no recrear sin orden explícita): `/tablero`, `/bitacora`, `/hoy` como página dedicada.
+> Si ves referencias a estas rutas en código antiguo, son legacy.
+
+---
+
+## 5. Módulos funcionales (estado V4)
+
+### Mi Semana (`/semana`)
+- Grilla Lun–Sáb (6 columnas). Sin toggle "Ahora / Semana" (eliminado en V4).
+- DnD entre columnas de día con @dnd-kit.
+- Columna del día actual incluye bloque **Incidencias** (`ZonaIncidencias`).
+- **Panel lateral de notas** (`PanelNotas`): visible en `xl+`; nota rápida + notas recientes.
+- Hooks: `useMiSemanaPage`, `useMiSemana`, `useSemanaDnD`, `useSemanaModales`, `useSemanaNavegacion`, `useHoyColumnas`.
+- APIs: `semana.ts`, `tablero.ts`, `recurrencia.ts`, `hoyColumnas.ts`.
+
+### Planificación (`/planificacion`) — Solo Jefe
+- Vista multi-miembro: carga semanal de todos los miembros activos.
+- Asignación de tareas por miembro y día.
+- Hook: `usePlanificacionPage`. API: `planificacion.ts`.
+
+### Objetivos (`/objetivos`)
+- CRUD de objetivos (jefe asigna a cualquiera; miembro solo auto-responsable).
+- Progreso calculado: % completadas / total no canceladas.
+- Hooks: `useObjetivosPage`. APIs: `objetivos.ts`, `objetivosMetricas.ts`.
+
+### Órdenes de Trabajo (`/ordenes-trabajo`)
+- Flujo: `borrador → pendiente → aprobada → en_ejecucion → completada` (o `rechazada`/`cancelada`).
+- Número correlativo via RPC `generar_numero_ot`.
+- Tipos de trabajo gestionados por el jefe.
+- Impresión de OT: `OTImpresion.tsx`.
+- Hook: `useOrdenesTrabajoPage`. API: `ordenTrabajo.ts`.
+
+### Métricas (`/metricas`) — Solo Jefe
+- KPIs por usuario: activas, completadas 7d, objetivos activos, atrasadas.
+- Comparativa entre miembros.
+- Hooks: `useMetricas`, `useObjetivosMetricas`. API: `objetivosMetricas.ts`.
+
+---
+
+## 6. RBAC
+
+| Rol | Acceso |
+|-----|--------|
+| `jefe` | Control total. Rutas protegidas con `JefeRoute`. |
+| `miembro` | Solo sus propias tareas/datos. |
+
+- Frontend: `ProtectedRoute` (auth) y `JefeRoute` (rol).
+- Backend: RLS con función `sgtd_es_jefe()` — política FOR ALL para jefes en las 7 tablas.
+- Selector: `selectEsJefe(authStore)` para condicionales en UI.
+
+---
+
+## 7. Esquema de base de datos (resumen)
+
+### Tablas principales
+
+| Tabla | Descripción |
+|-------|-------------|
+| `usuario` | id=auth.uid(), nombre, email, rol (`jefe`/`miembro`), activo |
+| `objetivo` | titulo, estado (`activo`/`completado`/`cancelado`), responsable_id |
+| `tarea` | titulo, estado (7 valores), tipo, prioridad, fecha_planificada, asignado_a, objetivo_id |
+| `evento` | titulo, tipo, fecha_inicio/fin, usuario_id, es_recurrente |
+| `nota_bitacora` | contenido, visibilidad, convertida_en (`tarea`/`evento`) |
+| `log_accion` | tarea_id, tipo_accion (7 valores), justificacion, leido_por_jefe |
+| `configuracion_semana` | fecha_inicio_semana (lunes), notas_semana |
+| `orden_trabajo` | numero_ot correlativo, estado, tipo_trabajo_id, datos de cierre |
+| `tipo_trabajo_ot` | descripcion, activo — CRUD por jefe |
+
+### Estados de tarea (enum)
+`pendiente` · `en_progreso` · `reprogramada` · `completada` · `bloqueada` · `atrasada` · `cancelada`
+
+> **`atrasada`** es un estado calculado: tarea planificada con fecha < hoy y estado abierto. Ver trigger en migración 015.
+
+### RPCs principales
+
+| RPC | Propósito |
+|-----|-----------|
+| `sgtd_es_jefe()` | Boolean — ¿auth.uid() es jefe activo? |
+| `sgtd_eliminar_tarea_con_motivo` | Elimina tarea + log atómico |
+| `sgtd_bloquear_tarea_con_log` | Estado → bloqueada + log |
+| `sgtd_reprogramar_tarea_con_log` | Nueva fecha + estado + log |
+| `sgtd_desbloquear_tarea_con_log` | Desbloquea + log |
+| `generar_numero_ot` | Número correlativo OT |
+| `sgtd_aprobar_ot` | Aprueba OT (solo jefe) |
+| `sgtd_rechazar_ot` | Rechaza OT con motivo |
+| `sgtd_completar_ot` | Cierra OT con datos del receptor |
+| `sgtd_completar_objetivo` | Completa objetivo |
+
+---
+
+## 8. Design system: Meta Canvas
+
+- **Tokens CSS:** prefijo `mc-*` / `--mc-color-*` / `--mc-state-*` (ver `tokens.css`).
+- **Reglas de color (semántica):**
+  - `--mc-color-warning` (#f7b928): SOLO para urgencia/atraso/alertas sin atender.
+  - `--mc-state-incidencia-*` → apunta a `--mc-color-info` (cyan). No usar warning para incidencias.
+  - Estados de tarea: usar `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `lib/estadoConfig.ts` — **no hardcodear hex**.
+- **Componentes canónicos:** `PageHeader`, `FilterBar`, `Button`, `Modal`, `JustificacionField`, `SectionErrorBoundary`.
+- **Acciones primarias:** `Button variant="primary"` para el CTA principal de cada página (incluyendo "Nueva tarea" en Mi Semana — fix pendiente).
+- **Tipografía:** Inter (carga no bloqueante).
+
+---
+
+## 9. Migraciones aplicadas
+
+| # | Cambio clave |
+|---|-------------|
+| 002 | `responsable_id` en objetivo |
+| 003 | RLS + `sgtd_es_jefe()` |
+| 004 | `convertida_en` en nota_bitacora |
+| 005 | RLS para miembro |
+| 006–009 | RPCs atómicas de tarea, trigger atrasada |
+| 010–022 | Mejoras OT, enums, completar objetivo |
+| 023–024 | Seguridad dominio, logs inmutables, validación fecha OT |
+| 025–026 | Schema recurrencia evento |
+| 027 | Fix eliminación tarea con log (B-01) y trigger atrasada (B-03) |
+| 028 | CHECK OT completada exige receptor nombre + DNI; RPC `sgtd_completar_ot` valida DNI |
+| 031 | Trigger anti-escalada `rol` en `usuario`; miembro lee notas `todos` del equipo |
+| 032 | Realtime `tarea_asignada` en RPCs crear/actualizar tarea (canal `usuario:{id}`) |
+| 033 | Sync bidireccional tarea↔OT: `sgtd_completar_tarea_con_resumen`, OT al completar tarea, `sgtd_crear_ot_desde_tarea` |
+
+---
+
+## 10. Flujo de autenticación
+
+```
+1. AuthProvider.bootstrap() → getCurrentUser()
+2. ¿Sesión válida?
+   ├─ NO → clear() → /login
+   └─ SÍ → asegurarUsuario(authUser)
+            ├─ ¿Existe en public.usuario? → retorna
+            └─ ¿No existe?
+                 ├─ ¿Email en dominio permitido? → INSERT rol='miembro'
+                 └─ ¿No permitido? → throw Error
+3. setAuth() → app carga
+4. Verificación periódica cada 4 min con getCurrentUser()
+5. Fetch interceptor: 401 en /api/database/ → refresh + reintento → si falla: logout
+```
+
+---
+
+## 11. Convenciones (no romper)
+
+- **Semana ISO:** formato texto `YYYYWW`, calculado con `semanaIsoDesdeFecha()`.
+- **Fechas locales:** `YYYY-MM-DD` para `fecha_planificada`.
+- **Fechas UTC ISO:** para timestamps (`created_at`, `fecha_completada`).
+- **Idioma español en dominio:** tablas, columnas, tipos, labels en español.
+- **Path alias `@/`:** mapea a `web/src/` (tsconfig + vite).
+- **Tailwind 3.4:** NO actualizar a v4 (incompatibilidad con InsForge MCP).
+- **Justificación obligatoria (≥10 chars):** para bloquear, cancelar, reprogramar, eliminar tareas.
+- **Parsers Zod con fallback:** `safeParse` — no romper UI en errores de parse.
+- **No asumir columnas nuevas:** el schema canónico es este CONTEXT. Cualquier cambio requiere migración explícita + actualización aquí.
+
+---
+
+## 12. Gestión de migraciones
+
+Las migraciones del proyecto viven en `db/migrations/` como SQL versionado. **No hay tabla `schema_migrations` del repo** — InsForge no registra automáticamente cada archivo `00N_*.sql` al ejecutarlo en el SQL Editor. Por eso la validación es **por objetos creados o modificados** (funciones, triggers, columnas), no por nombre de archivo.
+
+**Regla de oro:** Antes de cerrar cualquier ticket con cambios en BD, actualizar el checklist de esta sección (columna del entorno correspondiente) y verificar con las queries de identificación.
+
+### Cómo validar (dos niveles)
+
+| Nivel | Qué mide | Comando / acción |
+|-------|----------|------------------|
+| **Plataforma InsForge** | Migraciones internas del servicio BaaS | `npx @insforge/cli db query "SELECT * FROM system.migrations ORDER BY run_on DESC"` |
+| **Proyecto SGTD (recomendado)** | Si **nuestra** migración `027` (u otra) está aplicada en el Postgres del proyecto enlazado | Queries sobre `pg_proc`, `pg_trigger`, `information_schema` (ver tabla abajo) |
+
+Siempre enlazar el proyecto correcto antes de consultar:
+
+```bash
+npx @insforge/cli whoami
+npx @insforge/cli current    # debe apuntar al entorno que quieres validar
+```
+
+Ejecutar SQL contra el entorno enlazado:
+
+```bash
+npx @insforge/cli db query "SELECT 1 ..."
+# o: npx @insforge/cli db functions   # listar RPCs públicas
+```
+
+Alternativa: **SQL Editor** del dashboard InsForge (mismas queries).
+
+### Checklist por entorno
+
+| Migración | Descripción | Dev | Staging | Prod | Identificador técnico |
+|-----------|-------------|:---:|:-------:|:----:|------------------------|
+| 002–026 | Histórico (ver §9) | ✅ | ✅ | ✅ | Asumido en entornos vivos |
+| **027** | Fix eliminación tarea + trigger `reprogramada`→`atrasada` + backfill | ✅ | ✅ | 📅 Pendiente | `pg_proc`: `sgtd_marcar_atrasadas_vencidas` |
+| **028** | CHECK OT completada + receptor obligatorio (A-03) | ✅ | 📅 | 📅 | `pg_constraint`: `ck_ot_completada_tiene_receptor` |
+| **031** | Trigger `trg_sgtd_proteger_rol_usuario` + notas `todos` para miembro | 📅 | 📅 | 📅 | `pg_trigger`: `trg_sgtd_proteger_rol_usuario` |
+| **032** | Notificación `tarea_asignada` al asignado en crear/reasignar | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_notificar_tarea_asignada` |
+| **033** | Sync tarea↔OT + RPC completar tarea + crear OT desde tarea | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_crear_ot_desde_tarea` |
+
+Leyenda: ✅ aplicada y verificada · 📅 pendiente · ❌ falló / no aplicar sin revisión
+
+### Identificadores por migración (027)
+
+Ejecutar **todas** en el entorno a validar. Si alguna falla, la migración está incompleta o parcial.
+
+```sql
+-- 1) RPC de backfill (objeto nuevo exclusivo de 027)
+SELECT proname, prorettype::regtype::text AS returns
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_marcar_atrasadas_vencidas';
+-- Esperado: 1 fila, returns integer
+
+-- 2) Trigger function incluye reprogramada (cuerpo de 027)
+SELECT pg_get_functiondef(p.oid) LIKE '%reprogramada%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_fn_marcar_atrasada';
+-- Esperado: true
+
+-- 3) RPC eliminar exige motivo ≥ 10 chars (recreación en 027)
+SELECT pg_get_functiondef(p.oid) LIKE '%10%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_eliminar_tarea_con_motivo';
+-- Esperado: true (validación de longitud en función)
+```
+
+**CLI one-liner (027 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND proname = 'sgtd_marcar_atrasadas_vencidas') AS migration_027_ok"
+```
+
+Resultado esperado: `migration_027_ok = true`.
+
+### Aplicar 027 (si el checklist marca pendiente)
+
+1. Ejecutar el archivo completo: `db/migrations/027_fix_eliminar_atrasada_ot.sql` (SQL Editor o `db query` con el contenido del archivo).
+2. Backfill **una vez** por entorno:
+   ```sql
+   SELECT public.sgtd_marcar_atrasadas_vencidas();
+   ```
+3. Repetir identificadores arriba.
+4. QA manual: eliminar tarea con motivo ≥10 chars (sin P0001); tarea `reprogramada` vencida pasa a `atrasada` tras backfill o nuevo save.
+5. Actualizar columna **Prod** (o el entorno correspondiente) en el checklist a ✅.
+
+### Identificadores por migración (028)
+
+```sql
+-- Constraint A-03
+SELECT conname
+FROM pg_constraint
+WHERE conrelid = 'public.orden_trabajo'::regclass
+  AND conname = 'ck_ot_completada_tiene_receptor';
+-- Esperado: 1 fila
+
+-- RPC valida DNI (P0005)
+SELECT pg_get_functiondef(p.oid) LIKE '%P0005%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_completar_ot';
+-- Esperado: true
+```
+
+**CLI one-liner (028 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.orden_trabajo'::regclass AND conname = 'ck_ot_completada_tiene_receptor') AS migration_028_ok"
+```
+
+Tras aplicar SQL: `VITE_OT_MIGRATION_028=true` en `web/.env` y Vercel; reiniciar dev server.
+
+### Identificadores por migración (031)
+
+```sql
+-- Trigger anti-escalada de rol
+SELECT tgname FROM pg_trigger
+WHERE tgname = 'trg_sgtd_proteger_rol_usuario';
+-- Esperado: 1 fila
+
+-- Política de notas ampliada (miembro + todos)
+SELECT pg_get_expr(polqual, polrelid) LIKE '%visibilidad%'
+FROM pg_policy
+WHERE polrelid = 'public.nota_bitacora'::regclass
+  AND polname = 'sgtd_miembro_nota_select';
+-- Esperado: true
+```
+
+**CLI one-liner (031 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sgtd_proteger_rol_usuario') AS migration_031_ok"
+```
+
+### Identificadores por migración (032)
+
+```sql
+-- Helper de notificación
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_notificar_tarea_asignada';
+-- Esperado: 1 fila
+
+-- RPC crear invoca notificación
+SELECT pg_get_functiondef(p.oid) LIKE '%sgtd_notificar_tarea_asignada%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_crear_tarea_planificada';
+-- Esperado: true
+```
+
+**CLI one-liner (032 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND proname = 'sgtd_notificar_tarea_asignada') AS migration_032_ok"
+```
+
+### Identificadores por migración (033)
+
+```sql
+-- RPC completar tarea con resumen (nueva en repo)
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_completar_tarea_con_resumen';
+-- Esperado: 1 fila
+
+-- RPC crear OT desde tarea planificada
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_crear_ot_desde_tarea';
+-- Esperado: 1 fila
+
+-- sgtd_completar_ot sincroniza tarea vinculada
+SELECT pg_get_functiondef(p.oid) LIKE '%v_tarea_id%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_completar_ot';
+-- Esperado: true
+```
+
+**CLI one-liner (033 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND proname = 'sgtd_crear_ot_desde_tarea') AS migration_033_ok"
+```
+
+### Próxima migración (034+)
+
+Al añadir `db/migrations/034_*.sql`:
+
+1. Actualizar §9 (lista resumida) y esta tabla con **identificador técnico** (función, columna o política nueva).
+2. Documentar query de comprobación en `db/migrations/README.md`.
+3. Dejar Dev / Staging / Prod en 📅 hasta verificar cada entorno.
+
+---
+
+*Fin del documento. Actualizar cuando se añadan módulos, tablas o convenciones nuevas.*

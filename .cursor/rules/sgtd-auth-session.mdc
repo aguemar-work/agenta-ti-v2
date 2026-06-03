@@ -1,65 +1,59 @@
 ---
+description: Nexora/SGTD — manejo obligatorio de sesión InsForge y refresh de JWT
 alwaysApply: true
 ---
 
-description: SGTD - manejo obligatorio de sesión InsForge y refresh de JWT
+# Auth y sesión (InsForge) — V4
 
-# Atuh y sesión (InsForge)
 ## Regla crítica
+
 Nunca permitir que un JWT expirado genere errores visibles al usuario.
-No mostrar "Invalid Token" bajo ninguna circunstancia
+No mostrar "Invalid Token" ni ningún error técnico de sesión bajo ninguna circunstancia.
 
-## Cliente InsForge 
-- Debe configurarse con:
- - persistSession: true
- - autoRefreshToken: true
-- Debe existir un único cliente signleton.
+## Cliente InsForge
 
-## Interceptor obligatorio
-Para request a '/api/database/':
-- Si respuesta = 401:
- - detectar si es error de token (JWT / sesión)
- - ejecutar 'insforge.auth.refreshSession()'
- - reintentar la petición UNA vez
-- Si falla nuevamente 
-- ejecutar `signOut()`
-  - redirigir a `/login`
+- Configurar con `persistSession: true` y `autoRefreshToken: true`.
+- Cliente singleton en `src/lib/insforge.ts`. Una sola instancia en toda la app.
 
----
+## Fetch interceptor (`src/lib/insforgeFetchInterceptor.ts`)
+
+Instalado una sola vez en `main.tsx`. Parchea `window.fetch`:
+
+- Petición a `/api/database/` → respuesta 401:
+  1. Detectar si es error de token (JWT / sesión inválida)
+  2. Ejecutar `insforge.auth.refreshSession()`
+  3. Reintentar la petición **una sola vez**
+  4. Si vuelve a fallar → `signOut()` + redirigir a `/login`
+- No mostrar errores técnicos al usuario en ningún paso
 
 ## AuthProvider
 
-Debe:
+Responsabilidades:
+- Bootstrap: `getCurrentUser()` al montar
+- `asegurarUsuario(authUser)`: upsert en `public.usuario`
+  - Si no existe y el email está en dominio permitido → INSERT con `rol = 'miembro'`
+  - Si dominio no permitido → throw Error (no crear usuario)
+- **Verificación periódica cada 4 minutos** con `getCurrentUser()` — si falla o no hay usuario → `clear()` (logout lógico)
+- Exponer: `user`, `usuario` (fila de `public.usuario`), `loading`
+- Nunca leer token directamente de localStorage
 
-- exponer:
-  - user
-  - usuario (tabla `public.usuario`)
-  - loading
+## RBAC desde sesión
 
-- sincronizar sesión con `onAuthStateChange`
-
-- nunca leer token directamente de localStorage
-
----
-
-## RBAC
-
-- El rol se obtiene desde `public.usuario`
-- Nunca usar claims JWT como fuente de verdad
-
----
+- El rol se obtiene **exclusivamente** desde `public.usuario.rol`
+- Nunca usar claims JWT como fuente de verdad del rol
+- Selector: `selectEsJefe(authStore)` para condicionales en UI
 
 ## Rutas protegidas
 
-- Si `!user` → redirigir a `/login`
-- Nunca mostrar errores técnicos de sesión
-
----
+- `ProtectedRoute`: si `!user` → redirigir a `/login`
+- `JefeRoute`: si `rol !== 'jefe'` → redirigir a `/semana`
+- Rutas protegidas por jefe: `/planificacion`, `/metricas`
 
 ## Checklist obligatorio
 
-- Cliente con persistencia y auto-refresh activo
-- Interceptor instalado una sola vez
-- AuthProvider en nivel root
-- Manejo correcto de 401
-- UI nunca expone errores de token
+- [ ] Cliente con `persistSession` y `autoRefreshToken` activos
+- [ ] Interceptor instalado una sola vez en `main.tsx`
+- [ ] `AuthProvider` en nivel root (dentro de `AppProviders`)
+- [ ] Verificación periódica cada 4 min activa
+- [ ] 401 siempre manejado por interceptor — nunca propagado a UI
+- [ ] Rol leído desde `public.usuario`, no desde JWT

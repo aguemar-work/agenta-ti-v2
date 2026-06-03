@@ -45,11 +45,11 @@ export function useEventosHoy(usuarioId: string | undefined, ymd: string) {
   });
 }
 
-export function useNotasBitacoraHoy(usuarioId: string | undefined) {
+export function useNotasBitacoraHoy(usuarioId: string | undefined, esJefe = false) {
   return useQuery({
-    queryKey: [Q_NOTAS_HOY, usuarioId],
+    queryKey: [Q_NOTAS_HOY, usuarioId, esJefe],
     enabled:  Boolean(usuarioId),
-    queryFn:  () => getNotasBitacoraRecientes(usuarioId!, 8),
+    queryFn:  () => getNotasBitacoraRecientes(usuarioId!, 8, esJefe),
   });
 }
 

@@ -1,47 +1,81 @@
 ---
-description: UI SGTD — Meta Canvas; uso obligatorio de tokens y clases .mc-*
+description: UI Nexora — Meta Canvas; tokens, clases .mc-*, semántica de color
 globs: "**/*.{tsx,css}"
-alwaysApply: false
+alwaysApply: true
 ---
 
-# UI — Meta Canvas (SGTD)
+# UI — Meta Canvas (Nexora V4)
 
 ## Fuente de verdad
 
-El sistema visual está definido en:
+- `web/src/styles/tokens.css` — todos los tokens CSS en `:root`
+- `web/src/index.css` — clases `.mc-*`
+- `.cursor/rules/DESIGN-SYSTEM.md` — especificación completa
 
-- `.cursor/rules/DESIGN-SYSTEM.md`
-- `web/src/styles/tokens.css`
-- `web/src/index.css`
+## Principios innegociables
+
+Meta Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
+- **Silencioso:** sin decoración. Un solo acento.
+- **Denso:** listas antes que cards. Información antes que aire.
+- **Predecible:** 1 forma de hacer cada cosa. Sin variantes creativas.
 
 ## Reglas obligatorias
 
-- Usar únicamente tokens definidos en `:root` (sin hardcode).
-- Respetar layout base:
-  - Sidebar: 240px / 64px
-  - Main con scroll propio (`.mc-main`)
-- Estados de tareas = valores exactos de DB.
-- Espaciado: usar `gap` y `padding`, evitar `margin` en hijos.
-- Componentes base obligatorios:
-  - `.mc-btn`, `.mc-btn-secondary`, `.mc-btn-ghost`
-  - `.mc-input`
-  - `.mc-badge-*`
-  - `.mc-task-item`
-- Íconos: Lucide 16px / 20px.
-- Tipografía: Inter (400–600).
+### Colores
+- **Prohibido hardcodear hex** en TSX o CSS. Siempre `var(--mc-color-*)` o `var(--mc-state-*)`.
+- Tokens semánticos de color:
 
-## Restricciones
+| Token | Uso correcto |
+|-------|-------------|
+| `--mc-color-warning` (#F7B928) | **SOLO** urgencia / tareas atrasadas / alertas sin atender |
+| `--mc-color-danger` (#FA3E3E) | Acciones destructivas, errores críticos |
+| `--mc-color-success` (#31A24C) | Completado, éxito |
+| `--mc-color-accent` (#0064E0) | Acción primaria, enlaces, activo |
+| `--mc-state-incidencia-*` | Incidencias — apunta a `--mc-color-info` (cyan #0288d1), NO a warning |
 
-- Máximo 1 botón primario por vista
-- Sin sombras (excepto modales/dropdowns)
+**Incidencias resueltas son registros neutrales, no alertas.** No usar amarillo para ellas.
+
+### Estados de tarea
+- Usar exclusivamente `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `src/lib/estadoConfig.ts`
+- Los valores deben coincidir exactamente con los enums de BD
+- No inventar estados visuales adicionales
+
+### Espaciado
+- Usar tokens `--mc-space-*` (múltiplos de 4px)
+- Los contenedores definen `padding` y `gap`. Los hijos **no usan `margin`**.
+
+### Tipografía
+- Font: Inter (400/500/600) via `--mc-font-sans`
+- Escalas: `--mc-text-xs` (12) · `--mc-text-sm` (14) · `--mc-text-md` (16) · `--mc-text-lg` (20) · `--mc-text-xl` (24)
+- Cabeceras de tabla: 10–11px, `uppercase`, `letter-spacing: 0.06em`, `--mc-color-text-secondary`
+
+### Iconos
+- lucide-react siempre con `aria-hidden`
+- Tamaños: 16px (inline/badge) · 20px (botón/acción)
+- Usar `MoreHorizontal` de lucide, no el literal `···` (hallazgo V-11)
+
+### Botones
+- Máximo **1 botón primario** por vista
+- `.mc-btn` primario, `.mc-btn-secondary` alternativo, `.mc-btn-ghost` navegación/cancelar
+- Sin sombras en botones
+
+### Sombras
+- Prohibidas salvo en modales y dropdowns (`--mc-shadow-md`)
 - Sin degradados
-- No inventar tokens ni estados
 
-## Validación
+### Radio
+- `--mc-radius-sm` (6px) para badges/checkbox
+- `--mc-radius-md` (8px) para botones/inputs
+- `--mc-radius-lg` (12px) para cards/modales
 
-Antes de implementar UI:
+## Checklist antes de implementar UI
 
-- ¿Usa `.mc-task-item` o `.mc-card` correctamente?
-- ¿No hay valores hardcodeados?
-- ¿Respeta tokens?
-- ¿No hay margin innecesario?
+- [ ] ¿Usa tokens CSS? Sin valores hex hardcodeados
+- [ ] ¿Usa `TAREA_BADGE` / `TAREA_PILL` para estados de tarea?
+- [ ] ¿El amarillo (`--mc-color-warning`) es solo para alertas/urgencias, no incidencias?
+- [ ] ¿Usa `APP_PAGE_CLASS` como raíz de página?
+- [ ] ¿Solo 1 botón primario en la vista?
+- [ ] ¿Iconos con `aria-hidden`?
+- [ ] ¿Sin `margin` en hijos (solo `gap`/`padding` en contenedores)?
+- [ ] ¿Sin `.mc-card` anidado más de 1 nivel?
+- [ ] ¿Sin sombras fuera de modales/dropdowns?

@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PlanificacionActividadReciente } from '@/components/planificacion/PlanificacionActividadReciente';
-import { PlanificacionAlertas } from '@/components/planificacion/PlanificacionAlertas';
+import { PlanificacionAnalisisGrid } from '@/components/planificacion/PlanificacionAnalisisGrid';
+import { PlanificacionToolbar } from '@/components/planificacion/PlanificacionToolbar';
 import { PlanificacionCeldaMobile } from '@/components/planificacion/PlanificacionCeldaMobile';
 import { PlanificacionCeldaSidebar } from '@/components/planificacion/PlanificacionCeldaSidebar';
 import { PlanificacionHeader } from '@/components/planificacion/PlanificacionHeader';
-import { PlanificacionHeatmap } from '@/components/planificacion/PlanificacionHeatmap';
 import { PlanificacionHistorialCompleto } from '@/components/planificacion/PlanificacionHistorialCompleto';
 import { PlanificacionIncidenciasLista } from '@/components/planificacion/PlanificacionIncidenciasLista';
 import { PlanificacionJustificaciones } from '@/components/planificacion/PlanificacionJustificaciones';
-import { PlanificacionMobile } from '@/components/planificacion/PlanificacionMobile';
-import { PlanificacionRendimiento } from '@/components/planificacion/PlanificacionRendimiento';
 import { usePlanificacionPage } from '@/hooks/usePlanificacionPage';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useResumenSlaJefe } from '@/hooks/useResumenSlaJefe';
@@ -50,7 +48,6 @@ export function Planificacion() {
     loadActividad,
     bloqueadasSemana,
     resumenAlertas,
-    totalDiaEquipo,
     mostrarHistorial,
     setMostrarHistorial,
     histLogs,
@@ -68,8 +65,10 @@ export function Planificacion() {
     modal,
     setModal,
     cuenta,
+    totalDiaEquipo,
     conteoEstadosDiaMiembro,
-    mutLeerLog,
+    mutAceptarJustificacion,
+    mutDevolverJustificacion,
     hoyYmd,
     carga,
   } = usePlanificacionPage();
@@ -120,6 +119,10 @@ export function Planificacion() {
         onSemanaAnterior={() => setLunes((d) => agregarDias(d, -7))}
         onSemanaSiguiente={() => setLunes((d) => agregarDias(d, 7))}
         onIrHoy={() => setLunes(inicioSemanaIso(new Date()))}
+      />
+
+      <PlanificacionToolbar
+        resumen={resumenAlertas}
         periodoDesde={periodoDesde}
         periodoHasta={periodoHasta}
         onPeriodoDesde={setPeriodoDesde}
@@ -134,29 +137,76 @@ export function Planificacion() {
         </p>
       )}
 
-      <PlanificacionAlertas resumen={resumenAlertas} />
+      <div className={['mc-plan-layout', showCeldaSidebar ? 'mc-plan-layout--split' : ''].filter(Boolean).join(' ')}>
+        <div className="mc-plan-layout__main">
+          <PlanificacionAnalisisGrid
+            isDesktop={isDesktop}
+            periodoDesde={periodoDesde}
+            periodoHasta={periodoHasta}
+            miembros={miembros}
+            diasLab={diasLab}
+            cuenta={cuenta}
+            totalDiaEquipo={totalDiaEquipo}
+            conteoEstadosDiaMiembro={conteoEstadosDiaMiembro}
+            mobileMiembro={mobileMiembro}
+            onSelectMiembro={(m) => setMobileMiembroId(m?.id ?? null)}
+            onCeldaClick={(usuarioId, fecha, nombre) => setModal({ usuarioId, fecha, nombre })}
+          />
 
-      <div className={['mc-ot-layout', showCeldaSidebar ? 'mc-ot-layout--split' : ''].filter(Boolean).join(' ')}>
-        <div className="mc-ot-layout__main">
-          {isDesktop ? (
-            <PlanificacionHeatmap
-              miembros={miembros}
-              diasLab={diasLab}
-              cuenta={cuenta}
-              totalDiaEquipo={totalDiaEquipo}
-              onCeldaClick={(usuarioId, fecha, nombre) => setModal({ usuarioId, fecha, nombre })}
+          <div className="mc-plan-grid-operativa">
+            <PlanificacionJustificaciones
+              logs={logsPend}
+              loading={loadLogs}
+              error={errLogs}
+              busyAceptar={mutAceptarJustificacion.isPending}
+              busyDevolver={mutDevolverJustificacion.isPending}
+              nombreMiembro={nombreMiembro}
+              titulosTarea={titulosTarea}
+              onAceptar={(id) => mutAceptarJustificacion.mutate(id)}
+              onDevolver={(id, nota) => mutDevolverJustificacion.mutate({ logId: id, nota })}
             />
-          ) : (
-            <PlanificacionMobile
-              miembros={miembros}
-              diasLab={diasLab}
-              cuenta={cuenta}
-              conteoEstadosDiaMiembro={conteoEstadosDiaMiembro}
-              miembroSel={mobileMiembro}
-              onSelectMiembro={(m) => setMobileMiembroId(m?.id ?? null)}
-              onCeldaClick={(usuarioId, fecha, nombre) => setModal({ usuarioId, fecha, nombre })}
+
+            {!historialAbierto ? (
+              <PlanificacionActividadReciente
+                actividad={actividad}
+                loading={loadActividad}
+                onVerToda={() => {
+                  setHistorialAbierto(true);
+                  setMostrarHistorial(false);
+                  resetHistFiltros();
+                }}
+              />
+            ) : (
+              <PlanificacionHistorialCompleto
+                open={historialAbierto}
+                onClose={() => setHistorialAbierto(false)}
+                actividad={actividad}
+                loadActividad={loadActividad}
+                mostrarHistorial={mostrarHistorial}
+                setMostrarHistorial={setMostrarHistorial}
+                histLogs={histLogs}
+                histTotal={histTotal}
+                histTotalPaginas={histTotalPaginas}
+                loadHist={loadHist}
+                histPagina={histPagina}
+                setHistPagina={setHistPagina}
+                histUsuarioId={histUsuarioId}
+                setHistUsuarioId={setHistUsuarioId}
+                histTipoAccion={histTipoAccion}
+                setHistTipoAccion={setHistTipoAccion}
+                todosUsuarios={todosUsuarios}
+                resetHistFiltros={resetHistFiltros}
+              />
+            )}
+
+            <PlanificacionIncidenciasLista
+              incidencias={incidencias}
+              bloqueadas={bloqueadasSemana}
+              loading={loadInc}
+              hoyYmd={hoyYmd}
+              nombreMiembro={nombreMiembro}
             />
-          )}
+          </div>
         </div>
 
         {showCeldaSidebar && modal && (
@@ -181,61 +231,6 @@ export function Planificacion() {
           onClose={() => setModal(null)}
         />
       )}
-
-      <div className="mc-plan-dos-columnas">
-        {!historialAbierto ? (
-          <PlanificacionActividadReciente
-            actividad={actividad}
-            loading={loadActividad}
-            onVerToda={() => {
-              setHistorialAbierto(true);
-              setMostrarHistorial(false);
-              resetHistFiltros();
-            }}
-          />
-        ) : (
-          <PlanificacionHistorialCompleto
-            open={historialAbierto}
-            onClose={() => setHistorialAbierto(false)}
-            actividad={actividad}
-            loadActividad={loadActividad}
-            mostrarHistorial={mostrarHistorial}
-            setMostrarHistorial={setMostrarHistorial}
-            histLogs={histLogs}
-            histTotal={histTotal}
-            histTotalPaginas={histTotalPaginas}
-            loadHist={loadHist}
-            histPagina={histPagina}
-            setHistPagina={setHistPagina}
-            histUsuarioId={histUsuarioId}
-            setHistUsuarioId={setHistUsuarioId}
-            histTipoAccion={histTipoAccion}
-            setHistTipoAccion={setHistTipoAccion}
-            todosUsuarios={todosUsuarios}
-            resetHistFiltros={resetHistFiltros}
-          />
-        )}
-
-        <PlanificacionIncidenciasLista
-          incidencias={incidencias}
-          bloqueadas={bloqueadasSemana}
-          loading={loadInc}
-          hoyYmd={hoyYmd}
-          nombreMiembro={nombreMiembro}
-        />
-      </div>
-
-      <PlanificacionJustificaciones
-        logs={logsPend}
-        loading={loadLogs}
-        error={errLogs}
-        pending={mutLeerLog.isPending}
-        nombreMiembro={nombreMiembro}
-        titulosTarea={titulosTarea}
-        onMarcarLeido={(id) => mutLeerLog.mutate(id)}
-      />
-
-      <PlanificacionRendimiento periodoDesde={periodoDesde} periodoHasta={periodoHasta} />
     </div>
   );
 }

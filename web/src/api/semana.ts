@@ -5,6 +5,7 @@
 
 import { getInsforge } from '@/lib/insforge';
 import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
+import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { parseEvento, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
 import { agregarDias, semanaIsoDesdeFecha } from '@/lib/semanas';
@@ -62,6 +63,7 @@ export type CrearTareaPlanificadaInput = {
   nota_origen_id?:    string | null;
 };
 
+/** Punto de escritura canónico para tareas planificadas (Mi Semana, Planificación, conversión de notas). */
 export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): Promise<Tarea> {
   const insforge = getInsforge();
   const semana   = semanaIsoDesdeFecha(new Date(`${data.fecha_planificada}T12:00:00`));
@@ -198,6 +200,52 @@ export async function desbloquearTareaConLog(input: {
     p_justificacion: input.justificacion.trim(),
   });
   if (error) throw error;
+}
+
+/** Completa tarea en progreso con resumen (RPC atómica; cancela OTs abiertas vinculadas). */
+export async function completarTareaConResumen(input: {
+  tareaId:        string;
+  usuarioId:      string;
+  resumen:        string;
+  usuarioNombre?: string;
+  tareaTitulo?:   string;
+  jefeId?:        string;
+  jefeIds?:       string[];
+}): Promise<void> {
+  const { error } = await getInsforge().database.rpc('sgtd_completar_tarea_con_resumen', {
+    p_tarea_id:   input.tareaId,
+    p_usuario_id: input.usuarioId,
+    p_resumen:    input.resumen.trim(),
+  });
+  if (error) throw error;
+
+  const jefeIds = input.jefeIds ?? (input.jefeId ? [input.jefeId] : []);
+  if (jefeIds.length > 0) {
+    const resumen = input.resumen.trim();
+    void Promise.all(jefeIds.map((jefeId) =>
+      publicarEventoEquipo({
+        tipo:          'tarea_completada',
+        jefeId,
+        tareaId:       input.tareaId,
+        titulo:        input.tareaTitulo ?? 'Tarea',
+        usuarioNombre: input.usuarioNombre ?? 'Miembro',
+        resumen,
+      }),
+    ));
+  }
+}
+
+/** Bloquea tarea con justificación (delega en cambiarEstadoTarea). */
+export async function bloquearTarea(input: {
+  tareaId:       string;
+  usuarioId:     string;
+  justificacion: string;
+}): Promise<void> {
+  return cambiarEstadoTarea({
+    tareaId:       input.tareaId,
+    nuevoEstado:   'bloqueada',
+    justificacion: input.justificacion,
+  });
 }
 
 // ---------------------------------------------------------------------------

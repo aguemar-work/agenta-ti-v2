@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL } from '@/lib/estadoConfig';
+import { fechaLocalYmd } from '@/lib/fecha';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { breakdownPuntosObjetivo, etiquetaPuntosPrioridad } from '@/lib/objetivoProgreso';
+import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
 import type { ObjetivoConProgreso } from '@/api/objetivosMetricas';
-import type { EstadoObjetivo, EstadoTarea, Tarea } from '@/types';
+import type { EstadoObjetivo, Tarea } from '@/types';
 
 type OtRow = { id: string; numero: string; estado: string; descripcion: string };
 
@@ -127,24 +129,26 @@ export function ObjetivoDetalleContenido({
           <EmptyState compact title="Sin tareas vinculadas" />
         ) : (
           <div className="flex flex-col gap-1">
-            {tareasVinc.map((t) => (
+            {tareasVinc.map((t) => {
+              const est = estadoEfectivoTablero(t, fechaLocalYmd(new Date()));
+              return (
               <button
                 key={t.id}
                 type="button"
                 className={[
                   'mc-objetivo-detalle-tarea flex w-full items-center justify-between gap-2 rounded-[var(--mc-radius-md)] border px-2 py-1.5 text-left',
-                  t.estado === 'atrasada'
+                  est === 'atrasada'
                     ? 'border-[var(--mc-state-atrasada-border)] bg-[var(--mc-state-atrasada-bg-soft)]'
                     : 'border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)]',
                 ].join(' ')}
                 onClick={() => onTareaClick(t)}
               >
                 <span className="min-w-0 truncate text-xs text-[var(--mc-color-text)]">{t.titulo}</span>
-                {t.estado !== 'pendiente' ? (
-                  <TareaEstadoIndicator estado={t.estado as EstadoTarea} style={{ fontSize: 9 }} />
+                {est !== 'pendiente' ? (
+                  <TareaEstadoIndicator estado={est} style={{ fontSize: 9 }} />
                 ) : null}
               </button>
-            ))}
+            );})}
           </div>
         )}
       </div>

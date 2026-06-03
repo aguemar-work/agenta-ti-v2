@@ -279,3 +279,20 @@ export async function cancelarOrdenTrabajo(otId: Id, usuarioId: Id): Promise<voi
   });
   if (error) throw error;
 }
+
+/** Crea OT borrador vinculada a tarea planificada (RPC sgtd_crear_ot_desde_tarea, migr. 033). */
+export async function crearOtDesdeTarea(input: {
+  tareaId:        Id;
+  tipoTrabajoId?: Id | null;
+  fechaEstimada?: string | null;
+  prioridad?:     PrioridadOT;
+}): Promise<Id> {
+  const { data, error } = await getInsforge().database.rpc('sgtd_crear_ot_desde_tarea', {
+    p_tarea_id:        input.tareaId,
+    p_tipo_trabajo_id: input.tipoTrabajoId ?? null,
+    p_fecha_estimada:  input.fechaEstimada ?? null,
+    p_prioridad:       input.prioridad ?? 'normal',
+  });
+  if (error) throw error;
+  return data as Id;
+}

@@ -1,174 +1,197 @@
 -- =============================================================================
--- SGTD — datos de prueba (seed)
+-- SGTD — Datos de prueba (seed v2)
+-- seed.sql
 --
--- 1) Alta de usuarios SOLO vía app InsForge (auth.users + public.usuario).
--- 2) Ajusta manualmente el ROL en BD si hace falta: un jefe y dos miembros.
--- 3) Este script inserta objetivos/tareas/eventos/notas/log marcados 'SEED |'.
+-- Cambios respecto a seed v1:
+--   - Eliminadas 3 tareas con tipo='libre' → convertidas a nota_bitacora
+--   - Incidencias ahora muestran ambos estados (completada Y pendiente)
+--   - Agrega ejemplos con nota_origen_id y log completo
+--   - OTs de ejemplo con prioridad y log_ot
 --
--- Si prefieres UUID fijos en lugar de subconsultas, reemplaza en tu entorno
--- (deben existir en auth.users / public.usuario):
---   :UUID_JEFE      = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
---   :UUID_MIEMBRO1 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
---   :UUID_MIEMBRO2 = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
--- y convierte los SELECT de usuario en constantes.
+-- Uso:
+--   Dashboard InsForge → SQL Editor → Run
+--   Requiere al menos 1 jefe y 1 miembro en public.usuario
 -- =============================================================================
 
 BEGIN;
 
-DELETE FROM public.log_accion WHERE justificacion LIKE 'SEED |%';
-DELETE FROM public.nota_bitacora WHERE contenido LIKE 'SEED |%';
-DELETE FROM public.evento WHERE titulo LIKE 'SEED |%';
-DELETE FROM public.tarea WHERE titulo LIKE 'SEED |%';
-DELETE FROM public.objetivo WHERE titulo LIKE 'SEED |%';
+-- Limpiar seed previo
+DELETE FROM public.log_ot        WHERE ot_id IN (SELECT id FROM public.orden_trabajo WHERE descripcion LIKE 'SEED |%');
+DELETE FROM public.orden_trabajo  WHERE descripcion LIKE 'SEED |%';
+DELETE FROM public.log_accion     WHERE justificacion LIKE 'SEED |%';
+DELETE FROM public.nota_bitacora  WHERE contenido LIKE 'SEED |%';
+DELETE FROM public.evento         WHERE titulo LIKE 'SEED |%';
+DELETE FROM public.tarea          WHERE titulo LIKE 'SEED |%';
+DELETE FROM public.objetivo       WHERE titulo LIKE 'SEED |%';
+
+-- ── OBJETIVOS ─────────────────────────────────────────────────────────────────
 
 INSERT INTO public.objetivo (id, titulo, descripcion, fecha_limite, estado, creado_por, responsable_id)
-SELECT gen_random_uuid(), 'SEED | Reducir incidentes de despliegue', 'Objetivo operativo de prueba.', DATE '2026-12-20', 'activo', j.id, j.id
+SELECT gen_random_uuid(),
+       'SEED | Reducir incidentes de despliegue',
+       'Objetivo operativo de prueba.',
+       DATE '2026-12-20', 'activo', j.id, j.id
 FROM (SELECT id FROM public.usuario WHERE rol = 'jefe' AND activo = true ORDER BY created_at LIMIT 1) j;
 
 INSERT INTO public.objetivo (id, titulo, descripcion, fecha_limite, estado, creado_por, responsable_id)
-SELECT gen_random_uuid(), 'SEED | Mejorar documentación interna', 'Segundo objetivo activo.', DATE '2026-11-15', 'activo', j.id, j.id
+SELECT gen_random_uuid(),
+       'SEED | Mejorar documentación interna',
+       'Segundo objetivo activo.',
+       DATE '2026-06-15', 'activo', j.id, j.id
 FROM (SELECT id FROM public.usuario WHERE rol = 'jefe' AND activo = true ORDER BY created_at LIMIT 1) j;
 
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Revisión de backups', 't1', 'pendiente', 'planificada', 'alta', DATE '2026-04-14', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+-- ── TAREAS PLANIFICADAS ────────────────────────────────────────────────────────
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Actualizar runbooks', NULL, 'en_progreso', 'planificada', 'media', DATE '2026-04-15', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Revisión de backups', 'Verificar integridad de copias.',
+       'pendiente', 'planificada', 'alta',
+       CURRENT_DATE + 1, to_char(CURRENT_DATE + 1, 'IYYY') || lpad(to_char(CURRENT_DATE + 1, 'IW'), 2, '0'), NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       (SELECT id FROM public.objetivo WHERE titulo='SEED | Reducir incidentes de despliegue' LIMIT 1),
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Prueba de smoke QA', NULL, 'bloqueada', 'planificada', 'alta', DATE '2026-04-16', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Mejorar documentación interna' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Actualizar runbooks', NULL,
+       'en_progreso', 'planificada', 'media',
+       CURRENT_DATE, to_char(CURRENT_DATE, 'IYYY') || lpad(to_char(CURRENT_DATE, 'IW'), 2, '0'), NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       (SELECT id FROM public.objetivo WHERE titulo='SEED | Reducir incidentes de despliegue' LIMIT 1),
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Cierre de sprint', NULL, 'completada', 'planificada', 'baja', DATE '2026-04-17', '202616', TIMESTAMPTZ '2026-04-17T10:00:00Z',
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Prueba de smoke QA', NULL,
+       'bloqueada', 'planificada', 'alta',
+       CURRENT_DATE, to_char(CURRENT_DATE, 'IYYY') || lpad(to_char(CURRENT_DATE, 'IW'), 2, '0'), NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1 OFFSET 1),
+                (SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       (SELECT id FROM public.objetivo WHERE titulo='SEED | Mejorar documentación interna' LIMIT 1),
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Diseño wireframes', NULL, 'pendiente', 'planificada', 'media', DATE '2026-04-18', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Mejorar documentación interna' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Cierre de sprint', NULL,
+       'completada', 'planificada', 'baja',
+       CURRENT_DATE - 1,
+       to_char(CURRENT_DATE - 1, 'IYYY') || lpad(to_char(CURRENT_DATE - 1, 'IW'), 2, '0'),
+       now() - interval '2 hours',
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       NULL,
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
+
+-- Tarea atrasada (fecha en el pasado, estado pendiente → trigger la marcará atrasada)
+INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
+SELECT 'SEED | Auditoría de accesos', NULL,
+       'pendiente', 'planificada', 'alta',
+       CURRENT_DATE - 7,
+       to_char(CURRENT_DATE - 7, 'IYYY') || lpad(to_char(CURRENT_DATE - 7, 'IW'), 2, '0'), NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       (SELECT id FROM public.objetivo WHERE titulo='SEED | Reducir incidentes de despliegue' LIMIT 1),
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Auditoría de accesos', NULL, 'pendiente', 'planificada', 'alta', DATE '2026-04-01', '202614', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Cancelada de ejemplo', NULL,
+       'cancelada', 'planificada', 'baja',
+       CURRENT_DATE - 3,
+       to_char(CURRENT_DATE - 3, 'IYYY') || lpad(to_char(CURRENT_DATE - 3, 'IW'), 2, '0'), NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1 OFFSET 1),
+                (SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       NULL,
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), false;
+
+-- ── INCIDENCIAS — CASO A: ya resuelta (completada) ───────────────────────────
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Limpieza de logs legacy', NULL, 'en_progreso', 'planificada', 'media', DATE '2026-04-02', '202614', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Incidencia: fallo de VPN', 'Usuario reportó caída de VPN. Se restableció el servicio.',
+       'completada', 'no_planificada', 'alta',
+       CURRENT_DATE,
+       to_char(CURRENT_DATE, 'IYYY') || lpad(to_char(CURRENT_DATE, 'IW'), 2, '0'),
+       now() - interval '1 hour',
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       NULL,
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), true;
+
+-- ── INCIDENCIAS — CASO B: pendiente de atender ────────────────────────────────
 
 INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Renovar certificados', NULL, 'bloqueada', 'planificada', 'alta', DATE '2026-04-03', '202614', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+SELECT 'SEED | Incidencia: sin tinta impresora', 'Impresora de RR.HH. sin tinta. Pendiente de compra.',
+       'pendiente', 'no_planificada', 'baja',
+       CURRENT_DATE,
+       to_char(CURRENT_DATE, 'IYYY') || lpad(to_char(CURRENT_DATE, 'IW'), 2, '0'),
+       NULL,
+       COALESCE((SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1),
+                (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1)),
+       NULL,
+       (SELECT id FROM public.usuario WHERE rol='jefe' LIMIT 1), true;
 
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Informe semanal', NULL, 'atrasada', 'planificada', 'baja', DATE '2026-03-28', '202613', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
+-- ── NOTAS DE BITÁCORA ─────────────────────────────────────────────────────────
 
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Imprevisto: fallo de VPN', 'Registro automático', 'completada', 'no_planificada', 'media', DATE '2026-04-17', '202616', TIMESTAMPTZ '2026-04-17T08:00:00Z',
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), true;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Imprevisto: reunión urgente', NULL, 'completada', 'no_planificada', 'alta', DATE '2026-04-16', '202616', TIMESTAMPTZ '2026-04-16T18:00:00Z',
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), true;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Investigar herramienta X', NULL, 'pendiente', 'libre', 'baja', NULL, NULL, NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Refactor módulo auth', NULL, 'pendiente', 'libre', 'alta', NULL, NULL, NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Idea: dashboard métricas', NULL, 'pendiente', 'libre', 'media', NULL, NULL, NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Pair programming', NULL, 'pendiente', 'planificada', 'media', DATE '2026-04-19', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Code review PR #120', NULL, 'en_progreso', 'planificada', 'alta', DATE '2026-04-20', '202616', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Reducir incidentes de despliegue' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Deploy staging', NULL, 'completada', 'planificada', 'media', DATE '2026-04-12', '202615', TIMESTAMPTZ '2026-04-12T15:00:00Z',
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Mejorar documentación interna' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Monitoreo fin de semana', NULL, 'cancelada', 'planificada', 'baja', DATE '2026-04-05', '202614', NULL,
-       COALESCE((SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1), (SELECT id FROM public.usuario WHERE rol = 'miembro' LIMIT 1), (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1)), NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.tarea (titulo, descripcion, estado, tipo, prioridad, fecha_planificada, semana_planificada, fecha_completada, asignado_a, objetivo_id, creado_por, es_imprevisto)
-SELECT 'SEED | Capacitación seguridad', NULL, 'pendiente', 'planificada', 'alta', DATE '2026-04-21', '202616', NULL,
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1),
-       (SELECT id FROM public.objetivo WHERE titulo = 'SEED | Mejorar documentación interna' LIMIT 1),
-       (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1), false;
-
-INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
-SELECT 'SEED | Daily equipo', 'reunion', TIMESTAMPTZ '2026-04-18T09:00:00Z', TIMESTAMPTZ '2026-04-18T09:30:00Z', u.id, false
-FROM (SELECT id FROM public.usuario WHERE activo = true ORDER BY created_at LIMIT 1) u;
-
-INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
-SELECT 'SEED | Entrega informe', 'entrega', TIMESTAMPTZ '2026-04-19T14:00:00Z', TIMESTAMPTZ '2026-04-19T15:00:00Z', u.id, false
-FROM (SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 0) u;
-
-INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
-SELECT 'SEED | Bloque concentración', 'personal', TIMESTAMPTZ '2026-04-20T08:00:00Z', TIMESTAMPTZ '2026-04-20T12:00:00Z', u.id, false
-FROM (SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1) u;
-
-INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
-SELECT 'SEED | Revisión con proveedor', 'otro', TIMESTAMPTZ '2026-04-22T16:00:00Z', TIMESTAMPTZ '2026-04-22T17:00:00Z', u.id, false
-FROM (SELECT id FROM public.usuario WHERE rol = 'jefe' LIMIT 1) u;
-
+-- Nota que quedará como nota (sin convertir)
 INSERT INTO public.nota_bitacora (contenido, usuario_id, objetivo_id, visibilidad)
-SELECT 'SEED | Avance en despliegues: sin incidencias.', u.id, o.id, 'todos'
-FROM (SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1) u,
+SELECT 'SEED | Avance en despliegues sin incidencias esta semana.', u.id, o.id, 'todos'
+FROM (SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1) u,
      (SELECT id FROM public.objetivo WHERE titulo LIKE 'SEED |%' ORDER BY created_at LIMIT 1) o;
 
+-- Nota solo para jefe
 INSERT INTO public.nota_bitacora (contenido, usuario_id, objetivo_id, visibilidad)
-SELECT 'SEED | Riesgo: dependencia externa bloqueada.', u.id, NULL, 'solo_jefe'
-FROM (SELECT id FROM public.usuario WHERE rol = 'miembro' ORDER BY created_at LIMIT 1 OFFSET 1) u;
+SELECT 'SEED | Riesgo: dependencia externa bloqueada por proveedor.', u.id, NULL, 'solo_jefe'
+FROM (SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1 OFFSET 1) u
+WHERE EXISTS (SELECT 1 FROM public.usuario WHERE rol='miembro' LIMIT 1 OFFSET 1);
+
+-- Ideas que antes eran tareas 'libre' — ahora viven en bitácora
+INSERT INTO public.nota_bitacora (contenido, usuario_id, objetivo_id, visibilidad)
+SELECT 'SEED | Idea: investigar herramienta X para monitoreo de red.', u.id, NULL, 'privado'
+FROM (SELECT id FROM public.usuario WHERE rol='jefe' ORDER BY created_at LIMIT 1) u;
 
 INSERT INTO public.nota_bitacora (contenido, usuario_id, objetivo_id, visibilidad)
-SELECT 'SEED | Nota privada de seguimiento personal.', u.id, NULL, 'privado'
-FROM (SELECT id FROM public.usuario ORDER BY created_at LIMIT 1) u;
+SELECT 'SEED | Idea: refactorizar módulo de autenticación cuando haya tiempo.', u.id, NULL, 'privado'
+FROM (SELECT id FROM public.usuario WHERE rol='jefe' ORDER BY created_at LIMIT 1) u;
+
+INSERT INTO public.nota_bitacora (contenido, usuario_id, objetivo_id, visibilidad)
+SELECT 'SEED | Idea: armar dashboard de métricas para la reunión mensual.', u.id, NULL, 'privado'
+FROM (SELECT id FROM public.usuario WHERE rol='jefe' ORDER BY created_at LIMIT 1) u;
+
+-- ── EVENTOS ───────────────────────────────────────────────────────────────────
+
+INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
+SELECT 'SEED | Daily equipo',
+       'reunion',
+       (CURRENT_DATE + 1)::timestamptz + interval '9 hours',
+       (CURRENT_DATE + 1)::timestamptz + interval '9 hours 30 minutes',
+       u.id, false
+FROM (SELECT id FROM public.usuario WHERE activo=true ORDER BY created_at LIMIT 1) u;
+
+INSERT INTO public.evento (titulo, tipo, fecha_inicio, fecha_fin, usuario_id, es_recurrente)
+SELECT 'SEED | Entrega informe mensual',
+       'entrega',
+       (CURRENT_DATE + 2)::timestamptz + interval '14 hours',
+       (CURRENT_DATE + 2)::timestamptz + interval '15 hours',
+       u.id, false
+FROM (SELECT id FROM public.usuario WHERE rol='miembro' ORDER BY created_at LIMIT 1) u;
+
+-- ── LOG DE ACCIONES ───────────────────────────────────────────────────────────
 
 INSERT INTO public.log_accion (tarea_id, usuario_id, tipo_accion, valor_anterior, valor_nuevo, justificacion, leido_por_jefe)
-SELECT t.id, t.creado_por, 'reprogramada', '{"fecha_planificada":"2026-04-01"}'::jsonb, '{"fecha_planificada":"2026-04-10"}'::jsonb, 'SEED | Replanificación por cambio de prioridad.', false
+SELECT t.id, t.creado_por,
+       'reprogramada',
+       '{"fecha_planificada": "hace una semana"}'::jsonb,
+       jsonb_build_object('fecha_planificada', CURRENT_DATE - 7),
+       'SEED | Replanificación por cambio de prioridad del cliente.',
+       false
 FROM public.tarea t WHERE t.titulo = 'SEED | Auditoría de accesos' LIMIT 1;
 
 INSERT INTO public.log_accion (tarea_id, usuario_id, tipo_accion, valor_anterior, valor_nuevo, justificacion, leido_por_jefe)
-SELECT t.id, t.creado_por, 'cancelada', '{"estado":"pendiente"}'::jsonb, '{"estado":"cancelada"}'::jsonb, 'SEED | Objetivo dejó de aplicar.', false
-FROM public.tarea t WHERE t.titulo = 'SEED | Monitoreo fin de semana' LIMIT 1;
+SELECT t.id, t.creado_por,
+       'cancelada',
+       '{"estado": "pendiente"}'::jsonb,
+       '{"estado": "cancelada"}'::jsonb,
+       'SEED | Objetivo cambió de alcance, tarea ya no aplica.',
+       false
+FROM public.tarea t WHERE t.titulo = 'SEED | Cancelada de ejemplo' LIMIT 1;
 
 COMMIT;

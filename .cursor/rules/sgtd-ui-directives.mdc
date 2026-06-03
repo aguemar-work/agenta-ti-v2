@@ -1,48 +1,143 @@
 ---
-description: Directivas globales de layout, tipografía, cards, botones y UX de arrastre (SGTD web).
+description: Directivas globales de layout, componentes, UX y patrones UI (Nexora V4)
 globs: web/src/**/*.tsx, web/src/**/*.css
+alwaysApply: true
 ---
 
-# UI / layout SGTD
+# UI / Layout Nexora V4
 
-## Contenedor y sidebar
+## Contenedor raíz de página
 
-- Cada vista bajo el `Outlet` de `AppShell` debe usar como **raíz** la constante `APP_PAGE_CLASS` (`web/src/lib/appLayout.ts`): `mc-module mx-auto w-full max-w-[1400px] flex flex-col gap-6`. No usar otros `max-w-*` en páginas de módulo.
-- Sidebar flotante: el contenido principal usa **margen izquierdo fijo** al ancho del sidebar colapsado (`mc-app-column`, `mc-sidebar-floating`).
+Cada vista bajo el `Outlet` de `AppShell` debe usar como **raíz** la constante `APP_PAGE_CLASS` de `src/lib/appLayout.ts`:
 
-## Tipografía (cabecera de página)
+```
+mc-module flex w-full flex-1 min-h-0 flex-col gap-6
+```
 
-- Un solo **`<h1>`** por vista (título del módulo).
-- Un **`<h2>`** (o h3 si aplica) para **subtítulo breve** o **rango de fechas**. Sin párrafos descriptivos largos en la cabecera.
-- Títulos de bloque dentro de la página (notas, tablas, secciones) usar **`<div>`** con clases de énfasis, no duplicar jerarquía `h1`–`h2` en cada sección.
+Sin `max-w-*` en la raíz de módulo (layout líquido). Solo en modales/forms localizados.
 
-## Cards y botones
+## Cabecera de página
 
-- Tarjetas de fila de tarea: **`.mc-task-item`** (lista / backlog / columnas) y **`.mc-task-kanban`** (tablero): mismo `border-radius` (`--mc-radius-lg`), `padding` (`--mc-space-5`), `box-shadow` (`--mc-card-shadow`), borde `1px solid`.
-- Eventos / notas en columnas tipo HOY: **`.mc-entity-card`** (misma cápsula).
-- Variante card suelta de `TaskItem`: **`.mc-task-card`**.
-- Contenedores de módulo: `mc-card`, `mc-hoy-col`, `mc-kpi-card`, `mc-kanban-board`, `mc-semana-backlog` comparten tokens de sombra/radio coherentes.
-- Primarias: `mc-btn`. Secundarias: `mc-btn-ghost` / `mc-btn-secondary`.
+- Usar `<PageHeader title subtitle left actions />` de `components/layout/PageHeader.tsx`
+- **Un solo `<h1>`** por vista (título del módulo)
+- **Un solo `<h2>`** para subtítulo breve o rango de fechas — no párrafos descriptivos largos
+- Títulos de bloque internos: usar `<div>` con clases de énfasis, no duplicar jerarquía h1/h2
 
-## HOY
+## Acción primaria
 
-- Completar: modal con resumen (`ModalCompletarTarea` + `completarTareaConResumen`).
-- Incidencias: histórico completado; sin completar desde esa columna.
-- Bitácora: **+ Nueva nota** / input rápido (`insertarNotaBitacoraRapida`).
+- **`<Button variant="primary">`** para el CTA principal de cada página (uno por vista máximo)
+- Slot `actions` del `PageHeader` es el lugar correcto para la acción primaria
+- Ejemplos: "Nueva tarea" en Mi Semana, "Nuevo objetivo", "Nueva OT"
+- Acciones secundarias por fila/columna → `variant="ghost"`
 
-## MI SEMANA
+## Filtros
 
-- Subtítulo (h2): **Semana dd/MM/AAAA - dd/MM/AAAA** (fechas locales).
-- Modal: pestañas **Tarea | Evento**; tarea → prioridad + objetivo; evento → horas + recurrencia.
+- `<FilterBar>` con sub-componentes `.Pills` / `.Select` / `.Date` / `.Action`
+- Posición: bajo el header, antes del contenido
 
-## OBJETIVOS
+## Cards y tarjetas de tarea
 
-- **Nuevo objetivo**; detalle con `getTareasPorObjetivo` y alta con `objetivo_id`.
+| Componente | Uso |
+|-----------|-----|
+| `.mc-task-item` | Lista / backlog / columnas de semana |
+| `.mc-entity-card` | Eventos y notas en columnas tipo HOY |
+| `.mc-card` | Contenedores de sección |
+| `.mc-kpi-card` | KPI en Métricas |
 
-## PLANIFICACIÓN (jefe)
+Mismo `border-radius` (`--mc-radius-lg`), `padding` (`--mc-space-5`), borde `1px solid`.
+**Prohibido** más de 1 nivel de `.mc-card` anidado.
 
-- Sin duplicar KPIs de Métricas; carga por miembro + `log_accion` con **Marcar como leído**.
+## Modales
 
-## Drag and drop
+- Siempre `<Modal>` de `components/ui/Modal.tsx` (portalado, scroll lock, focus trap)
+- `<CancelButton>` o `variant="ghost"` para cancelar
+- Confirmaciones destructivas: siempre `<JustificacionField>` con mínimo ≥10 chars
 
-- Umbral **10px**; overlay `mc-drag-overlay-card`; placeholder `mc-drag-placeholder`; transiciones `--mc-transition-layout`.
+## Justificación obligatoria
+
+`<JustificacionField>` con validación visible para:
+- Bloquear tarea
+- Cancelar tarea
+- Reprogramar tarea
+- Eliminar tarea
+
+## Error boundaries
+
+- `<SectionErrorBoundary label="...">` envuelve cada sección/ruta
+- `AppErrorBoundary` (class component) en nivel global en `main.tsx`
+
+## Módulo Mi Semana
+
+- Subtítulo: rango **dd/MM/AAAA – dd/MM/AAAA** en cabecera (texto secundario)
+- Contadores de estado: **inline** en cabecera (`.mc-misemana-stats`), no tarjetas KPI
+- Jefe: «Ver semana de» solo en menú secundario (`⋯`); miembro ve siempre su semana
+- Notas: **drawer** cerrado por defecto; botón «Notas» en cabecera
+- Grilla 6 columnas (desktop); móvil: un día + swipe entre días
+- Columna HOY: `--mc-color-surface-elevated`, cabecera negrita + punto azul (`--mc-color-accent`)
+- Tarjeta `.mc-semana-task-card--minimal`: sin descripción visible; badge solo si estado ≠ `pendiente`
+- Pie de columna: `.mc-semana-col-resumen`; leyenda: `.mc-misemana-leyenda` bajo la grilla
+- Modal de creación: pestañas **Tarea | Evento**
+- Incidencias: fila en columna del día actual (+ enlace «Registrar incidencia»)
+
+## Módulo Objetivos
+
+- Contadores inline en cabecera (`readOnly`); sin sidebar permanente
+- Tabla a ancho completo; clic en fila abre `ObjetivoDetallePanel` (drawer / pantalla móvil)
+- Columna Progreso: `ObjetivosProgresoInfo` (tooltip con fórmula ponderada)
+- Leyenda de riesgo: `.mc-objetivos-leyenda` al pie de la página
+- Paginación cuando la lista supera 15 filas
+
+## Módulo Órdenes de Trabajo
+
+- Contadores inline en cabecera (`MiSemanaStatsInline` readOnly)
+- Tabla: Número + badge estado · Descripción (badge **Urgente** rojo solo si aplica) · Fecha
+- Sin columnas Solicitado por / Área destino en tabla — van al panel lateral
+- `OTFlujoEstados`: una línea de texto sin fondo (sobre la tabla)
+- Panel lateral al seleccionar fila (desktop); móvil: lista + swipe acciones + detalle pantalla completa
+- Footer borrador en `OTFormModal` sin cambios
+
+## Módulo Métricas (Jefe)
+
+- Hero `.mc-metricas-hero`: % cumplimiento + **único** delta vs semana anterior
+- Resumen `.mc-metricas-resumen`: números limpios sin delta ni iconos
+- Barras apiladas `.mc-metricas-chart` + donut OT compacto (máx. 150px) `.mc-metricas-donut-ot`
+- Comparativa con `.mc-metricas-avatar` (iniciales)
+- Objetivos `.mc-metricas-objetivo-card` compactos al pie
+- Sin `ValuePropositionBanner` — contexto en subtítulo del header
+
+## Módulo Planificación (Jefe)
+
+- Heatmap: solo número en celda + color de saturación (0 / 1–2 / 3–4 / 5–6 / 7+)
+- Fila resumen equipo: texto gris `8 pend · 3 en prog` — sin pills de color
+- Footer: «Ver actividad del equipo →» abre drawer (actividad, justificaciones, incidencias)
+- Sin KPI cards, feed ni paneles laterales en vista principal
+- Móvil: lista por miembro → días verticales al seleccionar
+- Clic en celda: modal detalle (jefe puede desbloquear / devolver / crear tarea)
+
+## Módulo Objetivos
+
+- Panel de tareas vinculadas: `getTareasPorObjetivo`
+- Nueva tarea vinculada incluye `objetivo_id` automáticamente
+
+## Drag and Drop
+
+- Pointer: **8px** de desplazamiento antes de activar; touch: **250ms** delay + tolerance **5** (`useSemanaDnDSensors`)
+- Overlay: clase `mc-drag-overlay-card`
+- Placeholder: clase `mc-drag-placeholder`
+- Transiciones: `--mc-transition-layout`
+- Solo en Mi Semana (mover tareas entre días)
+
+## Tablas
+
+- Cabecera: texto 10–11px, `uppercase`, `letter-spacing: 0.06em`, color `--mc-color-text-secondary`
+- Aplicar consistentemente en todas las tablas (hallazgo V-04 de auditoría)
+
+## Empty states
+
+- Estructura consistente: ícono + título + descripción corta
+- Sin mezclar versiones distintas entre módulos (hallazgo V-05 de auditoría)
+
+## KPI cards
+
+- Usar componente `<KpiCard>` unificado — no reinventar por página (hallazgo V-06 de auditoría)
+- No mezclar énfasis de color entre KPIs del mismo tipo

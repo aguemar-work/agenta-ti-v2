@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { bloquearTarea, reprogramarTareaConLog } from '@/hooks/useTareas';
+import { bloquearTarea, reprogramarTareaConLog } from '@/api/semana';
 import { useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
@@ -94,7 +94,7 @@ export function useSemanaModales({
       });
       setCompletarTareaId(null);
       toast.success('Tarea finalizada');
-      await invalidateRelatedQueries(qc, ['semana', 'tablero', 'tareas-hoy', 'planificacion']);
+      await invalidateRelatedQueries(qc, ['semana', 'tablero', 'tareas-hoy', 'planificacion', 'ordenes-trabajo']);
     } catch (err) {
       console.error('[confirmarCompletar]', err);
       toast.error('No se pudo completar la tarea.');

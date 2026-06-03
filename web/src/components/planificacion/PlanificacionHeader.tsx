@@ -1,5 +1,4 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { FilterBar } from '@/components/ui/FilterBar';
 import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import { inicioSemanaIso } from '@/lib/semanas';
 
@@ -9,10 +8,6 @@ type Props = {
   onSemanaAnterior: () => void;
   onSemanaSiguiente: () => void;
   onIrHoy: () => void;
-  periodoDesde: string;
-  periodoHasta: string;
-  onPeriodoDesde: (v: string) => void;
-  onPeriodoHasta: (v: string) => void;
 };
 
 export function PlanificacionHeader({
@@ -21,21 +16,15 @@ export function PlanificacionHeader({
   onSemanaAnterior,
   onSemanaSiguiente,
   onIrHoy,
-  periodoDesde,
-  periodoHasta,
-  onPeriodoDesde,
-  onPeriodoHasta,
 }: Props) {
   const hoyLunes = inicioSemanaIso(new Date()).getTime() === lunes.getTime();
 
   return (
-    <header className="mc-misemana-header mc-plan-header">
+    <header className="mc-misemana-header">
       <div className="mc-misemana-header__left">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mc-plan-header__title-row">
           <h1 className="mc-misemana-header__title m-0">Planificación del equipo</h1>
-          <span className="mc-badge mc-badge-secondary text-[10px] font-semibold uppercase tracking-wide">
-            Solo lectura
-          </span>
+          <span className="mc-badge mc-badge-secondary mc-plan-header__badge">Solo lectura</span>
         </div>
         <p className="m-0 text-sm text-[var(--mc-color-text-secondary)]">
           Carga operativa de la semana y rendimiento del período
@@ -54,11 +43,6 @@ export function PlanificacionHeader({
             <ChevronRight size={18} strokeWidth={2} aria-hidden />
           </button>
         </div>
-      </div>
-      <div className="mc-plan-header__periodo" role="group" aria-label="Período de rendimiento">
-        <span className="mc-plan-header__periodo-label">Período rendimiento</span>
-        <FilterBar.Date id="plan-desde" label="Desde" value={periodoDesde} onChange={onPeriodoDesde} />
-        <FilterBar.Date id="plan-hasta" label="Hasta" value={periodoHasta} onChange={onPeriodoHasta} />
       </div>
     </header>
   );

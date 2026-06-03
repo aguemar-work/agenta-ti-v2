@@ -1,9 +1,13 @@
 import { getInsforge } from '@/lib/insforge';
+import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import type { LogAccion } from '@/types';
 
 function parseLog(row: Record<string, unknown>): LogAccion {
   return row as unknown as LogAccion;
 }
+
+/** Tipos de log que el jefe debe revisar (acciones con justificación obligatoria). */
+const TIPOS_REVISION_JEFE = ['bloqueada', 'cancelada', 'reprogramada', 'eliminada'] as const;
 
 /** Entradas de log con justificación pendiente de revisión por el jefe. */
 export async function getJustificacionesPendientesJefe(): Promise<LogAccion[]> {
@@ -12,10 +16,14 @@ export async function getJustificacionesPendientesJefe(): Promise<LogAccion[]> {
     .from('log_accion')
     .select('*')
     .eq('leido_por_jefe', false)
+    .in('tipo_accion', [...TIPOS_REVISION_JEFE])
+    .not('justificacion', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(80);
+    .limit(40);
   if (error) throw error;
-  return (data ?? []).map((r) => parseLog(r as Record<string, unknown>));
+  return (data ?? [])
+    .map((r) => parseLog(r as Record<string, unknown>))
+    .filter((l) => (l.justificacion?.trim().length ?? 0) >= MIN_JUSTIFICACION_CHARS);
 }
 
 /** Historial de acciones de una tarea (más reciente primero). */
@@ -31,9 +39,20 @@ export async function getLogsPorTarea(tareaId: string, limit = 40): Promise<LogA
   return (data ?? []).map((r) => parseLog(r as Record<string, unknown>));
 }
 
-export async function marcarLogLeidoPorJefe(logId: string): Promise<void> {
-  const insforge = getInsforge();
-  const { error } = await insforge.database.from('log_accion').update({ leido_por_jefe: true }).eq('id', logId);
+/** El jefe acepta la justificación del miembro; la tarea no cambia. */
+export async function aceptarJustificacionJefe(logId: string): Promise<void> {
+  const { error } = await getInsforge().database.rpc('sgtd_aceptar_justificacion_jefe', {
+    p_log_id: logId,
+  });
+  if (error) throw error;
+}
+
+/** El jefe devuelve la tarea a pendiente con nota; marca el log original como revisado. */
+export async function devolverJustificacionJefe(logId: string, notaJefe: string): Promise<void> {
+  const { error } = await getInsforge().database.rpc('sgtd_devolver_justificacion_jefe', {
+    p_log_id: logId,
+    p_nota_jefe: notaJefe.trim(),
+  });
   if (error) throw error;
 }
 

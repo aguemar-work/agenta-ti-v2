@@ -185,6 +185,12 @@ export const tareaHandlers = [
   http.post(`${BASE}/rpc/sgtd_snap_tarea_hoy`, () =>
     HttpResponse.json(null),
   ),
+  http.post(`${BASE}/rpc/sgtd_convertir_nota_en_tarea`, () =>
+    HttpResponse.json(MOCK_IDS.tarea1),
+  ),
+  http.post(`${BASE}/rpc/sgtd_convertir_nota_en_evento`, () =>
+    HttpResponse.json(MOCK_IDS.evento1),
+  ),
 
   // PATCH tabla tarea (actualizarTarea)
   http.patch(`${BASE}/records/tarea`, () =>

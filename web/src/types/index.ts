@@ -121,6 +121,8 @@ export interface LogAccion {
   valor_nuevo: Json | null;
   justificacion: string | null;
   leido_por_jefe: boolean;
+  /** Tras revisión del jefe: aceptado | devuelto */
+  resultado_revision_jefe?: 'aceptado' | 'devuelto' | null;
   created_at: string;
 }
 

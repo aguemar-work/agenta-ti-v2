@@ -49,7 +49,7 @@ export function PlanificacionHistorialCompleto({
   if (!open) return null;
 
   return (
-    <section id="plan-historial" className="mc-card mc-plan-seccion" aria-labelledby="plan-historial-title">
+    <section id="plan-historial" className="mc-card mc-plan-panel mc-plan-panel--fill" aria-labelledby="plan-historial-title">
       <div className="flex items-center justify-between gap-2">
         <h2 id="plan-historial-title" className="mc-plan-seccion__title m-0">
           Actividad del equipo

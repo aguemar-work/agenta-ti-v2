@@ -1,29 +1,50 @@
 ---
-description: SGTD - RBAC Jefe/Miembro; seguridad en backend y UI
+description: Nexora/SGTD — RBAC Jefe/Miembro; seguridad en backend y UI
 alwaysApply: true
 ---
 
-# RBAC SGTD
-## Matriz (resumen)
+# RBAC Nexora V4
+
+## Roles
+
+| Rol | Código | Descripción |
+|-----|--------|-------------|
+| Jefe | `'jefe'` | Supervisor. Acceso total. |
+| Miembro | `'miembro'` | Técnico. Solo sus datos. |
+
+## Matriz de permisos
+
 | Acción | Jefe | Miembro |
 |--------|:----:|:-------:|
-| Ver HOY de cualquier usuario | sí | no |
-| Planificar semana propia | sí | sí |
-| Vista PLANIFICACIÓN | sí | no |
-| Editar tareas de otros | sí | no |
-| CRUD objetivos | sí | no |
-| Métricas de todo el equipo | sí | no |
-| Log de acciones | sí | no |
-| Registrar imprevistos | sí | sí |
-| Crear tareas en objetivos | sí | sí |
+| Ver tareas de todo el equipo | ✅ | Solo propias |
+| Crear tareas para otros | ✅ | Solo auto-asignación |
+| Planificar semana propia | ✅ | ✅ |
+| Vista Planificación multi-miembro | ✅ | ❌ |
+| Aprobar / rechazar OT | ✅ | ❌ |
+| CRUD objetivos (asignar a cualquiera) | ✅ | Solo auto-responsable |
+| Métricas comparativas del equipo | ✅ | ❌ |
+| Ver log de acciones del equipo | ✅ | ❌ |
+| Gestionar tipos de trabajo OT | ✅ | ❌ |
+| Registrar imprevistos | ✅ | ✅ |
+| Crear tareas en objetivos | ✅ | ✅ (auto-asignadas) |
 
+## Implementación frontend
 
-## Tablero (Miembro)
+- `ProtectedRoute`: redirige a `/login` si no hay sesión
+- `JefeRoute`: redirige a `/semana` si `rol !== 'jefe'`
+- `selectEsJefe(authStore)`: selector Zustand para condicionales en UI
+- Ocultar acciones de jefe en UI con `esJefe && ...` — esto es UX, no seguridad real
 
-Ve **todas** las tareas; solo edita/arrastra las **propias**. Las ajenas: solo lectura + candado en UI (`CONTEXT.md`).
+## Implementación backend (fuente de verdad)
+
+- RLS habilitado en **todas** las tablas (7 tablas principales + OT)
+- Función `sgtd_es_jefe()` (SECURITY DEFINER): retorna boolean verificando `auth.uid()` en `usuario`
+- Políticas `sgtd_jefe_*_all`: acceso FOR ALL a todas las tablas para jefe
+- Ocultar en UI **no sustituye** la autorización en datos — el RLS es el enforcement real
 
 ## Reglas de implementación
 
-1. **InsForge / Postgres:** políticas **RLS** (o equivalente) deben reflejar esta matriz. Ocultar en UI no sustituye autorización en datos.
-2. **JWT / sesión:** identificar `usuario.rol` en claims o tabla `usuario`; no confiar en flags solo en `localStorage`.
-3. **PLANIFICACIÓN:** solo Jefe; la UI no debe permitir crear/editar tareas desde esa vista.
+1. **Nunca confiar solo en el frontend** — toda restricción de jefe debe estar en RLS
+2. **Rol desde `public.usuario`** — no desde claims JWT ni localStorage
+3. **Vista Planificación:** solo lectura para el jefe — no permite crear/editar tareas desde ahí
+4. Si se añade una acción nueva restringida a jefe: crear política RLS + `JefeRoute` o guard en UI

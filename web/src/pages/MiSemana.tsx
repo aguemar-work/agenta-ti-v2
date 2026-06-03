@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import {
@@ -11,6 +12,8 @@ import { MiSemanaToolbar } from '@/components/semana/MiSemanaToolbar';
 import { useSwipeDiaSemana } from '@/hooks/useSwipeDiaSemana';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
+import { ModalConvertirNota } from '@/components/semana/ModalConvertirNota';
+import { NotasDrawer } from '@/components/semana/NotasDrawer';
 import { Modal } from '@/components/ui/Modal';
 import { ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { ModalBloquear } from '@/components/tareas/ModalBloquear';
@@ -42,6 +45,7 @@ const CONTEO_CONFIG = [
 type FiltroEstado = (typeof CONTEO_CONFIG)[number]['key'];
 
 export function MiSemana() {
+  const navigate = useNavigate();
   const {
     usuario,
     esJefe,
@@ -66,8 +70,12 @@ export function MiSemana() {
     setModalInc,
     notaRapida,
     setNotaRapida,
+    notaConvertir,
+    setNotaConvertir,
     crearIncidenciaHoy,
     guardarNotaRapida,
+    confirmarConvertirNotaTarea,
+    confirmarConvertirNotaEvento,
     objetivosActivos,
     usuariosAsignables,
     tareaDetalle,
@@ -100,6 +108,7 @@ export function MiSemana() {
     guardarDetalle,
     eliminarDesdeDetalle,
     iniciarDesdeDetalle,
+    generarOtDesdeTarea,
     incidenciasSemana,
   } = useMiSemanaPage();
 
@@ -272,80 +281,27 @@ export function MiSemana() {
         />
       </Suspense>
 
-      {notasDrawerOpen && (
-        <>
-          <div
-            className="mc-drawer-overlay"
-            onClick={() => setNotasDrawerOpen(false)}
-            aria-hidden
-          />
-          <aside
-            id="mc-misemana-notas-drawer"
-            className="mc-drawer-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Notas del día"
-          >
-            <div className="mc-drawer-panel-header">
-              <h2 className="mc-drawer-panel-title">Notas</h2>
-              <button
-                type="button"
-                className="mc-modal-close"
-                onClick={() => setNotasDrawerOpen(false)}
-                aria-label="Cerrar panel de notas"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  aria-hidden
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <div className="mc-drawer-panel-body">
-              {notasHoy.length === 0 ? (
-                <EmptyState compact title="Sin notas" />
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {notasHoy.slice(0, 20).map((n) => (
-                    <div
-                      key={n.id}
-                      className="rounded border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] px-2 py-1.5 text-[11px] text-[var(--mc-color-text)]"
-                    >
-                      {n.contenido.length > 200 ? `${n.contenido.slice(0, 200)}…` : n.contenido}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <textarea
-                rows={3}
-                className="mc-input resize-none text-xs"
-                placeholder="Nota rápida…"
-                value={notaRapida}
-                onChange={(e) => setNotaRapida(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) guardarNotaRapida();
-                }}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={guardarNotaRapida}
-                disabled={!notaRapida.trim()}
-              >
-                Guardar nota
-              </Button>
-            </div>
-          </aside>
-        </>
-      )}
+      <NotasDrawer
+        open={notasDrawerOpen}
+        notas={notasHoy}
+        notaRapida={notaRapida}
+        usuarioId={uid}
+        onClose={() => setNotasDrawerOpen(false)}
+        onNotaRapidaChange={setNotaRapida}
+        onGuardarNota={guardarNotaRapida}
+        onConvertir={setNotaConvertir}
+      />
+
+      <ModalConvertirNota
+        open={notaConvertir !== null}
+        nota={notaConvertir}
+        hoyYmd={hoyYmd}
+        usuariosAsignables={usuariosAsignables}
+        asignadoPorDefectoId={uid}
+        onClose={() => setNotaConvertir(null)}
+        onConvertirTarea={confirmarConvertirNotaTarea}
+        onConvertirEvento={confirmarConvertirNotaEvento}
+      />
 
       <ModalMiSemana
         open={modal !== null}
@@ -419,11 +375,19 @@ export function MiSemana() {
         tarea={tareaDetalle}
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
+        ot={tareaDetalle ? ordenesPorTarea.get(tareaDetalle.id) ?? null : null}
         readOnly={Boolean(tareaDetalle && !esJefe && tareaDetalle.asignado_a !== usuario.id)}
         onClose={() => setDetalleTareaId(null)}
         onGuardar={guardarDetalle}
         onEliminar={eliminarDesdeDetalle}
         onIniciar={iniciarDesdeDetalle}
+        onGenerarOt={
+          tareaDetalle && puedeGestionar(tareaDetalle) ? generarOtDesdeTarea : undefined
+        }
+        onOtClick={(ot) => {
+          setDetalleTareaId(null);
+          navigate('/ordenes-trabajo', { state: { abrirOtId: ot.id } });
+        }}
         onCompletar={(t) => {
           setCompletarTareaId(t.id);
           setDetalleTareaId(null);
