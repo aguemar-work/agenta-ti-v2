@@ -20,13 +20,13 @@ import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { useMiSemanaPage } from '@/hooks/useMiSemanaPage';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { Calendar } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
+import type { Tarea } from '@/types';
 
 const MiSemanaGrillaDnD = lazy(() =>
   import('@/components/semana/MiSemanaGrillaDnD').then((m) => ({ default: m.MiSemanaGrillaDnD })),
@@ -381,9 +381,9 @@ export function MiSemana() {
         onGuardar={guardarDetalle}
         onEliminar={eliminarDesdeDetalle}
         onIniciar={iniciarDesdeDetalle}
-        onGenerarOt={
-          tareaDetalle && puedeGestionar(tareaDetalle) ? generarOtDesdeTarea : undefined
-        }
+        {...(tareaDetalle && puedeGestionar(tareaDetalle)
+          ? { onGenerarOt: (t: Tarea) => { void generarOtDesdeTarea(t); } }
+          : {})}
         onOtClick={(ot) => {
           setDetalleTareaId(null);
           navigate('/ordenes-trabajo', { state: { abrirOtId: ot.id } });

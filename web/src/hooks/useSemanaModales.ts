@@ -94,7 +94,7 @@ export function useSemanaModales({
       });
       setCompletarTareaId(null);
       toast.success('Tarea finalizada');
-      await invalidateRelatedQueries(qc, ['semana', 'tablero', 'tareas-hoy', 'planificacion', 'ordenes-trabajo']);
+      await invalidateRelatedQueries(qc, ['semana', 'tablero', 'tareas-hoy', 'planificacion', 'ot']);
     } catch (err) {
       console.error('[confirmarCompletar]', err);
       toast.error('No se pudo completar la tarea.');

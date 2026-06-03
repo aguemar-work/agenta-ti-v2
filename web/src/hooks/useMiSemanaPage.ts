@@ -262,7 +262,7 @@ export function useMiSemanaPage() {
         tareaId:       t.id,
         fechaEstimada: t.fecha_planificada ?? hoyYmd,
       });
-      await invalidateRelatedQueries(qc, ['ordenes-trabajo', 'semana']);
+      await invalidateRelatedQueries(qc, ['ot', 'semana']);
       modales.setDetalleTareaId(null);
       navigate('/ordenes-trabajo', { state: { abrirOtId: otId } });
       toast.success('OT creada en borrador');

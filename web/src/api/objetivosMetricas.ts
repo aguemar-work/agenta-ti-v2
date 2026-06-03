@@ -32,6 +32,19 @@ function acumularEstadoEfectivo(
   else if (est === 'reprogramada') buckets.reprogramadas += 1;
 }
 
+/** Solo contadores usados en la comparativa por miembro (sin pendientes / en progreso). */
+function acumularEstadoEfectivoComparativa(
+  t: TareaParaEstadoEfectivo,
+  hoyYmd: string,
+  buckets: Omit<KpisComparativaMiembro, 'usuarioId' | 'nombre'>,
+): void {
+  const est = estadoEfectivoTablero(t, hoyYmd);
+  if (est === 'completada') buckets.completadas += 1;
+  else if (est === 'atrasada') buckets.atrasadas += 1;
+  else if (est === 'bloqueada') buckets.bloqueadas += 1;
+  else if (est === 'reprogramada') buckets.reprogramadas += 1;
+}
+
 export type ObjetivoConProgreso = Objetivo & {
   total_tareas: number;
   completadas: number;
@@ -263,7 +276,7 @@ export async function getKpisComparativa(
   for (const t of list) {
     const row = byUser.get(t.asignado_a);
     if (!row) continue;
-    acumularEstadoEfectivo(t, hoyYmd, row);
+    acumularEstadoEfectivoComparativa(t, hoyYmd, row);
   }
 
   return (usuarios ?? []).map((u: { id: string; nombre: string }) => ({
