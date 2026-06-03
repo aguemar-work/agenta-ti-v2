@@ -5,6 +5,7 @@
 
 import { getInsforge } from '@/lib/insforge';
 import { parseEvento, parseNota, parseTarea } from '@/lib/schemas';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Evento, NotaBitacora, Tarea, TipoEvento, VisibilidadBitacora } from '@/types';
 
@@ -30,7 +31,7 @@ const estadosActivos: Tarea['estado'][] = ['pendiente', 'en_progreso', 'bloquead
 export async function getIncidenciasAbiertas(usuarioId: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('es_imprevisto', true)
@@ -48,7 +49,7 @@ export async function getIncidenciasRangoUsuario(
 ): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('es_imprevisto', true)
@@ -76,7 +77,7 @@ export async function getIncidenciasEquipoPorFechaPlanificada(
   if (ids.length === 0) return [];
 
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('es_imprevisto', true)
     .in('asignado_a', ids)
@@ -92,7 +93,7 @@ export async function getIncidenciasEquipoPorFechaPlanificada(
 export async function getIncidenciasDelDia(usuarioId: string, ymd: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('es_imprevisto', true)
@@ -177,7 +178,7 @@ export async function crearIncidencia(input: CrearIncidenciaInput): Promise<Tare
 
   // La RPC devuelve el UUID; necesitamos leer la tarea completa
   const { data: tarea, error: errTarea } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('id', data as string)
     .single();

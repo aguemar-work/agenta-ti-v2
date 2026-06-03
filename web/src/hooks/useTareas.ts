@@ -8,6 +8,7 @@ import {
 } from '@/api/semana';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { getInsforge } from '@/lib/insforge';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { parseTarea } from '@/lib/schemas';
 import type { Tarea, Usuario } from '@/types';
 
@@ -80,7 +81,7 @@ export function useTareasHoy(asignadoA: string | undefined) {
     queryFn: async () => {
       const insforge = getInsforge();
       const { data, error } = await insforge.database
-        .from('tarea')
+        .from(TAREA_ACTIVA)
         .select('*')
         .eq('asignado_a', asignadoA!)
         .eq('tipo', 'planificada')
@@ -113,7 +114,7 @@ export function useUsuariosParaSelector(esJefe: boolean) {
 export async function completarTarea(tareaId: string): Promise<void> {
   const insforge = getInsforge();
   const { error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .update({ estado: 'completada', fecha_completada: new Date().toISOString() })
     .eq('id', tareaId);
   if (error) throw error;

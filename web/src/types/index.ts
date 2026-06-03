@@ -83,6 +83,8 @@ export interface Tarea {
   es_imprevisto: boolean;
   /** UUID de la nota de bitácora que originó esta tarea (trazabilidad). */
   nota_origen_id: Id | null;
+  /** Soft-delete (migr. 034); null = activa. */
+  eliminada_en?: string | null;
   created_at: string;
   updated_at: string;
 }

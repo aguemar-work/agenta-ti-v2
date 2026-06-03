@@ -8,6 +8,7 @@ import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constant
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { parseEvento, parseTarea } from '@/lib/schemas';
 import { resolveAsignadoA } from '@/lib/tareaAsignacion';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { agregarDias, semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Evento, EstadoTarea, Tarea, TipoEvento } from '@/types';
 
@@ -18,7 +19,7 @@ export async function getTareasSemana(usuarioId: string, semanaISO: string): Pro
   // Las atrasadas de semanas previas tienen semana_planificada distinta pero
   // estado='atrasada', por lo que deben aparecer en la vista Hoy/Semana.
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('tipo', 'planificada')

@@ -1,6 +1,6 @@
 # Migraciones SGTD — `db/migrations/`
 
-Scripts SQL numerados (`002` … `033`) aplicados **manualmente** en InsForge (SQL Editor o CLI). El schema canónico consolidado está en `../schema.sql`.
+Scripts SQL numerados (`002` … `034`) aplicados **manualmente** en InsForge (SQL Editor o CLI). El schema canónico consolidado está en `../schema.sql`.
 
 **Checklist vivo por entorno:** `.cursor/rules/CONTEXT.mdc` → sección **12. Gestión de migraciones**.
 
@@ -207,6 +207,26 @@ npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_names
 - Tarea sin OT → «Generar OT» crea borrador y abre formulario.
 - Completar tarea en progreso → OT vinculada pasa a `cancelada`.
 - Completar OT en ejecución con tarea vinculada → tarea pasa a `completada`.
+
+---
+
+## Migración 034 — validación completa
+
+**Archivo:** `034_soft_delete_tarea.sql`  
+**Negocio:** eliminar tarea = soft-delete (`eliminada_en`); log `eliminada` conserva `tarea_id`; lecturas operativas vía `tarea_activa` (RLS invoker).
+
+### Comprobaciones SQL
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tarea' AND column_name = 'eliminada_en') AS migration_034_ok"
+```
+
+### QA manual (app)
+
+- Eliminar tarea con motivo ≥10 chars → desaparece de Mi Semana; log persiste con `tarea_id`.
+- Planificación → justificación «Eliminación» muestra título (mapa o `valor_anterior`).
+- Tarea soft-deleted con `estado=atrasada` no reaparece en grilla (ni por `.or(estado.eq.atrasada)`).
+- Jefe puede consultar fila en `tarea` (RLS sin cambios) para historial futuro.
 
 ---
 

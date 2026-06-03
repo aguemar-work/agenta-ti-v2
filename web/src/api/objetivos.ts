@@ -1,6 +1,7 @@
 import { getInsforge } from '@/lib/insforge';
 import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { parseTarea } from '@/lib/schemas';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import type { EstadoObjetivo, Objetivo, Tarea } from '@/types';
 
 function parseObjetivo(row: Record<string, unknown>): Objetivo {
@@ -21,7 +22,7 @@ export async function getObjetivosActivos(): Promise<Pick<Objetivo, 'id' | 'titu
 export async function getTareasPorObjetivo(objetivoId: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('objetivo_id', objetivoId)
     .order('updated_at', { ascending: false });

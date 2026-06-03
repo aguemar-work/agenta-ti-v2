@@ -1,6 +1,7 @@
 import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { parseTarea } from '@/lib/schemas';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Tarea, Usuario } from '@/types';
 
@@ -17,7 +18,7 @@ export async function getCargaEquipoSemana(semanaISO: string): Promise<Tarea[]> 
   if (ids.length === 0) return [];
 
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('tipo', 'planificada')
     .eq('semana_planificada', semanaISO)
@@ -41,7 +42,7 @@ export async function getMiembrosActivos(): Promise<Pick<Usuario, 'id' | 'nombre
 export async function getTareasUsuarioDia(usuarioId: string, fecha: string): Promise<Tarea[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('tipo', 'planificada')
@@ -83,7 +84,7 @@ export async function getIncidenciasEquipoSemana(lunes: Date, sabado: Date): Pro
   hasta.setHours(23, 59, 59, 999);
 
   const { data, error } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('*')
     .eq('es_imprevisto', true)
     .in('asignado_a', ids)

@@ -31,6 +31,17 @@ function labelTipo(tipo: string): string {
   return m[tipo] ?? tipo;
 }
 
+/** Título de tarea: mapa vivo, join o snapshot en valor_anterior (logs huérfanos pre-034). */
+function tituloTareaDesdeLog(
+  log: LogAccion,
+  titulosTarea: Record<string, string>,
+): string | null {
+  if (log.tarea_id && titulosTarea[log.tarea_id]) return titulosTarea[log.tarea_id]!;
+  const va = log.valor_anterior as { titulo?: string } | null;
+  const snap = va?.titulo?.trim();
+  return snap || null;
+}
+
 export function PlanificacionJustificaciones({
   logs,
   loading,
@@ -115,9 +126,12 @@ export function PlanificacionJustificaciones({
                           })}
                         </time>
                       </div>
-                      {log.tarea_id && titulosTarea[log.tarea_id] ? (
-                        <p className="mc-plan-revision-card__tarea">{titulosTarea[log.tarea_id]}</p>
-                      ) : null}
+                      {(() => {
+                        const titulo = tituloTareaDesdeLog(log, titulosTarea);
+                        return titulo ? (
+                          <p className="mc-plan-revision-card__tarea">{titulo}</p>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 

@@ -1,6 +1,7 @@
 import { getInsforge } from '@/lib/insforge';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero, type TareaParaEstadoEfectivo } from '@/lib/tableroEstado';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import type { EstadoObjetivo, Objetivo, Tarea } from '@/types';
 
 function parseObjetivo(row: Record<string, unknown>): Objetivo {
@@ -98,7 +99,7 @@ export async function getObjetivosConProgreso(): Promise<ObjetivoConProgreso[]> 
   const objetivos = (objs ?? []).map((r) => parseObjetivo(r as Record<string, unknown>));
 
   const { data: trows, error: e2 } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('id,objetivo_id,estado')
     .not('objetivo_id', 'is', null);
   if (e2) throw e2;
@@ -129,7 +130,7 @@ export async function getKpisUsuario(usuarioId: string): Promise<KpisUsuario> {
   const hoyYmd = hoyYmdMetricas();
 
   const { data: tareas, error: e1 } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('estado,fecha_completada,tipo,fecha_planificada')
     .eq('asignado_a', usuarioId);
   if (e1) throw e1;
@@ -167,7 +168,7 @@ export async function getKpisRango(
   const insforge = getInsforge();
   const hoyYmd = hoyYmdMetricas();
   let q = insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('estado,es_imprevisto,fecha_planificada,tipo')
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
@@ -208,7 +209,7 @@ export async function getKpisPorSemana(
   const insforge = getInsforge();
   const hoyYmd = hoyYmdMetricas();
   let q = insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('estado,semana_planificada,es_imprevisto,fecha_planificada,tipo')
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
@@ -259,7 +260,7 @@ export async function getKpisComparativa(
   if (e1) throw e1;
 
   const { data, error: e2 } = await insforge.database
-    .from('tarea')
+    .from(TAREA_ACTIVA)
     .select('asignado_a,estado,es_imprevisto,fecha_planificada,tipo')
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)

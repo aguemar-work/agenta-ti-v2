@@ -59,6 +59,7 @@ import { publicarEventoUsuario } from '@/lib/realtimePublish';
 import { getInsforge } from '@/lib/insforge';
 
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
@@ -149,7 +150,7 @@ export function useOrdenesTrabajoPage() {
 
       const { data, error } = await getInsforge().database
 
-        .from('tarea')
+        .from(TAREA_ACTIVA)
 
         .select('id,titulo,estado')
 

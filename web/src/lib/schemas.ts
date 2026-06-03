@@ -30,6 +30,7 @@ export const TareaSchema = z.object({
   creado_por:         id,
   es_imprevisto:      z.boolean(),
   nota_origen_id:     idNul,
+  eliminada_en:       z.string().nullable().optional(),
   created_at:         dateStr,
   updated_at:         dateStr,
 });

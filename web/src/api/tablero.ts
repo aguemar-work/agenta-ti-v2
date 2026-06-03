@@ -2,6 +2,7 @@ import { getInsforge } from '@/lib/insforge';
 import { COMPLETADAS_DIAS_LIMITE } from '@/lib/constants';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { parseTarea } from '@/lib/schemas';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { EstadoTarea, Tarea } from '@/types';
@@ -14,7 +15,7 @@ export type FiltrosTablero = {
 
 export async function getTareasTablero(filtros: FiltrosTablero): Promise<Tarea[]> {
   const insforge = getInsforge();
-  let q = insforge.database.from('tarea').select('*');
+  let q = insforge.database.from(TAREA_ACTIVA).select('*');
 
   if (filtros.usuarioId !== 'todos') {
     q = q.eq('asignado_a', filtros.usuarioId);
