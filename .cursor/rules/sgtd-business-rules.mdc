@@ -90,15 +90,19 @@ Solo se cuentan tareas `planificadas` — no `no_planificadas` ni `libres`.
 
 ## 7. Flujo de Órdenes de Trabajo (OT)
 
+**Detalle completo:** `.cursor/rules/sgtd-ot.mdc`
+
 ```
-borrador → pendiente → aprobada → en_ejecucion → completada
-                  ↓ rechazada (jefe)
-         (cualquier estado pre-completada) → cancelada
+borrador → pendiente → aprobada → completada
+              ↓ rechazada (jefe)
+         cancelada (creador / jefe en BD)
 ```
 
-- Solo el jefe puede aprobar/rechazar
-- Número correlativo generado por RPC `generar_numero_ot` — no calcular en frontend
-- Cierre requiere datos del receptor: nombre y DNI (obligatorios); cargo opcional (CHECK migración 028)
+- Sin estado `en_ejecucion` ni paso «Iniciar ejecución» (migración **036**).
+- Número `OT-TI-XXXX` al **enviar** (`sgtd_enviar_ot`), idempotente; borrador sin número.
+- Solo jefe aprueba/rechaza en `pendiente`.
+- Cierre desde `aprobada`: receptor + DNI 8 dígitos (028/036).
+- Sync tarea vinculada: migraciones **033** y **035**.
 
 ---
 

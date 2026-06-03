@@ -35,9 +35,10 @@ Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejec
 - Hooks: `useObjetivosPage` · APIs: `objetivos.ts`, `objetivosMetricas.ts`
 
 ### Órdenes de Trabajo (`/ordenes-trabajo`)
-- Flujo formal con estados y número correlativo.
-- Tipos de trabajo gestionados por el jefe.
-- Impresión de OT: `OTImpresion.tsx`.
+- Flujo formal **4 estados:** `borrador → pendiente → aprobada → completada` (+ terminales).
+- Número al enviar; borrador autoguardado; «Generar OT» desde Mi Semana.
+- Tipos de trabajo gestionados por el jefe. Impresión: `OTImpresion.tsx`.
+- **Reglas detalladas:** `.cursor/rules/sgtd-ot.mdc`
 - Hook: `useOrdenesTrabajoPage` · API: `ordenTrabajo.ts`
 
 ### Métricas (`/metricas`) — Solo Jefe

@@ -94,7 +94,7 @@ Mismo `border-radius` (`--mc-radius-lg`), `padding` (`--mc-space-5`), borde `1px
 - Sin columnas Solicitado por / Área destino en tabla — van al panel lateral
 - `OTFlujoEstados`: una línea de texto sin fondo (sobre la tabla)
 - Panel lateral al seleccionar fila (desktop); móvil: lista + swipe acciones + detalle pantalla completa
-- Footer borrador en `OTFormModal` sin cambios
+- Footer borrador en `OTFormModal` (autoguardado servidor + «Enviar al jefe» vía RPC 036)
 
 ## Módulo Métricas (Jefe)
 

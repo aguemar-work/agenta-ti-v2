@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS public.orden_trabajo (
     )
   ),
   CONSTRAINT ck_ot_pendiente_tiene_numero CHECK (
-    estado = 'borrador'
+    estado IN ('borrador', 'cancelada')
     OR (numero IS NOT NULL AND btrim(numero) <> '')
   )
 );

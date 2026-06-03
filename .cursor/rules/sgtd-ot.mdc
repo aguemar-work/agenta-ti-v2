@@ -1,0 +1,141 @@
+---
+description: Módulo Órdenes de Trabajo (OT) — flujo 4 estados, RPCs, permisos UI vs BD, vínculo tarea
+globs: web/src/api/ordenTrabajo.ts, web/src/hooks/useOrdenesTrabajoPage.ts, web/src/pages/OrdenesTrabajo.tsx, web/src/components/ot/**, web/src/lib/ot*.ts, db/migrations/*ot*.sql, db/migrations/03[6-9]*.sql
+alwaysApply: false
+---
+
+# Módulo: Órdenes de Trabajo (OT)
+
+**Ruta:** `/ordenes-trabajo` · **Hook:** `useOrdenesTrabajoPage` · **API:** `ordenTrabajo.ts`
+
+Checklist de migraciones por entorno: `.cursor/rules/CONTEXT.mdc` §12.
+
+---
+
+## Máquina de estados (4 activos + 2 terminales)
+
+```
+borrador ──enviar──► pendiente ──aprobar──► aprobada ──completar──► completada
+   │                     │
+   └── cancelar          └── rechazar
+       (creador*)            (jefe)
+              ▼                     ▼
+          cancelada            rechazada
+```
+
+\* En UI solo el **creador** cancela borrador/pendiente. En BD el **jefe** puede cancelar más estados vía `sgtd_cancelar_ot` (sin botón dedicado en UI para OT avanzadas).
+
+El estado `en_ejecucion` y el RPC `sgtd_iniciar_ejecucion_ot` fueron **eliminados** (migración **036**). No reintroducir «Iniciar ejecución».
+
+---
+
+## Transiciones y RPCs
+
+| Desde | Acción | Hacia | RPC | Requisitos |
+|-------|--------|-------|-----|------------|
+| `borrador` | Enviar al jefe | `pendiente` | `sgtd_enviar_ot(p_ot_id, p_usuario_id)` | Descripción, área destino, fecha estimada ≥ hoy; genera `OT-TI-XXXX` |
+| `pendiente` | Aprobar | `aprobada` | `sgtd_aprobar_ot` | Solo jefe; setea `fecha_inicio_real = coalesce(..., now())` |
+| `pendiente` | Rechazar | `rechazada` | `sgtd_rechazar_ot` | Solo jefe; motivo ≥ 10 caracteres |
+| `aprobada` | Completar OT | `completada` | `sgtd_completar_ot` | Creador o jefe; receptor + DNI 8 dígitos; sync tarea (033) |
+| pre-completada | Cancelar | `cancelada` | `sgtd_cancelar_ot` | Ver matriz permisos abajo |
+
+`rechazada` y `cancelada` son **terminales** (solo lectura).
+
+### Envío (`sgtd_enviar_ot`)
+
+- **BD:** creador de la OT **o jefe** (`sgtd_es_jefe()`).
+- **UI:** botón «Enviar al jefe» en `OTFormModal` — flujo del creador.
+- El frontend **no** setea `estado = 'pendiente'` directo; guarda campos y llama `enviarOTAlJefe()` → RPC.
+- **Autoguardado:** borrador en servidor cada ~2 s (`enviar: false` implícito); placeholders `(borrador)` / `(pendiente)` solo para NOT NULL en INSERT.
+
+### Número `OT-TI-XXXX`
+
+- Se asigna al **enviar**, no al crear borrador. Borradores no consumen correlativo (`numero` nullable).
+- **Idempotente:** si el borrador ya tiene número (p. ej. legacy pre-036) y se vuelve a enviar, conserva el mismo.
+- OT en `pendiente` **no** repasa por `sgtd_enviar_ot`; solo se actualizan campos.
+- `sgtd_crear_ot_desde_tarea` (033): inserta `numero = NULL` → completar formulario → enviar.
+
+### Cierre
+
+- Obligatorios: nombre receptor + DNI exactamente **8 dígitos** (028 + 036).
+- Validación alineada: `puedeCompletarOTReceptor` (frontend) y `sgtd_completar_ot` (BD).
+- Guardia de estado: **`aprobada`** (antes `en_ejecucion`).
+- Si `tarea_id` y tarea activa no cerrada → tarea `completada` + log (033; respeta `eliminada_en` / 034).
+- Impresión (`OTImpresion`): `aprobada` y `completada`.
+- UI borrador sin número: `labelNumeroOT()` → «Borrador».
+
+### Vínculo tarea ↔ OT (033 + 035)
+
+| Acción | Efecto |
+|--------|--------|
+| Completar OT | Completa tarea vinculada |
+| Completar / eliminar tarea | Cancela OTs abiertas vinculadas (`sgtd_cancelar_ots_vinculadas_tarea`; requiere **035**) |
+| Generar OT desde Mi Semana | `sgtd_crear_ot_desde_tarea` → borrador |
+
+---
+
+## Permisos: UI vs BD
+
+| Estado | UI — jefe | UI — creador | BD — jefe | BD — miembro creador |
+|--------|-----------|--------------|-----------|----------------------|
+| `borrador` | Ver todas | Editar, cancelar, enviar | Enviar, cancelar | Editar, cancelar, enviar |
+| `pendiente` | Aprobar, rechazar | Editar, cancelar | Aprobar, rechazar, cancelar | Editar, cancelar |
+| `aprobada` | Completar, imprimir | Completar, imprimir | Completar, cancelar | Completar |
+| `completada` | Ver, imprimir | Ver, imprimir | Ver | Ver |
+| `rechazada` / `cancelada` | Solo lectura | Solo lectura | Solo lectura | Solo lectura |
+
+- **Lista:** jefe ve todas las OT; miembro solo `creado_por = su id`.
+- **Tipos de trabajo:** CRUD solo jefe (`ModalTiposOT`).
+- **RLS** en `orden_trabajo` y `log_ot` es el enforcement real; ocultar botones es UX.
+
+Implementación UI: `buildOTDetalleAcciones` en `lib/otDetalleAcciones.ts`.
+
+---
+
+## Auditoría
+
+Cada transición → fila en `log_ot` (`usuario_id`, `accion`, `estado_anterior`, `estado_nuevo`). Log **inmutable** (trigger 024).
+
+---
+
+## Capas de código (no romper)
+
+```
+OrdenesTrabajo.tsx
+ └→ useOrdenesTrabajoPage
+      └→ api/ordenTrabajo.ts (SDK + Zod)
+           └→ RPC / PostgREST
+```
+
+---
+
+## Constraints BD relevantes
+
+| Constraint | Regla |
+|------------|-------|
+| `orden_trabajo_estado_check` | Sin `en_ejecucion` (036) |
+| `ck_ot_pendiente_tiene_numero` | `numero` NULL solo en `borrador` y `cancelada` (037) |
+| `ck_ot_completada_tiene_receptor` | Nombre + DNI si `completada` (028) |
+
+---
+
+## Archivos clave
+
+| Área | Archivos |
+|------|----------|
+| Migraciones | `036_simplificar_flujo_ot.sql`, `037_fix_ck_ot_numero_cancelada.sql` |
+| API | `enviarOTAlJefe`, `completarOT`, `crearOtDesdeTarea` |
+| UI acciones | `otDetalleAcciones.ts`, `OTDetalleContenido.tsx`, `OTFormModal.tsx` |
+| Display número | `lib/otNumero.ts` |
+| Tests | `lib/__tests__/otDetalleAcciones.test.ts`, `otComplecion.test.ts` |
+
+---
+
+## QA manual (post-036)
+
+1. Crear OT → borrador autoguardado, sin número (muestra «Borrador»).
+2. Enviar al jefe → `OT-TI-XXXX`, estado `pendiente`.
+3. Cancelar borrador sin haber enviado → `cancelada` sin error de CHECK (037).
+4. Jefe aprueba → `aprobada`; «Completar OT» visible (sin «Iniciar ejecución»).
+5. Cierre con receptor + DNI 8 dígitos → `completada`; tarea vinculada cerrada si aplica.
+6. OT legacy en `en_ejecucion` → migradas a `aprobada` (036) y cerrables.

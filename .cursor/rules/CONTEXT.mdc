@@ -4,7 +4,7 @@ alwaysApply: true
 
 # CONTEXT — Nexora / SGTD (Agenda TI v3) · V4
 
-**Última actualización:** 2026-05-15
+**Última actualización:** 2026-06-03
 **Fuente de verdad:** este archivo + `.cursor/rules/*.mdc`
 **Nota:** `CONTEXT_2026-04-23.md` (raíz) está **obsoleto** para V4 — lo reemplaza este documento.
 
@@ -127,11 +127,12 @@ Page (componente visual)
 - Hooks: `useObjetivosPage`. APIs: `objetivos.ts`, `objetivosMetricas.ts`.
 
 ### Órdenes de Trabajo (`/ordenes-trabajo`)
-- Flujo: `borrador → pendiente → aprobada → en_ejecucion → completada` (o `rechazada`/`cancelada`).
-- Número correlativo via RPC `generar_numero_ot`.
-- Tipos de trabajo gestionados por el jefe.
-- Impresión de OT: `OTImpresion.tsx`.
-- Hook: `useOrdenesTrabajoPage`. API: `ordenTrabajo.ts`.
+- Flujo: `borrador → pendiente → aprobada → completada` (+ `rechazada` / `cancelada`).
+- Número `OT-TI-XXXX` al enviar (`sgtd_enviar_ot`); borrador autoguardado en servidor.
+- Atajo «Generar OT» desde Mi Semana → `sgtd_crear_ot_desde_tarea` (borrador).
+- Tipos de trabajo gestionados por el jefe. Impresión: `OTImpresion.tsx`.
+- Reglas detalladas: `.cursor/rules/sgtd-ot.mdc`
+- Hook: `useOrdenesTrabajoPage` · API: `ordenTrabajo.ts`
 
 ### Métricas (`/metricas`) — Solo Jefe
 - KPIs por usuario: activas, completadas 7d, objetivos activos, atrasadas.
@@ -166,7 +167,7 @@ Page (componente visual)
 | `nota_bitacora` | contenido, visibilidad, convertida_en (`tarea`/`evento`) |
 | `log_accion` | tarea_id, tipo_accion (7 valores), justificacion, leido_por_jefe |
 | `configuracion_semana` | fecha_inicio_semana (lunes), notas_semana |
-| `orden_trabajo` | numero_ot correlativo, estado, tipo_trabajo_id, datos de cierre |
+| `orden_trabajo` | `numero` nullable en borrador; estados sin `en_ejecucion` (036) |
 | `tipo_trabajo_ot` | descripcion, activo — CRUD por jefe |
 
 ### Estados de tarea (enum)
@@ -183,10 +184,11 @@ Page (componente visual)
 | `sgtd_bloquear_tarea_con_log` | Estado → bloqueada + log |
 | `sgtd_reprogramar_tarea_con_log` | Nueva fecha + estado + log |
 | `sgtd_desbloquear_tarea_con_log` | Desbloquea + log |
-| `generar_numero_ot` | Número correlativo OT |
+| `generar_numero_ot` | Correlativo `OT-TI-XXXX` (llamado desde `sgtd_enviar_ot`) |
+| `sgtd_enviar_ot` | Borrador → pendiente + número (036) |
 | `sgtd_aprobar_ot` | Aprueba OT (solo jefe) |
 | `sgtd_rechazar_ot` | Rechaza OT con motivo |
-| `sgtd_completar_ot` | Cierra OT con datos del receptor |
+| `sgtd_completar_ot` | Cierra OT desde `aprobada` + receptor/DNI |
 | `sgtd_completar_objetivo` | Completa objetivo |
 
 ---
@@ -223,6 +225,8 @@ Page (componente visual)
 | 033 | Sync bidireccional tarea↔OT: `sgtd_completar_tarea_con_resumen`, OT al completar tarea, `sgtd_crear_ot_desde_tarea` |
 | 034 | Soft-delete `eliminada_en` + vista `tarea_activa` (security_invoker) + RPC eliminar sin DELETE |
 | 035 | GRANT EXECUTE `sgtd_cancelar_ots_vinculadas_tarea` + validación sesión (fix 42501) |
+| 036 | Flujo OT 4 estados: `sgtd_enviar_ot`, sin `en_ejecucion`, completar desde `aprobada` |
+| 037 | CHECK `ck_ot_pendiente_tiene_numero`: permite `cancelada` sin número |
 
 ---
 
@@ -299,6 +303,8 @@ Alternativa: **SQL Editor** del dashboard InsForge (mismas queries).
 | **033** | Sync tarea↔OT + RPC completar tarea + crear OT desde tarea | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_crear_ot_desde_tarea` |
 | **034** | Soft-delete tarea + vista `tarea_activa` (security_invoker) | 📅 | 📅 | 📅 | `pg_views`: `tarea_activa` + columna `eliminada_en` |
 | **035** | GRANT EXECUTE helper `sgtd_cancelar_ots_vinculadas_tarea` (fix 42501) | 📅 | 📅 | 📅 | `has_function_privilege('authenticated', 'sgtd_cancelar_ots_vinculadas_tarea(uuid,uuid,text)', 'EXECUTE')` |
+| **036** | Flujo OT simplificado + `sgtd_enviar_ot` + drop `sgtd_iniciar_ejecucion_ot` | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_enviar_ot` |
+| **037** | CHECK numero: `cancelada` sin número (borrador cancelado) | 📅 | 📅 | 📅 | `pg_get_constraintdef`: `ck_ot_pendiente_tiene_numero` incluye `cancelada` |
 
 Leyenda: ✅ aplicada y verificada · 📅 pendiente · ❌ falló / no aplicar sin revisión
 
@@ -477,9 +483,60 @@ WHERE n.nspname = 'public' AND proname = 'sgtd_eliminar_tarea_con_motivo';
 npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tarea' AND column_name = 'eliminada_en') AS migration_034_ok"
 ```
 
-### Próxima migración (036+)
+### Identificadores por migración (036)
 
-Al añadir `db/migrations/036_*.sql`:
+```sql
+-- RPC enviar OT (036)
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_enviar_ot';
+-- Esperado: 1 fila
+
+-- iniciar_ejecucion eliminado
+SELECT NOT EXISTS (
+  SELECT 1 FROM pg_proc p
+  JOIN pg_namespace n ON p.pronamespace = n.oid
+  WHERE n.nspname = 'public' AND proname = 'sgtd_iniciar_ejecucion_ot'
+) AS iniciar_dropped;
+-- Esperado: true
+
+-- completar_ot exige aprobada (no en_ejecucion)
+SELECT pg_get_functiondef(p.oid) LIKE '%aprobada%'
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public' AND proname = 'sgtd_completar_ot';
+-- Esperado: true
+```
+
+**CLI one-liner (036 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND proname = 'sgtd_enviar_ot') AS migration_036_ok"
+```
+
+**Prerrequisitos:** 033, 034 ( `eliminada_en` en `sgtd_completar_ot`).
+
+**QA app:** ver `.cursor/rules/sgtd-ot.mdc` § QA manual.
+
+### Identificadores por migración (037)
+
+```sql
+SELECT pg_get_constraintdef(c.oid) LIKE '%cancelada%'
+FROM pg_constraint c
+WHERE c.conrelid = 'public.orden_trabajo'::regclass
+  AND c.conname = 'ck_ot_pendiente_tiene_numero';
+-- Esperado: true
+```
+
+**CLI one-liner (037 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT (pg_get_constraintdef(c.oid) LIKE '%cancelada%') AS migration_037_ok FROM pg_constraint c WHERE c.conrelid = 'public.orden_trabajo'::regclass AND c.conname = 'ck_ot_pendiente_tiene_numero'"
+```
+
+### Próxima migración (038+)
+
+Al añadir `db/migrations/038_*.sql`:
 
 1. Actualizar §9 (lista resumida) y esta tabla con **identificador técnico** (función, columna o política nueva).
 2. Documentar query de comprobación en `db/migrations/README.md`.

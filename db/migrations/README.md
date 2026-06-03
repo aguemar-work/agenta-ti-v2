@@ -241,8 +241,35 @@ npx @insforge/cli db query "SELECT has_function_privilege('authenticated', 'publ
 
 ---
 
+## Migración 036 — validación completa
+
+**Archivo:** `036_simplificar_flujo_ot.sql`  
+**Negocio:** flujo OT 4 estados; número al enviar; sin `en_ejecucion`.
+
+**Prerrequisitos:** 033, 034.
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND proname = 'sgtd_enviar_ot') AS migration_036_ok"
+```
+
+QA: `.cursor/rules/sgtd-ot.mdc` § QA manual.
+
+---
+
+## Migración 037 — validación completa
+
+**Archivo:** `037_fix_ck_ot_numero_cancelada.sql`  
+**Negocio:** cancelar borrador sin número no viola CHECK.
+
+```bash
+npx @insforge/cli db query "SELECT (pg_get_constraintdef(c.oid) LIKE '%cancelada%') AS migration_037_ok FROM pg_constraint c WHERE c.conrelid = 'public.orden_trabajo'::regclass AND c.conname = 'ck_ot_pendiente_tiene_numero'"
+```
+
+---
+
 ## Referencias
 
-- Reglas de negocio: `.cursor/rules/sgtd-business-rules.mdc`
+- **Módulo OT (reglas):** `.cursor/rules/sgtd-ot.mdc`
+- Reglas de negocio generales: `.cursor/rules/sgtd-business-rules.mdc`
 - Auditoría deploy: `web/auditorias/auditoria_16052026_final.md`
 - CLI InsForge: `npx @insforge/cli db query --help` · skill `.claude/skills/insforge-cli`

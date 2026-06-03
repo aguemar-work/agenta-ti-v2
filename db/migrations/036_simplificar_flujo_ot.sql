@@ -51,7 +51,7 @@ ALTER TABLE public.orden_trabajo
 ALTER TABLE public.orden_trabajo
   ADD CONSTRAINT ck_ot_pendiente_tiene_numero
   CHECK (
-    estado = 'borrador'
+    estado IN ('borrador', 'cancelada')
     OR (numero IS NOT NULL AND btrim(numero) <> '')
   );
 

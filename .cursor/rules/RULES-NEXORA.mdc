@@ -77,7 +77,8 @@ Referencias a estas rutas en código son legacy.
 ## 6. Base de datos
 
 - **No modificar schema sin migración** en `db/migrations/`
-- Migraciones ya aplicadas: 002–026. La siguiente sería 027.
+- Checklist vivo por entorno: `.cursor/rules/CONTEXT.mdc` §12 (027–037+)
+- Módulo OT: `.cursor/rules/sgtd-ot.mdc`
 - Nombrar RPCs con prefijo `sgtd_`
 - Usar RPCs atómicas para operaciones que requieren log: `sgtd_bloquear_tarea_con_log`, `sgtd_reprogramar_tarea_con_log`, etc.
 - Estado `atrasada` es calculado por trigger (migración 015) — no calcularlo en frontend

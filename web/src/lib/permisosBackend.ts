@@ -53,6 +53,12 @@ export const REGLAS_PERMISO_BACKEND: readonly ReglaPermisoBackend[] = [
     detalle: 'sgtd_aprobar_ot / sgtd_rechazar_ot exigen sgtd_es_jefe().',
   },
   {
+    accion: 'Enviar / completar OT',
+    ui: 'OTFormModal / buildOTDetalleAcciones',
+    capa: 'rpc',
+    detalle: 'sgtd_enviar_ot (creador o jefe); sgtd_completar_ot desde aprobada (creador o jefe). Ver sgtd-ot.mdc.',
+  },
+  {
     accion: 'Auto-provisionar o promover rol',
     ui: 'asegurarUsuario → rol miembro',
     capa: 'rls',
