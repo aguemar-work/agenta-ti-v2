@@ -230,6 +230,17 @@ npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.colu
 
 ---
 
+## Migración 035 — validación completa
+
+**Archivo:** `035_fix_grant_cancelar_ots.sql`  
+**Negocio:** fix 42501 al eliminar/completar tarea con OT vinculada.
+
+```bash
+npx @insforge/cli db query "SELECT has_function_privilege('authenticated', 'public.sgtd_cancelar_ots_vinculadas_tarea(uuid,uuid,text)', 'EXECUTE') AS migration_035_ok"
+```
+
+---
+
 ## Referencias
 
 - Reglas de negocio: `.cursor/rules/sgtd-business-rules.mdc`

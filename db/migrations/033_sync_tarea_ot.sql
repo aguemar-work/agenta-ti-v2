@@ -28,6 +28,21 @@ AS $$
 DECLARE
   v_ot record;
 BEGIN
+  IF p_usuario_id <> auth.uid() AND NOT public.sgtd_es_jefe() THEN
+    RAISE EXCEPTION 'Sin permiso (usuario_id no coincide con la sesión)'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tarea t
+    WHERE t.id = p_tarea_id
+      AND (t.asignado_a = auth.uid() OR public.sgtd_es_jefe())
+  ) THEN
+    RAISE EXCEPTION 'Sin permiso para cancelar OTs vinculadas a esta tarea'
+      USING ERRCODE = '42501';
+  END IF;
+
   FOR v_ot IN
     SELECT id, estado
     FROM public.orden_trabajo
@@ -53,6 +68,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.sgtd_cancelar_ots_vinculadas_tarea(uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sgtd_cancelar_ots_vinculadas_tarea(uuid, uuid, text) TO authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 2. Completar tarea con resumen (+ cierra OTs abiertas vinculadas)

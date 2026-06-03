@@ -30,17 +30,23 @@ type Handlers = {
   aprobarPending?: boolean;
 };
 
+/** Alineado con RPCs sgtd_iniciar_ejecucion_ot / sgtd_completar_ot (creador o jefe). */
 export function buildOTDetalleAcciones(
   ot: OrdenTrabajo,
   esJefe: boolean,
+  usuarioId: string | undefined,
   handlers: Handlers,
 ): OTDetalleAcciones {
+  const esCreador = Boolean(usuarioId && ot.creado_por === usuarioId);
+  const puedeEjecutar = esJefe || esCreador;
+
   const puedeAprobar = esJefe && ot.estado === 'pendiente';
   const puedeRechazar = esJefe && ot.estado === 'pendiente';
-  const puedeIniciar = !esJefe && ot.estado === 'aprobada';
-  const puedeCompletar = !esJefe && ['aprobada', 'en_ejecucion'].includes(ot.estado);
-  const puedeEditar = !esJefe && ['borrador', 'pendiente'].includes(ot.estado);
-  const puedeCancelar = !esJefe && ['borrador', 'pendiente'].includes(ot.estado);
+  const puedeIniciar = puedeEjecutar && ot.estado === 'aprobada';
+  /** RPC exige estado en_ejecucion — no mostrar en aprobada. */
+  const puedeCompletar = puedeEjecutar && ot.estado === 'en_ejecucion';
+  const puedeEditar = esCreador && ['borrador', 'pendiente'].includes(ot.estado);
+  const puedeCancelar = esCreador && ['borrador', 'pendiente'].includes(ot.estado);
   const puedeImprimir = ['aprobada', 'en_ejecucion', 'completada'].includes(ot.estado);
 
   return {
@@ -67,12 +73,15 @@ export function buildOTDetalleAcciones(
 export function accionesSwipeOT(
   ot: OrdenTrabajo,
   esJefe: boolean,
+  usuarioId: string | undefined,
 ): { aprobar: boolean; completar: boolean; cancelar: boolean } {
+  const esCreador = Boolean(usuarioId && ot.creado_por === usuarioId);
+  const puedeEjecutar = esJefe || esCreador;
   return {
     aprobar: esJefe && ot.estado === 'pendiente',
-    completar: !esJefe && ['aprobada', 'en_ejecucion'].includes(ot.estado),
+    completar: puedeEjecutar && ot.estado === 'en_ejecucion',
     cancelar:
-      (!esJefe && ['borrador', 'pendiente'].includes(ot.estado)) ||
+      (esCreador && ['borrador', 'pendiente'].includes(ot.estado)) ||
       (esJefe && ot.estado === 'pendiente'),
   };
 }

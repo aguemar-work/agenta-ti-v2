@@ -222,6 +222,7 @@ Page (componente visual)
 | 032 | Realtime `tarea_asignada` en RPCs crear/actualizar tarea (canal `usuario:{id}`) |
 | 033 | Sync bidireccional tarea↔OT: `sgtd_completar_tarea_con_resumen`, OT al completar tarea, `sgtd_crear_ot_desde_tarea` |
 | 034 | Soft-delete `eliminada_en` + vista `tarea_activa` (security_invoker) + RPC eliminar sin DELETE |
+| 035 | GRANT EXECUTE `sgtd_cancelar_ots_vinculadas_tarea` + validación sesión (fix 42501) |
 
 ---
 
@@ -297,6 +298,7 @@ Alternativa: **SQL Editor** del dashboard InsForge (mismas queries).
 | **032** | Notificación `tarea_asignada` al asignado en crear/reasignar | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_notificar_tarea_asignada` |
 | **033** | Sync tarea↔OT + RPC completar tarea + crear OT desde tarea | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_crear_ot_desde_tarea` |
 | **034** | Soft-delete tarea + vista `tarea_activa` (security_invoker) | 📅 | 📅 | 📅 | `pg_views`: `tarea_activa` + columna `eliminada_en` |
+| **035** | GRANT EXECUTE helper `sgtd_cancelar_ots_vinculadas_tarea` (fix 42501) | 📅 | 📅 | 📅 | `has_function_privilege('authenticated', 'sgtd_cancelar_ots_vinculadas_tarea(uuid,uuid,text)', 'EXECUTE')` |
 
 Leyenda: ✅ aplicada y verificada · 📅 pendiente · ❌ falló / no aplicar sin revisión
 
@@ -475,9 +477,9 @@ WHERE n.nspname = 'public' AND proname = 'sgtd_eliminar_tarea_con_motivo';
 npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tarea' AND column_name = 'eliminada_en') AS migration_034_ok"
 ```
 
-### Próxima migración (035+)
+### Próxima migración (036+)
 
-Al añadir `db/migrations/035_*.sql`:
+Al añadir `db/migrations/036_*.sql`:
 
 1. Actualizar §9 (lista resumida) y esta tabla con **identificador técnico** (función, columna o política nueva).
 2. Documentar query de comprobación en `db/migrations/README.md`.

@@ -179,8 +179,8 @@ export function OrdenesTrabajo() {
   );
 
   const accionesDetalle = useMemo(
-    () => (otActiva ? buildOTDetalleAcciones(otActiva, esJefe, handlersDetalle) : null),
-    [otActiva, esJefe, handlersDetalle],
+    () => (otActiva ? buildOTDetalleAcciones(otActiva, esJefe, usuario?.id, handlersDetalle) : null),
+    [otActiva, esJefe, usuario?.id, handlersDetalle],
   );
 
   const toggleOT = useCallback(
