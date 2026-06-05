@@ -12,20 +12,33 @@ alwaysApply: true
 
 ---
 
-## 1. Estados de tarea
+## 1. Modelo de tarea v1.1 (dos ejes)
 
-Valores permitidos (enum en BD):
-`pendiente` · `en_progreso` · `reprogramada` · `completada` · `bloqueada` · `atrasada` · `cancelada`
+**Detalle:** `web/CONTEXT/TAREA-MODEL.md`
 
-**No inventar estados adicionales.**
+### Eje 1 — `estado` (persistido, enum `estado_tarea`, migr. 040)
+
+`pendiente` · `en_progreso` · `completada` · `cancelada`
+
+Transiciones: `pendiente → en_progreso → completada`; cancelar desde `pendiente` o `en_progreso`.
+
+**No escribir** `atrasada`, `reprogramada`, `bloqueada` en `estado`.
+
+### Eje 2 — `situacion` (calculado en vista `tarea_activa`)
+
+`atrasada` · `reprogramada` · `creada` · `null` (terminales)
+
+- `atrasada`: planificada vencida con `estado IN ('pendiente','en_progreso')`
+- `reprogramada`: `reprogramaciones > 0` (y no atrasada)
+- La UI usa `claveVisualTarea()` (`lib/tableroEstado.ts`) para badges y conteos
 
 ---
 
-## 2. Tarea atrasada
+## 2. Reprogramar
 
-- Calculado por **trigger en BD** (migración 015) — no en frontend
-- Condición: `fecha_planificada < hoy` AND `estado IN ('pendiente', 'reprogramada')` en trigger (migración 027); `en_progreso` se respeta si el usuario ya la inició
-- La UI solo refleja el valor que viene de BD, no lo calcula
+- RPC `sgtd_reprogramar_tarea_con_log`: cambia **fecha** + incrementa `reprogramaciones` + log
+- **No cambia** `estado` (sigue `pendiente` salvo que el usuario haya iniciado)
+- Justificación ≥10 caracteres obligatoria
 
 ---
 
@@ -35,12 +48,8 @@ Valores permitidos (enum en BD):
 |------|--------------------|--------------------|
 | `planificada` | obligatoria | obligatoria |
 | `no_planificada` | = hoy | = semana actual |
-| `libre` (backlog) | null | null |
 
-Al arrastrar una tarea `libre` a un día en Mi Semana:
-- `tipo → 'planificada'`
-- `fecha_planificada` = fecha del día destino
-- `semana_planificada` = semana ISO del día destino
+**Eliminado:** `libre` — backlog en `nota_bitacora`.
 
 ---
 
@@ -61,14 +70,12 @@ Se registran desde la columna del día actual en Mi Semana (`ZonaIncidencias`).
 Registrar en `log_accion` con `justificacion` (≥10 caracteres obligatorio) al:
 - Reprogramar fecha
 - Cancelar tarea
-- Bloquear tarea
 - Eliminar tarea
 
 Usar las RPCs atómicas correspondientes:
 - `sgtd_reprogramar_tarea_con_log`
-- `sgtd_bloquear_tarea_con_log`
-- `sgtd_desbloquear_tarea_con_log`
 - `sgtd_eliminar_tarea_con_motivo`
+- `sgtd_cambiar_estado_tarea` (cancelar con justificación)
 
 **No permitir estas acciones sin justificación — validar en frontend Y en RPC.**
 
@@ -76,7 +83,7 @@ Usar las RPCs atómicas correspondientes:
 
 ## 6. Métricas ponderadas
 
-Pesos por prioridad: `alta = 3`, `media = 2`, `baja = 1`
+Pesos por prioridad: `critica = 4`, `alta = 3`, `media = 2`, `baja = 1`
 
 ```
 % cumplimiento ponderado =
@@ -84,7 +91,7 @@ Pesos por prioridad: `alta = 3`, `media = 2`, `baja = 1`
   Σ(peso de tareas planificadas) × 100
 ```
 
-Solo se cuentan tareas `planificadas` — no `no_planificadas` ni `libres`.
+Solo se cuentan tareas `planificadas` — no `no_planificadas`.
 
 ---
 

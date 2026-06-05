@@ -461,10 +461,6 @@ export function Objetivos() {
           void t;
           setTareaDetalle(null);
         }}
-        onBloquear={(t: Tarea) => {
-          void t;
-          setTareaDetalle(null);
-        }}
         onEliminar={async () => {
           setTareaDetalle(null);
         }}

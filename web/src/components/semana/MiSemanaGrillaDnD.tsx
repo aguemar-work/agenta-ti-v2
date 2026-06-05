@@ -16,6 +16,7 @@ import { DraggableTareaSemana } from '@/components/semana/DraggableTareaSemana';
 import { EventoCard } from '@/components/semana/EventoCard';
 import { SemanaIncidenciasAcordeon } from '@/components/semana/SemanaIncidenciasAcordeon';
 import { SemanaColumnaResumen } from '@/components/semana/SemanaColumnaResumen';
+import { MiSemanaLeyendaEstados } from '@/components/semana/MiSemanaLeyendaEstados';
 import { SemanaDiaDrop } from '@/components/semana/SemanaDiaDrop';
 import { Button } from '@/components/ui/Button';
 import { useSemanaDnDSensors } from '@/hooks/useSemanaDnD';
@@ -36,6 +37,7 @@ export type MiSemanaGrillaDnDProps = {
   filtroEstado: FiltroEstado | null;
   incidenciasSemana: Tarea[];
   ordenesPorTarea: Map<string, OrdenTrabajo>;
+  nombresPorId: Map<string, string>;
   ocultarCompletadas?: boolean;
   activeDragId: string | null;
   setActiveDragId: (id: string | null) => void;
@@ -48,6 +50,9 @@ export type MiSemanaGrillaDnDProps = {
   onAbrirDetalle: (tareaId: string) => void;
   onRegistrarIncidencia: () => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
+  onIniciarTarea?: (t: Tarea) => void;
+  onCompletarTarea?: (t: Tarea) => void;
+  onReprogramarTarea?: (t: Tarea) => void;
 };
 
 function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
@@ -74,6 +79,7 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
     filtroEstado,
     incidenciasSemana,
     ordenesPorTarea,
+    nombresPorId,
     ocultarCompletadas = false,
     activeDragId,
     setActiveDragId,
@@ -86,6 +92,9 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
     onAbrirDetalle,
     onRegistrarIncidencia,
     onOtClick,
+    onIniciarTarea,
+    onCompletarTarea,
+    onReprogramarTarea,
   } = props;
 
   const sensors = useSemanaDnDSensors();
@@ -145,6 +154,7 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
                     .join(' ')
                     .trim()}
                 >
+                  {/* 1. Día */}
                   <div
                     className={[
                       'mc-semana-dia-col__header flex shrink-0 items-baseline gap-1.5 border-b border-[var(--mc-color-border)] px-2 py-1.5',
@@ -175,6 +185,10 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
                     </span>
                   </div>
 
+                  {/* 2. Conteo */}
+                  <SemanaColumnaResumen tareas={delDia} hoyYmd={hoyYmd} />
+
+                  {/* 3. Alta rápida */}
                   <Button
                     variant="ghost"
                     size="xs"
@@ -184,34 +198,49 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
                     + Tarea / evento
                   </Button>
 
+                  {/* 4. Cards */}
                   <div className="mc-semana-dia-col__body relative flex min-h-0 flex-1 flex-col">
                     <SemanaDiaDrop
                       id={`day-${ymd}`}
                       className="mc-semana-dia-drop flex min-h-0 flex-1 flex-col gap-2 p-2"
                       showPlaceholder={ph}
                     >
-                    {eventosEnDia(eventos, ymd).map((ev) => (
-                      <EventoCard key={ev.id} evento={ev} />
-                    ))}
-                    {delDiaVis.map((t) => (
-                      <DraggableTareaSemana
-                        key={t.id}
-                        tarea={t}
-                        hoyYmd={hoyYmd}
-                        ot={ordenesPorTarea.get(t.id) ?? null}
-                        readOnly={!puedeGestionar(t)}
-                        onOpenDetalle={(x) => onAbrirDetalle(x.id)}
-                        {...(onOtClick ? { onOtClick } : {})}
-                      />
-                    ))}
-                    {nCompletadasOcultas > 0 && (
-                      <p className="mc-incidencia-row__ocultas" role="status">
-                        {nCompletadasOcultas} completada{nCompletadasOcultas !== 1 ? 's' : ''}{' '}
-                        oculta{nCompletadasOcultas !== 1 ? 's' : ''}
-                      </p>
-                    )}
+                      {eventosEnDia(eventos, ymd).map((ev) => (
+                        <EventoCard key={ev.id} evento={ev} />
+                      ))}
+                      {delDiaVis.map((t) => {
+                        const gestiona = puedeGestionar(t);
+                        return (
+                          <DraggableTareaSemana
+                            key={t.id}
+                            tarea={t}
+                            hoyYmd={hoyYmd}
+                            ot={ordenesPorTarea.get(t.id) ?? null}
+                            responsableNombre={nombresPorId.get(t.asignado_a) ?? '—'}
+                            readOnly={!gestiona}
+                            onOpenDetalle={(x) => onAbrirDetalle(x.id)}
+                            {...(onOtClick ? { onOtClick } : {})}
+                            {...(gestiona && onIniciarTarea ? { onIniciar: onIniciarTarea } : {})}
+                            {...(gestiona && onCompletarTarea
+                              ? { onCompletar: onCompletarTarea }
+                              : {})}
+                            {...(gestiona && onReprogramarTarea
+                              ? { onReprogramar: onReprogramarTarea }
+                              : {})}
+                          />
+                        );
+                      })}
+                      {nCompletadasOcultas > 0 && (
+                        <p className="mc-incidencia-row__ocultas" role="status">
+                          {nCompletadasOcultas} completada{nCompletadasOcultas !== 1 ? 's' : ''}{' '}
+                          oculta{nCompletadasOcultas !== 1 ? 's' : ''}
+                        </p>
+                      )}
                     </SemanaDiaDrop>
+                  </div>
 
+                  {/* 5. Pie: incidencias + registrar */}
+                  <div className="mc-semana-dia-col__pie shrink-0">
                     <SemanaIncidenciasAcordeon
                       incidencias={incidenciasDia}
                       hoyYmd={hoyYmd}
@@ -219,35 +248,32 @@ export function MiSemanaGrillaDnD(props: MiSemanaGrillaDnDProps) {
                       puedeAbrir={(inc) => ymd === hoyYmd && puedeGestionar(inc)}
                       onAbrirDetalle={onAbrirDetalle}
                     />
-                  </div>
-
-                  {esHoy && (
-                    <div className="shrink-0 border-t border-dashed border-[var(--mc-color-border)] px-2 py-1">
+                    {esHoy && (
                       <button
                         type="button"
                         onClick={onRegistrarIncidencia}
-                        className="w-full text-[10px] text-[var(--mc-color-info)] hover:underline"
+                        className="mc-semana-dia-col__registrar-inc"
                       >
                         + Registrar incidencia
                       </button>
-                    </div>
-                  )}
-
-                  <SemanaColumnaResumen
-                    tareas={delDia}
-                    hoyYmd={hoyYmd}
-                    incidenciasCount={incidenciasDia.length}
-                  />
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
+          <MiSemanaLeyendaEstados className="shrink-0 border-t border-[var(--mc-color-border)]" />
         </section>
 
         <DragOverlay dropAnimation={{ duration: 180, easing: 'ease-out' }}>
           {activeTareaDrag && (
             <div className="mc-drag-overlay-card pointer-events-none max-w-[280px]">
-              <DraggableTareaSemana tarea={activeTareaDrag} hoyYmd={hoyYmd} readOnly />
+              <DraggableTareaSemana
+                tarea={activeTareaDrag}
+                hoyYmd={hoyYmd}
+                responsableNombre={nombresPorId.get(activeTareaDrag.asignado_a) ?? '—'}
+                readOnly
+              />
             </div>
           )}
         </DragOverlay>

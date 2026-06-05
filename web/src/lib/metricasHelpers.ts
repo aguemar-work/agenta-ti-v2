@@ -15,7 +15,7 @@ export function pct(val: number, total: number): number {
 
 export function colorCumplimiento(p: number): string {
   if (p >= 70) return 'var(--mc-state-completada-fg)';
-  if (p >= 40) return 'var(--mc-state-bloqueada-meta)';
+  if (p >= 40) return 'var(--mc-state-precaucion-border)';
   return 'var(--mc-state-atrasada-meta)';
 }
 

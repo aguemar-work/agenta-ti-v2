@@ -4,8 +4,9 @@ alwaysApply: true
 
 # CONTEXT — Nexora / SGTD (Agenda TI v3) · V4
 
-**Última actualización:** 2026-06-03
-**Fuente de verdad:** este archivo + `.cursor/rules/*.mdc`
+**Última actualización:** 2026-06-05
+**Fuente de verdad:** este archivo + `web/CONTEXT/*.md` + `.cursor/rules/*.mdc`
+**Modelo tarea v1.1:** `web/CONTEXT/TAREA-MODEL.md` · schema resumido: `web/CONTEXT/CONTEXT.md`
 **Nota:** `CONTEXT_2026-04-23.md` (raíz) está **obsoleto** para V4 — lo reemplaza este documento.
 
 ---
@@ -162,7 +163,8 @@ Page (componente visual)
 |-------|-------------|
 | `usuario` | id=auth.uid(), nombre, email, rol (`jefe`/`miembro`), activo |
 | `objetivo` | titulo, estado (`activo`/`completado`/`cancelado`), responsable_id |
-| `tarea` | titulo, estado (7 valores), tipo, prioridad, fecha_planificada, asignado_a, objetivo_id |
+| `tarea` | titulo, estado (4 valores), tipo (2), prioridad (+critica), reprogramaciones, fecha_planificada, asignado_a, objetivo_id |
+| `tarea_activa` | vista sobre `tarea` + columna calculada `situacion` (eje 2) |
 | `evento` | titulo, tipo, fecha_inicio/fin, usuario_id, es_recurrente |
 | `nota_bitacora` | contenido, visibilidad, convertida_en (`tarea`/`evento`) |
 | `log_accion` | tarea_id, tipo_accion (7 valores), justificacion, leido_por_jefe |
@@ -170,20 +172,25 @@ Page (componente visual)
 | `orden_trabajo` | `numero` nullable en borrador; estados sin `en_ejecucion` (036) |
 | `tipo_trabajo_ot` | descripcion, activo — CRUD por jefe |
 
-### Estados de tarea (enum)
-`pendiente` · `en_progreso` · `reprogramada` · `completada` · `bloqueada` · `atrasada` · `cancelada`
+### Modelo de tarea v1.1 (migr. 038–040)
 
-> **`atrasada`** es un estado calculado: tarea planificada con fecha < hoy y estado abierto. Ver trigger en migración 015.
+**Detalle:** `web/CONTEXT/TAREA-MODEL.md`
+
+| Eje | Valores | Dónde |
+|-----|---------|-------|
+| **Estado** (`estado_tarea`) | `pendiente`, `en_progreso`, `completada`, `cancelada` | columna `tarea.estado` |
+| **Situación** (calculada) | `atrasada`, `reprogramada`, `creada`, `null` | vista `tarea_activa.situacion` |
+
+> **`atrasada`/`reprogramada` ya no son valores de `estado`.** La UI usa `claveVisualTarea()` para badges.
 
 ### RPCs principales
 
 | RPC | Propósito |
 |-----|-----------|
 | `sgtd_es_jefe()` | Boolean — ¿auth.uid() es jefe activo? |
-| `sgtd_eliminar_tarea_con_motivo` | Elimina tarea + log atómico |
-| `sgtd_bloquear_tarea_con_log` | Estado → bloqueada + log |
-| `sgtd_reprogramar_tarea_con_log` | Nueva fecha + estado + log |
-| `sgtd_desbloquear_tarea_con_log` | Desbloquea + log |
+| `sgtd_eliminar_tarea_con_motivo` | Soft-delete + log atómico |
+| `sgtd_cambiar_estado_tarea` | Iniciar / completar / cancelar (4 estados) |
+| `sgtd_reprogramar_tarea_con_log` | Nueva fecha + `reprogramaciones++` (sin cambiar estado) |
 | `generar_numero_ot` | Correlativo `OT-TI-XXXX` (llamado desde `sgtd_enviar_ot`) |
 | `sgtd_enviar_ot` | Borrador → pendiente + número (036) |
 | `sgtd_aprobar_ot` | Aprueba OT (solo jefe) |
@@ -227,6 +234,9 @@ Page (componente visual)
 | 035 | GRANT EXECUTE `sgtd_cancelar_ots_vinculadas_tarea` + validación sesión (fix 42501) |
 | 036 | Flujo OT 4 estados: `sgtd_enviar_ot`, sin `en_ejecucion`, completar desde `aprobada` |
 | 037 | CHECK `ck_ot_pendiente_tiene_numero`: permite `cancelada` sin número |
+| 038 | Modelo v1.1 aditivo: `reprogramaciones`, `critica`, vista `tarea_activa.situacion` |
+| 039 | Lógica dos ejes: RPCs 4 estados, reprogramar sin cambiar estado, SLA por atraso |
+| 040 | Enum 4+2, DROP bloquear/desbloquear, vista `situacion` final, limpieza SLA bloqueada |
 
 ---
 
@@ -256,7 +266,8 @@ Page (componente visual)
 - **Idioma español en dominio:** tablas, columnas, tipos, labels en español.
 - **Path alias `@/`:** mapea a `web/src/` (tsconfig + vite).
 - **Tailwind 3.4:** NO actualizar a v4 (incompatibilidad con InsForge MCP).
-- **Justificación obligatoria (≥10 chars):** para bloquear, cancelar, reprogramar, eliminar tareas.
+- **Justificación obligatoria (≥10 chars):** para cancelar, reprogramar, eliminar tareas.
+- **Modelo tarea v1.1:** leer `situacion` de `tarea_activa`; ver `web/CONTEXT/TAREA-MODEL.md`.
 - **Parsers Zod con fallback:** `safeParse` — no romper UI en errores de parse.
 - **No asumir columnas nuevas:** el schema canónico es este CONTEXT. Cualquier cambio requiere migración explícita + actualización aquí.
 
@@ -303,8 +314,11 @@ Alternativa: **SQL Editor** del dashboard InsForge (mismas queries).
 | **033** | Sync tarea↔OT + RPC completar tarea + crear OT desde tarea | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_crear_ot_desde_tarea` |
 | **034** | Soft-delete tarea + vista `tarea_activa` (security_invoker) | 📅 | 📅 | 📅 | `pg_views`: `tarea_activa` + columna `eliminada_en` |
 | **035** | GRANT EXECUTE helper `sgtd_cancelar_ots_vinculadas_tarea` (fix 42501) | 📅 | 📅 | 📅 | `has_function_privilege('authenticated', 'sgtd_cancelar_ots_vinculadas_tarea(uuid,uuid,text)', 'EXECUTE')` |
-| **036** | Flujo OT simplificado + `sgtd_enviar_ot` + drop `sgtd_iniciar_ejecucion_ot` | 📅 | 📅 | 📅 | `pg_proc`: `sgtd_enviar_ot` |
-| **037** | CHECK numero: `cancelada` sin número (borrador cancelado) | 📅 | 📅 | 📅 | `pg_get_constraintdef`: `ck_ot_pendiente_tiene_numero` incluye `cancelada` |
+| **036** | Flujo OT simplificado + `sgtd_enviar_ot` + drop `sgtd_iniciar_ejecucion_ot` | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_enviar_ot` |
+| **037** | CHECK numero: `cancelada` sin número (borrador cancelado) | ✅ | 📅 | 📅 | `pg_get_constraintdef`: `ck_ot_pendiente_tiene_numero` incluye `cancelada` |
+| **038** | `reprogramaciones` + prioridad `critica` + vista `situacion` | ✅ | 📅 | 📅 | `information_schema`: columna `reprogramaciones`; enum `critica` |
+| **039** | RPCs 4 estados; reprogramar sin mutar estado; SLA depreca bloqueadas | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_cambiar_estado_tarea` sin `bloqueada` en cuerpo |
+| **040** | Enum 4 estados + 2 tipos; DROP RPCs bloquear/desbloquear | ✅ | 📅 | 📅 | `pg_proc`: ausencia `sgtd_bloquear_tarea_con_log`; enum 4 valores |
 
 Leyenda: ✅ aplicada y verificada · 📅 pendiente · ❌ falló / no aplicar sin revisión
 
@@ -534,9 +548,36 @@ WHERE c.conrelid = 'public.orden_trabajo'::regclass
 npx @insforge/cli db query "SELECT (pg_get_constraintdef(c.oid) LIKE '%cancelada%') AS migration_037_ok FROM pg_constraint c WHERE c.conrelid = 'public.orden_trabajo'::regclass AND c.conname = 'ck_ot_pendiente_tiene_numero'"
 ```
 
-### Próxima migración (038+)
+### Identificadores por migración (040)
 
-Al añadir `db/migrations/038_*.sql`:
+```sql
+-- Enum estado_tarea: solo 4 valores
+SELECT t.typname, e.enumlabel
+FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid
+WHERE t.typname = 'estado_tarea'
+ORDER BY e.enumsortorder;
+-- Esperado: pendiente, en_progreso, completada, cancelada
+
+-- RPCs bloquear eliminadas
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public'
+  AND proname IN ('sgtd_bloquear_tarea_con_log','sgtd_desbloquear_tarea_con_log');
+-- Esperado: 0 filas
+
+-- Distribución situacion
+SELECT situacion, count(*) FROM public.tarea_activa GROUP BY 1 ORDER BY 1;
+```
+
+**CLI one-liner (040 aplicada):**
+
+```bash
+npx @insforge/cli db query "SELECT count(*) AS n FROM pg_enum e JOIN pg_type t ON e.enumtypid=t.oid WHERE t.typname='estado_tarea' AND e.enumlabel IN ('pendiente','en_progreso','completada','cancelada') HAVING count(*)=4"
+```
+
+### Próxima migración (041+)
+
+Al añadir `db/migrations/041_*.sql`:
 
 1. Actualizar §9 (lista resumida) y esta tabla con **identificador técnico** (función, columna o política nueva).
 2. Documentar query de comprobación en `db/migrations/README.md`.

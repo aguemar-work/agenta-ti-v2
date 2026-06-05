@@ -35,10 +35,11 @@ Meta Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
 
 **Incidencias resueltas son registros neutrales, no alertas.** No usar amarillo para ellas.
 
-### Estados de tarea
-- Usar exclusivamente `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `src/lib/estadoConfig.ts`
-- Los valores deben coincidir exactamente con los enums de BD
-- No inventar estados visuales adicionales
+### Estados de tarea (modelo v1.1 — dos ejes)
+- Usar `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `src/lib/estadoConfig.ts` con claves **`ClaveVisualTarea`**
+- Clave visual = `estado` persistido + `atrasada`/`reprogramada` de `situacion` (`claveVisualTarea()`)
+- **No** usar badge/pill para `bloqueada` — eliminado en migr. 040
+- Detalle: `web/CONTEXT/TAREA-MODEL.md`
 
 ### Espaciado
 - Usar tokens `--mc-space-*` (múltiplos de 4px)

@@ -5,7 +5,7 @@
 >
 > Ejecutar antes de cada release. Marcar cada ítem con ✅ PASS / ❌ FAIL / ⏭ N/A.
 >
-> **Versión:** V4 · Actualizado 2026-05-16
+> **Versión:** V4 · Actualizado 2026-06-05 (modelo tarea v1.1)
 > **Eliminado en V4:** Tablero Kanban (`/tablero`), Bitácora como página (`/bitacora`), vista Hoy dedicada (`/hoy`).
 > Los escenarios D3, D4, B1–B4 y P2 del checklist anterior fueron retirados.
 
@@ -30,15 +30,16 @@
 |---|-----------|-------|-------------------|--------|
 | S1 | Navegar entre semanas | Clic en flechas `ChevronLeft` / `ChevronRight` del header. | La grilla cambia de semana. El subtítulo del header muestra el rango correcto (`dd/MM/AAAA – dd/MM/AAAA`). | |
 | S2 | Arrastrar tarea a otro día | En Mi Semana, arrastrar tarjeta de Lunes a Miércoles. | Tarea se mueve visualmente. `fecha_planificada` y `semana_planificada` actualizadas en BD. | |
-| S3 | Arrastrar tarea atrasada a hoy | Tarea con `estado = atrasada`, arrastrar a la columna de hoy. | `fecha_planificada` actualizada a hoy. `semana_planificada` actualizada. Toast de confirmación. | |
+| S3 | Arrastrar tarea atrasada a hoy | Tarea con `situacion = atrasada` (vista `tarea_activa`), arrastrar a la columna de hoy. | `fecha_planificada` actualizada a hoy. `estado` sigue `pendiente`. `reprogramaciones` incrementa. Badge reprogramada si aplica. Toast de confirmación. | |
 | S4 | Arrastrar en móvil (touch) | Ejecutar S2 en dispositivo móvil o tablet. | El DnD táctil funciona con `@dnd-kit` (`TouchSensor` + `PointerSensor`). La tarea se mueve y persiste en BD. Ver **D5** para regresión formal iOS/Android. | |
 | S5 | Crear tarea planificada desde header | Clic en botón primario "+ Nueva tarea" del `PageHeader`. Completar formulario (pestaña Tarea). | Modal abre con pestaña "Tarea" activa. Tarea creada aparece en la columna del día seleccionado. | |
 | S6 | Crear evento desde modal | Clic en "+ Nueva tarea". Seleccionar pestaña "Evento". Completar. | Evento creado aparece en la columna del día correspondiente con su badge de tipo. | |
 | S7 | Completar tarea con justificación | Abrir detalle de tarea → "Completar". | Estado cambia a `completada`. Log registrado. Tarea muestra `opacity-60` y tachado en título. | |
 | S8 | Reprogramar tarea (justificación obligatoria) | Abrir opciones de tarea → "Reprogramar". Intentar sin justificación. | Sin justificación (< 10 chars): formulario no envía. Con justificación válida: fecha actualizada, log registrado. | |
-| S9 | Bloquear tarea (justificación obligatoria) | Abrir opciones de tarea → "Bloquear". | Sin justificación (< 10 chars): rechazado. Con justificación válida: estado `bloqueada`, log registrado. | |
-| S10 | Cancelar tarea (justificación obligatoria) | Abrir opciones de tarea → "Cancelar". | Sin justificación (< 10 chars): rechazado. Con justificación válida: estado `cancelada`, log registrado. | |
-| S11 | Eliminar tarea (motivo obligatorio) | Abrir opciones de tarea → "Eliminar". | Sin motivo (< 5 chars): rechazado. Con motivo válido: tarea eliminada, log registrado antes de DELETE. | |
+| S9 | Cancelar tarea (justificación obligatoria) | Detalle de tarea → menú `⋯` → "Cancelar tarea". | Sin justificación (< 10 chars): rechazado. Con justificación válida: estado `cancelada`, log registrado. | |
+| S13 | Prioridad visible en tarjeta | Crear tarea con prioridad Crítica (o Alta). | En la grilla semanal, la tarjeta muestra chip de prioridad junto al estado. Prioridad Media no muestra chip. | |
+| S10 | Eliminar tarea (motivo obligatorio) | Abrir opciones de tarea → "Eliminar". | Sin motivo (< 10 chars): rechazado. Con motivo válido: soft-delete (`eliminada_en`), log registrado. | |
+| S11 | Atrasadas de semanas anteriores visibles | Abrir Mi Semana en semana actual con tareas vencidas de semanas pasadas en BD. | Aparecen en la grilla gracias al filtro `situacion.eq.atrasada`. Badge atrasada. `estado` = `pendiente`. | |
 | S12 | **Regresión visual — columna densa (>8 tareas)** | En un día con ≥8 tareas planificadas (seed o datos reales), viewport escritorio `md+`. | La columna del día hace scroll vertical interno (`mc-semana-dia-drop`). La grilla de 6 columnas no desborda ni rompe el layout de la página. Cabecera del día y botón "+ Tarea / evento" siguen visibles. | |
 | D5 | **Regresión táctil — DnD entre días (iOS + Android)** | En **un dispositivo iOS** y **uno Android** (o emulador fiable): 1) Abrir `/semana`. 2) En columna con ≥3 tareas, **scroll vertical** dentro del día (debe funcionar sin activar drag). 3) Mantener presionado ~250 ms sobre una tarea y arrastrar a otro día. 4) Confirmar toast/estado en BD. | Scroll de columna fluido. Drag solo tras press-and-hold (`TouchSensor` delay 250 ms, tolerance 5). Overlay visible al arrastrar. Tarea persiste en el día destino. Registrar PASS/FAIL por plataforma en la tabla de ejecución. | |
 
@@ -78,6 +79,7 @@
 | PL5 | Color de celdas por carga | Miembro con >8 tareas en un día; otro con >5. | Celda >8: fondo `danger/0.05`. Celda >5: fondo `warning/0.05`. Celda normal: sin color de fondo especial. | |
 | PL6 | Log de acciones — marcar como leído | Jefe ve log con acciones sin leer. Clic en "Marcar como leído". | `leido_por_jefe = true` en BD. El indicador de no leído desaparece. | |
 | PL7 | **Regresión visual — >5 miembros + scroll horizontal** | Equipo con ≥6 miembros activos; reducir ancho hasta scroll horizontal en la tabla de carga. | Cada fila conserva el nombre visible (`planificacion-celda-miembro` sticky). Scroll horizontal fluido; sombra sutil en la columna fija. Sin solapamiento ilegible de celdas. | |
+| PL8 | Justificaciones del equipo (no aprobación de cierre) | Miembro reprograma o cancela una tarea. Jefe abre Planificación → panel "Justificaciones del equipo". | Aparece el log con motivo. El panel **no** lista tareas completadas. Botón "Marcar como revisado" cierra la revisión sin cambiar el estado de la tarea. | |
 
 ---
 
@@ -109,15 +111,18 @@
 
 ---
 
-## 8. Métricas (solo Jefe)
+## 8. Planificación — análisis y rendimiento (solo Jefe)
+
+> **Nota V4:** El módulo `/metricas` ya no existe como vista separada. Redirige a `/planificacion`.
+> KPIs, cumplimiento ponderado y gráficas viven en la sección de análisis dentro de Planificación.
 
 | # | Escenario | Pasos | Resultado esperado | Estado |
 |---|-----------|-------|-------------------|--------|
-| M1 | Acceso denegado a Miembro | Miembro intenta navegar a `/metricas` directamente. | Redirigido a `/semana`. Ruta protegida por `JefeRoute`. | |
-| M2 | KPIs por miembro correctos | Verificar KPIs de un miembro conocido (activas, completadas 7d, atrasadas). | Los valores coinciden con lo que se ve en Planificación y Mi Semana para ese miembro. | |
+| M1 | Legacy `/metricas` redirige | Navegar a `/metricas` (Jefe o Miembro). | Redirige a `/planificacion` (Jefe) o `/semana` (Miembro vía guard). | |
+| M2 | KPIs por miembro correctos | En Planificación → análisis, verificar KPIs de un miembro conocido. | Los valores coinciden con Mi Semana y la tabla de carga para ese miembro. | |
 | M3 | Cumplimiento ponderado | Miembro con: 1 tarea alta completada (peso 3) + 1 media pendiente (peso 2). | Cumplimiento = 3/(3+2) = 60%. La barra muestra ese porcentaje. | |
 | M4 | Comparativa al 100% | Todos los miembros con cumplimiento al 100%. | La barra comparativa se muestra igual para todos. **No debe ocultarse ni quedar vacía**. | |
-| M5 | Métricas con >3 meses de datos | Filtrar rango amplio (90+ días). | Gráficas renderizan sin bloquear el hilo principal (<3s). Sin congelamiento de UI. | |
+| M5 | Gráficas con rango amplio | Filtrar rango amplio (90+ días) en análisis. | Gráficas renderizan sin bloquear el hilo principal (<3s). Sin congelamiento de UI. | |
 
 ---
 
@@ -147,7 +152,7 @@
 |---|-----------|-------------------|--------|
 | P1 | Mi Semana con >20 tareas | Vista carga en <3s. Drag & Drop sin lag perceptible. | |
 | P2 | Planificación con ≥5 miembros activos | Tabla carga en <3s. Scroll horizontal fluido con columna sticky funcionando. | |
-| P3 | Métricas con >3 meses de datos | Gráficas renderizan en <3s sin bloquear el hilo principal. | |
+| P3 | Análisis en Planificación con rango amplio | Gráficas de rendimiento renderizan en <3s sin bloquear el hilo principal. | |
 | P4 | Modales abren en <300ms | Abrir modal de nueva tarea, detalle de tarea, detalle de OT. | Cada modal abre sin demora perceptible. Sin layout shift. | |
 
 ---
@@ -157,7 +162,7 @@
 | # | Escenario | Resultado esperado | Estado |
 |---|-----------|-------------------|--------|
 | AC1 | Navegación por teclado en modales | Tab navega por todos los campos en orden. Enter confirma la acción principal. Escape cierra el modal. | |
-| AC2 | Contraste de estados de tarea | Los badges de estado (`atrasada`, `bloqueada`, `completada`, etc.) cumplen WCAG AA (ratio ≥ 4.5:1). | |
+| AC2 | Contraste de estados de tarea | Los badges de `ClaveVisualTarea` (`atrasada`, `reprogramada`, `completada`, etc.) cumplen WCAG AA (ratio ≥ 4.5:1). | |
 | AC3 | Iconos con aria-hidden | Inspeccionar DOM: todos los `<svg>` de lucide-react tienen `aria-hidden="true"`. | |
 | AC4 | Botones con aria-label | Botones icon-only (menú `···`, cerrar modal, arrastrar) tienen `aria-label` descriptivo. | |
 
@@ -168,7 +173,7 @@
 | # | Escenario | Pasos | Resultado esperado | Estado |
 |---|-----------|-------|-------------------|--------|
 | SEC1 | Miembro no accede a Planificación | Navegar a `/planificacion` desde sesión de Miembro. | Redirigido a `/semana`. | |
-| SEC2 | Miembro no accede a Métricas | Navegar a `/metricas` desde sesión de Miembro. | Redirigido a `/semana`. | |
+| SEC2 | Legacy `/metricas` no expone datos a Miembro | Navegar a `/metricas` desde sesión de Miembro. | Redirigido a `/semana` (sin acceso a análisis del equipo). | |
 | SEC3 | Miembro no modifica tarea ajena | Miembro intenta editar tarea asignada a otro usuario via API. | RLS rechaza. Error 4xx. | |
 | SEC4 | Miembro no aprueba OT | Miembro intenta llamar RPC `sgtd_aprobar_ot` directamente. | RLS rechaza. `sgtd_es_jefe()` retorna false. | |
 | SEC5 | Log inmutable | Intentar UPDATE o DELETE en `log_accion` o `log_ot` directamente desde BD. | Trigger de inmutabilidad rechaza la operación. | |

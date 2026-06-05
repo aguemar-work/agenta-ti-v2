@@ -22,7 +22,7 @@ export function MetricasComparativa({ comparativa, loading, embedded = false }: 
           <table className="mc-metricas-comparativa__table">
             <thead>
               <tr>
-                {['Miembro', 'Compl.', 'Atr.', 'Bloq.', 'Repr.', 'Cumpl.'].map((h) => (
+                {['Miembro', 'Compl.', 'Atr.', 'Repr.', 'Cumpl.'].map((h) => (
                   <th key={h} className="mc-metricas-comparativa__th">
                     {h}
                   </th>
@@ -31,7 +31,7 @@ export function MetricasComparativa({ comparativa, loading, embedded = false }: 
             </thead>
             <tbody>
               {comparativa.map((m) => {
-                const totalM = m.completadas + m.atrasadas + m.bloqueadas + m.reprogramadas;
+                const totalM = m.completadas + m.atrasadas + m.reprogramadas;
                 const cumplM = pct(m.completadas, totalM);
                 const esBajo = totalM > 0 && cumplM < 50;
 
@@ -52,9 +52,6 @@ export function MetricasComparativa({ comparativa, loading, embedded = false }: 
                     <td className="mc-metricas-comparativa__num mc-metricas-comparativa__num--ok">{m.completadas}</td>
                     <td className={`mc-metricas-comparativa__num ${m.atrasadas > 0 ? 'mc-metricas-comparativa__num--danger' : ''}`}>
                       {m.atrasadas}
-                    </td>
-                    <td className={`mc-metricas-comparativa__num ${m.bloqueadas > 0 ? 'mc-metricas-comparativa__num--warn' : ''}`}>
-                      {m.bloqueadas}
                     </td>
                     <td className="mc-metricas-comparativa__num">{m.reprogramadas}</td>
                     <td className="mc-metricas-comparativa__cumpl">

@@ -61,9 +61,19 @@ describe('TareaSchema', () => {
     expect(TareaSchema.safeParse(t).success).toBe(false);
   });
 
-  const estados = ['pendiente', 'en_progreso', 'reprogramada', 'completada', 'bloqueada', 'atrasada', 'cancelada'] as const;
+  const estados = ['pendiente', 'en_progreso', 'completada', 'cancelada'] as const;
   it.each(estados)('acepta estado %s', (estado) => {
     expect(TareaSchema.safeParse({ ...BASE_TAREA, estado }).success).toBe(true);
+  });
+
+  it('rechaza estados legacy (atrasada, bloqueada, reprogramada)', () => {
+    for (const estado of ['atrasada', 'bloqueada', 'reprogramada'] as const) {
+      expect(TareaSchema.safeParse({ ...BASE_TAREA, estado }).success).toBe(false);
+    }
+  });
+
+  it('acepta situacion calculada opcional', () => {
+    expect(TareaSchema.safeParse({ ...BASE_TAREA, situacion: 'atrasada' }).success).toBe(true);
   });
 
   const tipos = ['planificada', 'no_planificada'] as const;

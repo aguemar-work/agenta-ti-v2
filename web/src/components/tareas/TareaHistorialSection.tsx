@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 import { getLogsPorTarea } from '@/api/audit';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
-import type { EstadoTarea, TipoAccionLog } from '@/types';
+import type { ClaveVisualTarea, TipoAccionLog } from '@/types';
 
 const LABEL_TIPO: Record<TipoAccionLog, string> = {
   creada: 'Creada',
@@ -20,9 +20,8 @@ const LABEL_TIPO: Record<TipoAccionLog, string> = {
 };
 
 /** Mapeo log → pill de estado cuando aplica el mismo diseño. */
-const LOG_A_ESTADO: Partial<Record<TipoAccionLog, EstadoTarea>> = {
+const LOG_A_ESTADO: Partial<Record<TipoAccionLog, ClaveVisualTarea>> = {
   reprogramada: 'reprogramada',
-  bloqueada: 'bloqueada',
   desbloqueada: 'pendiente',
   completada: 'completada',
   cancelada: 'cancelada',

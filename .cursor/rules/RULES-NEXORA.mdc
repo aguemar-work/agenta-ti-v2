@@ -47,11 +47,11 @@ Page → useXxxPage (hook) → api/xxx.ts (SDK + Zod) → InsForge
 ## 3. Design system Meta Canvas
 
 - **Tokens CSS**: usar siempre `var(--mc-color-*)` y `var(--mc-state-*)`. Prohibido hardcodear hex.
-- **Estados de tarea**: usar `TAREA_BADGE`, `TAREA_PILL`, `TAREA_LABEL` de `lib/estadoConfig.ts`
+- **Estados de tarea**: `ClaveVisualTarea` vía `claveVisualTarea()` + `TAREA_*` de `lib/estadoConfig.ts` (ver `web/CONTEXT/TAREA-MODEL.md`)
 - **`--mc-color-warning`**: SOLO para urgencia/atraso/alertas sin atender. Incidencias → `--mc-state-incidencia-*` (apunta a info/cyan)
 - **Acciones primarias**: `<Button variant="primary">` para el CTA principal de cada página
 - **Modales**: siempre usar `<Modal>` de `components/ui/Modal.tsx`
-- **Justificación obligatoria**: `<JustificacionField>` con mínimo ≥10 chars para: bloquear, cancelar, reprogramar, eliminar tarea
+- **Justificación obligatoria**: `<JustificacionField>` con mínimo ≥10 chars para: cancelar, reprogramar, eliminar tarea
 - **Errores por sección**: envolver con `<SectionErrorBoundary label="...">`
 
 ---
@@ -77,11 +77,11 @@ Referencias a estas rutas en código son legacy.
 ## 6. Base de datos
 
 - **No modificar schema sin migración** en `db/migrations/`
-- Checklist vivo por entorno: `.cursor/rules/CONTEXT.mdc` §12 (027–037+)
+- Checklist vivo por entorno: `.cursor/rules/CONTEXT.mdc` §12 (027–040+)
 - Módulo OT: `.cursor/rules/sgtd-ot.mdc`
 - Nombrar RPCs con prefijo `sgtd_`
-- Usar RPCs atómicas para operaciones que requieren log: `sgtd_bloquear_tarea_con_log`, `sgtd_reprogramar_tarea_con_log`, etc.
-- Estado `atrasada` es calculado por trigger (migración 015) — no calcularlo en frontend
+- Usar RPCs atómicas para operaciones que requieren log: `sgtd_reprogramar_tarea_con_log`, `sgtd_eliminar_tarea_con_motivo`, etc.
+- `situacion` (atrasada/reprogramada) se lee de `tarea_activa` — no persistir en `estado` (migr. 038–040)
 
 ---
 

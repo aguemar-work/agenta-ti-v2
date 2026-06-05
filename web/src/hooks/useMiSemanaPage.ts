@@ -52,7 +52,7 @@ export function useMiSemanaPage() {
   const mut = useMiSemanaMutations(uid);
 
   const conteos = useMemo(() => {
-    const c = { pendiente: 0, en_progreso: 0, atrasada: 0, reprogramada: 0, completada: 0, bloqueada: 0 };
+    const c = { pendiente: 0, en_progreso: 0, atrasada: 0, reprogramada: 0, completada: 0 };
     for (const t of tareasPlan) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       if (est in c) c[est as keyof typeof c]++;
@@ -87,14 +87,12 @@ export function useMiSemanaPage() {
   const resumenDia = useMemo(() => {
     let pendientesHoy = 0;
     let atrasadas = 0;
-    let bloqueadas = 0;
     for (const t of tareasPlan) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       if (t.fecha_planificada === hoyYmd && est === 'pendiente') pendientesHoy++;
       if (est === 'atrasada') atrasadas++;
-      if (est === 'bloqueada') bloqueadas++;
     }
-    return { pendientesHoy, atrasadas, bloqueadas };
+    return { pendientesHoy, atrasadas };
   }, [tareasPlan, hoyYmd]);
 
   const [ocultarCompletadas, setOcultarCompletadas] = useState(() => {
@@ -301,8 +299,6 @@ export function useMiSemanaPage() {
     setDetalleTareaId:   modales.setDetalleTareaId,
     completarTareaId:    modales.completarTareaId,
     setCompletarTareaId: modales.setCompletarTareaId,
-    bloquearTareaState:  modales.bloquearTareaState,
-    setBloquearTareaState: modales.setBloquearTareaState,
     reprDetalleTarea:    modales.reprDetalleTarea,
     setReprDetalleTarea: modales.setReprDetalleTarea,
     reprDragTarea:       dnd.reprDragTarea,
@@ -310,12 +306,12 @@ export function useMiSemanaPage() {
     puedeGestionar,
     confirmarReprDrag:     dnd.confirmarReprDrag,
     confirmarReprDetalle:  modales.confirmarReprDetalle,
-    confirmarBloqueo:      modales.confirmarBloqueo,
     confirmarCompletar:    modales.confirmarCompletar,
     crearTareaDesdeModal:  modales.crearTareaDesdeModal,
     crearEventoDesdeModal: modales.crearEventoDesdeModal,
     guardarDetalle:        modales.guardarDetalle,
     eliminarDesdeDetalle:  modales.eliminarDesdeDetalle,
+    cancelarDesdeDetalle:  modales.cancelarDesdeDetalle,
     iniciarDesdeDetalle:   modales.iniciarDesdeDetalle,
     generarOtDesdeTarea,
   };

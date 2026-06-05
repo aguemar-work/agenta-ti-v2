@@ -26,7 +26,6 @@ import {
 } from '@/api/planificacion';
 import {
   crearTareaPlanificada,
-  desbloquearTareaConLog,
   reprogramarTareaConLog,
 } from '@/api/semana';
 import { getObjetivosActivos } from '@/api/objetivos';
@@ -36,7 +35,7 @@ import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { agregarDias, inicioSemanaIso, numeroSemanaDesdeLunes, semanaIsoDesdeFecha } from '@/lib/semanas';
 import { useAuthStore } from '@/store/authStore';
-import type { EstadoTarea, Tarea } from '@/types';
+import type { ClaveVisualTarea, Tarea } from '@/types';
 
 export const Q_LOGS = 'audit-logs-pendientes';
 
@@ -59,7 +58,6 @@ export function usePlanificacionPage() {
   const [modal, setModal] = useState<{ usuarioId: string; fecha: string; nombre: string } | null>(null);
   /** Controla el modal de creación directa de tarea desde el panel del Jefe. */
   const [modalCrear, setModalCrear] = useState<{ usuarioId: string; fecha: string } | null>(null);
-  const [desbloquearTarea, setDesbloquearTarea] = useState<Tarea | null>(null);
   const [devolverTarea, setDevolverTarea] = useState<Tarea | null>(null);
   const [motivoDevolver, setMotivoDevolver] = useState('');
   const [busyDevolver, setBusyDevolver] = useState(false);
@@ -196,28 +194,17 @@ export function usePlanificacionPage() {
     for (const t of carga) {
       if (estadoEfectivoTablero(t, hoyYmd) === 'atrasada') atrasadas++;
     }
-    const ymdsSemana = new Set(diasLab.map((d) => fechaLocalYmd(d)));
-    const bloqueadas = carga.filter(
-      (t) => estadoEfectivoTablero(t, hoyYmd) === 'bloqueada' && t.fecha_planificada && ymdsSemana.has(t.fecha_planificada),
-    );
     return {
       atrasadas,
       otsPendientes: otsPendientes.length,
-      incidenciasActivas: incidencias.length + bloqueadas.length,
+      incidenciasActivas: incidencias.length,
       justificacionesPendientes: logsPend.length,
     };
-  }, [carga, hoyYmd, diasLab, otsPendientes, incidencias.length, logsPend.length]);
+  }, [carga, hoyYmd, otsPendientes, incidencias.length, logsPend.length]);
 
-  const bloqueadasSemana = useMemo(() => {
-    const ymdsSemana = new Set(diasLab.map((d) => fechaLocalYmd(d)));
-    return carga.filter(
-      (t) => estadoEfectivoTablero(t, hoyYmd) === 'bloqueada' && t.fecha_planificada && ymdsSemana.has(t.fecha_planificada),
-    );
-  }, [carga, diasLab, hoyYmd]);
-
-  function conteoEstadosDia(ymd: string): Partial<Record<EstadoTarea, number>> {
+  function conteoEstadosDia(ymd: string): Partial<Record<ClaveVisualTarea, number>> {
     const del = carga.filter((t) => t.fecha_planificada === ymd);
-    const counts: Partial<Record<EstadoTarea, number>> = {};
+    const counts: Partial<Record<ClaveVisualTarea, number>> = {};
     for (const t of del) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       counts[est] = (counts[est] ?? 0) + 1;
@@ -225,9 +212,9 @@ export function usePlanificacionPage() {
     return counts;
   }
 
-  function conteoEstadosDiaMiembro(uid: string, ymd: string): Partial<Record<EstadoTarea, number>> {
+  function conteoEstadosDiaMiembro(uid: string, ymd: string): Partial<Record<ClaveVisualTarea, number>> {
     const del = carga.filter((t) => t.asignado_a === uid && t.fecha_planificada === ymd);
-    const counts: Partial<Record<EstadoTarea, number>> = {};
+    const counts: Partial<Record<ClaveVisualTarea, number>> = {};
     for (const t of del) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       counts[est] = (counts[est] ?? 0) + 1;
@@ -236,7 +223,7 @@ export function usePlanificacionPage() {
   }
 
   const conteoSemana = useMemo(() => {
-    const counts: Partial<Record<EstadoTarea, number>> = {};
+    const counts: Partial<Record<ClaveVisualTarea, number>> = {};
     for (const t of carga) {
       const est = estadoEfectivoTablero(t, hoyYmd);
       counts[est] = (counts[est] ?? 0) + 1;
@@ -250,19 +237,6 @@ export function usePlanificacionPage() {
     await qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] });
   }
 
-  async function confirmarDesbloqueo(input: { tareaId: string; nuevaFecha: string; justificacion: string }) {
-    if (!usuario) return;
-    try {
-      await desbloquearTareaConLog({ ...input, usuarioId: usuario.id });
-      setDesbloquearTarea(null);
-      toast.success('Tarea desbloqueada');
-      await invalidarCarga();
-    } catch (err) {
-      console.error('[confirmarDesbloqueo]', err);
-      toast.error('No se pudo desbloquear la tarea.');
-    }
-  }
-
   async function confirmarDevolver() {
     if (!devolverTarea || !usuario || !motivoDevolverOk) return;
     setBusyDevolver(true);
@@ -272,7 +246,6 @@ export function usePlanificacionPage() {
         usuarioId: usuario.id,
         nuevaFecha: devolverTarea.fecha_planificada ?? hoyYmd,
         justificacion: motivoDevolver.trim(),
-        nuevoEstado: 'pendiente',
       });
       setDevolverTarea(null);
       setMotivoDevolver('');
@@ -345,7 +318,6 @@ export function usePlanificacionPage() {
     conteoSemana,
     otsPendientes,
     resumenAlertas,
-    bloqueadasSemana,
     totalDiaEquipo,
 
     // Mutaciones justificaciones
@@ -354,7 +326,6 @@ export function usePlanificacionPage() {
 
     // Modales
     modal, setModal,
-    desbloquearTarea, setDesbloquearTarea,
     devolverTarea,
     motivoDevolver, setMotivoDevolver,
     motivoDevolverOk, motivoDevolverLen,
@@ -367,7 +338,6 @@ export function usePlanificacionPage() {
     conteoEstadosDiaMiembro,
 
     // Handlers
-    confirmarDesbloqueo,
     confirmarDevolver,
     abrirDevolver,
     cerrarDevolver,

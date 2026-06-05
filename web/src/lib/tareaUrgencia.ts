@@ -21,7 +21,7 @@ import {
 // Urgencia horaria de una tarea (vista HOY)
 //
 // Solo aplica a tareas pendientes/en_progreso del día actual.
-// Si ya está completada, bloqueada, atrasada o cancelada → 'normal'
+// Si ya está completada o cancelada → 'normal'
 // (su propio estado ya comunica el problema).
 // ---------------------------------------------------------------------------
 
@@ -132,7 +132,7 @@ export const RIESGO_CONFIG: Record<NivelRiesgoObjetivo, {
   moderado: {
     label:      'Moderado',
     badgeClass: 'mc-badge-warning',
-    textColor:  'var(--mc-state-bloqueada-meta)',
+    textColor:  'var(--mc-state-precaucion-border)',
     bgColor:    'var(--mc-state-precaucion-bg-soft)',
     barColor:   'var(--mc-state-precaucion-border)',
   },

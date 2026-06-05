@@ -16,8 +16,7 @@
  *   ot_rechazada          → { otId, numero, motivo }
  *   incidencia_registrada → { titulo, usuarioNombre }
  *   tarea_atrasada          → { tareaId, titulo, diasAtraso, usuarioNombre }
- *   tarea_bloqueada_critica → { tareaId, titulo, horasBloqueada, usuarioNombre }
- *   resumen_sla_diario      → { nuevasAtrasadas, bloqueadasCriticas, fecha }
+ *   resumen_sla_diario      → { nuevasAtrasadas, fecha }
  *
  * Uso:
  *   const { conectado } = useRealtimeNotificaciones();
@@ -197,36 +196,13 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
             });
           });
 
-          rt.on('tarea_bloqueada_critica', (payload: EventPayload) => {
-            if (cancelledRef.current) return;
-            invalidatePlanificacionYsla(qc);
-            notifyIfEnabled(prefs, 'tarea_bloqueada_critica', () => {
-              const horas = Number(payload.horasBloqueada ?? 48);
-              const quien = payload.usuarioNombre ? ` (${payload.usuarioNombre})` : '';
-              const msg = `Tarea bloqueada ${horas}h${quien}: "${payload.titulo ?? ''}"`;
-              toast.error(msg, {
-                description: 'Sin resolver hace más de 48 horas',
-                duration: 10_000,
-                action: {
-                  label: 'Ver',
-                  onClick: () => navigate(planificacionSlaPath()),
-                },
-              });
-              announcePolitely(msg);
-            });
-          });
-
           rt.on('resumen_sla_diario', (payload: EventPayload) => {
             if (cancelledRef.current) return;
             invalidatePlanificacionYsla(qc);
             notifyIfEnabled(prefs, 'resumen_sla_diario', () => {
               const n = Number(payload.nuevasAtrasadas ?? 0);
-              const b = Number(payload.bloqueadasCriticas ?? 0);
-              if (n === 0 && b === 0) return;
-              const partes: string[] = [];
-              if (n > 0) partes.push(`${n} atrasada${n !== 1 ? 's' : ''} nuevas`);
-              if (b > 0) partes.push(`${b} bloqueada${b !== 1 ? 's' : ''} >48 h`);
-              const msg = `Resumen SLA: ${partes.join(', ')}`;
+              if (n === 0) return;
+              const msg = `Resumen SLA: ${n} atrasada${n !== 1 ? 's' : ''} nueva${n !== 1 ? 's' : ''}`;
               toast.warning(msg, {
                 description: 'Revisar en planificación',
                 duration: 12_000,

@@ -74,7 +74,7 @@ export function PlanificacionJustificaciones({
 
   const titulo = (
     <>
-      Pendientes de revisión
+      Justificaciones del equipo
       {logs.length > 0 ? (
         <span className="mc-plan-panel__count" aria-label={`${logs.length} pendientes`}>
           {logs.length}
@@ -92,7 +92,10 @@ export function PlanificacionJustificaciones({
       className="mc-plan-grid-operativa__revision"
     >
       {logs.length > 0 ? (
-        <p className="mc-plan-panel__hint m-0">Requieren tu decisión: aceptar o devolver al miembro.</p>
+        <p className="mc-plan-panel__hint m-0">
+          Solo reprogramaciones, cancelaciones y eliminaciones con motivo. Las tareas completadas no
+          pasan por aquí — revisa el resumen al cerrar cada tarea.
+        </p>
       ) : null}
       {error && (
         <p className="m-0 text-sm text-[var(--mc-color-danger)]">No se pudieron cargar las justificaciones.</p>
@@ -100,7 +103,11 @@ export function PlanificacionJustificaciones({
       {loading ? (
         <p className="m-0 text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>
       ) : logs.length === 0 ? (
-        <EmptyState compact title="Sin pendientes" desc="No hay justificaciones que requieran tu decisión." />
+        <EmptyState
+          compact
+          title="Sin justificaciones pendientes"
+          desc="Cuando un miembro reprograme, cancele o elimine una tarea, aparecerá aquí para revisar el motivo."
+        />
       ) : (
         <>
           <ul className="mc-plan-revision-list">
@@ -164,7 +171,7 @@ export function PlanificacionJustificaciones({
                   ) : (
                     <div className="mc-plan-revision-card__acciones">
                       <Button variant="secondary" size="xs" disabled={busy} onClick={() => onAceptar(log.id)}>
-                        {busyAceptar ? '…' : 'Aceptar'}
+                        {busyAceptar ? '…' : 'Marcar como revisado'}
                       </Button>
                       <Button
                         variant="ghost"

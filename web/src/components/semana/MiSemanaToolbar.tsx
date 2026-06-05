@@ -1,4 +1,3 @@
-import { MiSemanaLeyendaEstados } from '@/components/semana/MiSemanaLeyendaEstados';
 import { MiSemanaMenuSecundario } from '@/components/semana/MiSemanaMenuSecundario';
 import { MiSemanaStatsInline } from '@/components/semana/MiSemanaStatsInline';
 
@@ -51,7 +50,6 @@ export function MiSemanaToolbar({
       </div>
 
       <div className="mc-misemana-toolbar__right">
-        <MiSemanaLeyendaEstados compact className="mc-misemana-toolbar__leyenda" />
         <label className="mc-misemana-toggle-completadas">
           <input
             type="checkbox"

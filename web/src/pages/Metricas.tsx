@@ -53,7 +53,7 @@ export function Metricas() {
   const miembrosBajoRendimiento = useMemo(
     () =>
       comparativa.filter((m) => {
-        const tot = m.completadas + m.atrasadas + m.bloqueadas + m.reprogramadas;
+        const tot = m.completadas + m.atrasadas + m.reprogramadas;
         return tot > 0 && pct(m.completadas, tot) < 50;
       }).length,
     [comparativa],

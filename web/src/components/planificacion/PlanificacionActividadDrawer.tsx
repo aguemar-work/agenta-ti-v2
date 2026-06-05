@@ -5,7 +5,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { LogActividadItem } from '@/api/audit';
 import type { FiltrosHistorialLog } from '@/api/audit';
 import type { LogAccion, Tarea, TipoAccionLog } from '@/types';
-import type { EstadoTarea } from '@/types';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 
@@ -185,7 +184,7 @@ export function PlanificacionActividadDrawer({
               ) : (
                 <div className="mc-plan-drawer-list">
                   {incidencias.map((t) => {
-                    const est = estadoEfectivoTablero(t, hoyYmd) as EstadoTarea;
+                    const est = estadoEfectivoTablero(t, hoyYmd);
                     return (
                       <div key={t.id} className="mc-plan-drawer-list__item mc-plan-drawer-list__item--stack">
                         <div className="flex items-center justify-between gap-2">

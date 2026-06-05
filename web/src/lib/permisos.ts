@@ -12,7 +12,7 @@
 import type { Tarea, Usuario } from '@/types';
 
 /**
- * Determina si el usuario puede gestionar (editar, completar, bloquear,
+ * Determina si el usuario puede gestionar (editar, completar,
  * reprogramar, eliminar) una tarea.
  *
  * Reglas:

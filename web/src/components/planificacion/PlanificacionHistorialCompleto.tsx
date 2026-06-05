@@ -134,7 +134,6 @@ export function PlanificacionHistorialCompleto({
               <option value="todos">Todos los tipos</option>
               <option value="reprogramada">Reprogramada</option>
               <option value="cancelada">Cancelación</option>
-              <option value="bloqueada">Bloqueada</option>
               <option value="completada">Completada</option>
             </select>
           </div>

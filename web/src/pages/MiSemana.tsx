@@ -16,7 +16,6 @@ import { ModalConvertirNota } from '@/components/semana/ModalConvertirNota';
 import { NotasDrawer } from '@/components/semana/NotasDrawer';
 import { Modal } from '@/components/ui/Modal';
 import { ESTADO_OT_LABEL } from '@/lib/otConfig';
-import { ModalBloquear } from '@/components/tareas/ModalBloquear';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
 import { Button } from '@/components/ui/Button';
@@ -64,6 +63,7 @@ export function MiSemana() {
     esBannerViernes,
     notasHoy,
     ordenesPorTarea,
+    nombresPorId,
     ocultarCompletadas,
     toggleOcultarCompletadas,
     modalInc,
@@ -92,8 +92,6 @@ export function MiSemana() {
     setDetalleTareaId,
     completarTareaId,
     setCompletarTareaId,
-    bloquearTareaState,
-    setBloquearTareaState,
     reprDetalleTarea,
     setReprDetalleTarea,
     reprDragTarea,
@@ -101,12 +99,12 @@ export function MiSemana() {
     puedeGestionar,
     confirmarReprDrag,
     confirmarReprDetalle,
-    confirmarBloqueo,
     confirmarCompletar,
     crearTareaDesdeModal,
     crearEventoDesdeModal,
     guardarDetalle,
     eliminarDesdeDetalle,
+    cancelarDesdeDetalle,
     iniciarDesdeDetalle,
     generarOtDesdeTarea,
     incidenciasSemana,
@@ -166,7 +164,8 @@ export function MiSemana() {
           onSemanaAnterior={() => setLunes((d) => navegarSemanaAnterior(d))}
           onSemanaSiguiente={() => setLunes((d) => navegarSemanaSiguiente(d))}
           onIrHoy={() => setLunes(lunesSemanaActual())}
-          onNuevaTarea={() => setModal({ fecha: hoyYmd })}
+          onNuevaTarea={() => setModal({ fecha: diaMobileYmd })}
+          nuevaTareaLabel="+ Tarea"
           onNotas={() => setNotasDrawerOpen(true)}
           notasOpen={notasDrawerOpen}
         />
@@ -266,6 +265,7 @@ export function MiSemana() {
           filtroEstado={filtroEstado}
           incidenciasSemana={incidenciasSemana}
           ordenesPorTarea={ordenesPorTarea}
+          nombresPorId={nombresPorId}
           ocultarCompletadas={ocultarCompletadas}
           activeDragId={activeDragId}
           setActiveDragId={setActiveDragId}
@@ -278,6 +278,9 @@ export function MiSemana() {
           onAbrirDetalle={setDetalleTareaId}
           onRegistrarIncidencia={() => setModalInc(true)}
           onOtClick={setOtViendo}
+          onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
+          onCompletarTarea={(t) => setCompletarTareaId(t.id)}
+          onReprogramarTarea={(t) => setReprDetalleTarea(t)}
         />
       </Suspense>
 
@@ -339,11 +342,6 @@ export function MiSemana() {
         onClose={() => setCompletarTareaId(null)}
         onConfirm={confirmarCompletar}
       />
-      <ModalBloquear
-        tarea={bloquearTareaState}
-        onClose={() => setBloquearTareaState(null)}
-        onConfirm={confirmarBloqueo}
-      />
       <ModalReprogramar
         tarea={reprDragTarea?.tarea ?? null}
         {...(reprDragTarea?.fecha ? { fechaFija: reprDragTarea.fecha } : {})}
@@ -380,6 +378,7 @@ export function MiSemana() {
         onClose={() => setDetalleTareaId(null)}
         onGuardar={guardarDetalle}
         onEliminar={eliminarDesdeDetalle}
+        onCancelar={cancelarDesdeDetalle}
         onIniciar={iniciarDesdeDetalle}
         {...(tareaDetalle && puedeGestionar(tareaDetalle)
           ? { onGenerarOt: (t: Tarea) => { void generarOtDesdeTarea(t); } }
@@ -394,10 +393,6 @@ export function MiSemana() {
         }}
         onReprogramar={(t) => {
           setReprDetalleTarea(t);
-          setDetalleTareaId(null);
-        }}
-        onBloquear={(t) => {
-          setBloquearTareaState(t);
           setDetalleTareaId(null);
         }}
       />

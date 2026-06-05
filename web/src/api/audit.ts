@@ -7,7 +7,7 @@ function parseLog(row: Record<string, unknown>): LogAccion {
 }
 
 /** Tipos de log que el jefe debe revisar (acciones con justificación obligatoria). */
-const TIPOS_REVISION_JEFE = ['bloqueada', 'cancelada', 'reprogramada', 'eliminada'] as const;
+const TIPOS_REVISION_JEFE = ['cancelada', 'reprogramada', 'eliminada'] as const;
 
 /** Entradas de log con justificación pendiente de revisión por el jefe. */
 export async function getJustificacionesPendientesJefe(): Promise<LogAccion[]> {
@@ -113,7 +113,7 @@ export type LogActividadItem = {
 
 /**
  * Logs de actividad relevantes de la semana para el feed del Jefe.
- * Solo incluye acciones con contenido narrativo: completadas, reprogramadas, bloqueadas.
+ * Solo incluye acciones con contenido narrativo: completadas, reprogramadas, canceladas.
  */
 export async function getActividadEquipoSemana(
   desde: Date,

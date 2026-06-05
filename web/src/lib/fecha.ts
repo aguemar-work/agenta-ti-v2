@@ -13,3 +13,9 @@ export function fechaLocalDdMmYyyy(fecha: Date): string {
   const y = fecha.getFullYear();
   return `${d}/${m}/${y}`;
 }
+
+/** Pie de card: «2 jun» (sin año). */
+export function fechaCortaDiaMes(ymd: string): string {
+  const d = new Date(`${ymd}T12:00:00`);
+  return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+}

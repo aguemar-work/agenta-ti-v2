@@ -167,14 +167,14 @@ describe('moverTareaColumna', () => {
     });
   });
 
-  it('dado columna "bloqueada" con justificación, cuando se mueve, entonces el RPC recibe la justificación', async () => {
+  it('dado cancelación con justificación, cuando se mueve, entonces el RPC recibe la justificación', async () => {
     const { moverTareaColumna } = await import('@/api/tablero');
-    const justificacion = 'Recurso externo no disponible';
+    const justificacion = 'Ya no aplica al cierre del proyecto';
 
-    await moverTareaColumna(TEST_IDS.tarea1, 'bloqueada', TEST_IDS.miembro, justificacion);
+    await moverTareaColumna(TEST_IDS.tarea1, 'cancelada', TEST_IDS.miembro, justificacion);
 
     expect(mockRpc).toHaveBeenCalledWith('sgtd_mover_tarea_columna', expect.objectContaining({
-      p_nuevo_estado:  'bloqueada',
+      p_nuevo_estado:  'cancelada',
       p_justificacion: justificacion,
     }));
   });
@@ -184,7 +184,7 @@ describe('moverTareaColumna', () => {
     mockRpc.mockResolvedValue({ data: null, error: new Error('permission denied') });
 
     await expect(
-      moverTareaColumna(TEST_IDS.tarea1, 'bloqueada', TEST_IDS.miembro, 'justificación válida'),
+      moverTareaColumna(TEST_IDS.tarea1, 'cancelada', TEST_IDS.miembro, 'justificación válida con diez'),
     ).rejects.toThrow('permission denied');
   });
 });

@@ -10,7 +10,7 @@ describe('permisos — paridad con RLS/RPC', () => {
     const acciones = REGLAS_PERMISO_BACKEND.map((r) => r.accion);
     expect(acciones).toContain('Ver/editar cualquier tarea');
     expect(acciones).toContain('Modificar tarea ajena (miembro)');
-    expect(acciones).toContain('Bloquear / reprogramar / eliminar con log');
+    expect(acciones).toContain('Reprogramar / cancelar / eliminar con log');
     expect(acciones).toContain('Aprobar / rechazar OT');
   });
 

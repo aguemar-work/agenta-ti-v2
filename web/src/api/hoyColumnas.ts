@@ -25,7 +25,7 @@ function ordenarNotasBitacora(notas: NotaBitacora[]): NotaBitacora[] {
   });
 }
 
-const estadosActivos: Tarea['estado'][] = ['pendiente', 'en_progreso', 'bloqueada', 'atrasada'];
+const estadosActivos: Tarea['estado'][] = ['pendiente', 'en_progreso'];
 
 /** Incidencias abiertas del usuario (columna Incidencias en HOY). */
 export async function getIncidenciasAbiertas(usuarioId: string): Promise<Tarea[]> {

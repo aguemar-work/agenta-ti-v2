@@ -112,7 +112,7 @@ Mismo `border-radius` (`--mc-radius-lg`), `padding` (`--mc-space-5`), borde `1px
 - Footer: «Ver actividad del equipo →» abre drawer (actividad, justificaciones, incidencias)
 - Sin KPI cards, feed ni paneles laterales en vista principal
 - Móvil: lista por miembro → días verticales al seleccionar
-- Clic en celda: modal detalle (jefe puede desbloquear / devolver / crear tarea)
+- Clic en celda: modal detalle (jefe puede devolver / crear tarea)
 
 ## Módulo Objetivos
 

@@ -64,6 +64,7 @@ import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
 import { labelNumeroOT } from '@/lib/otNumero';
+import { mensajeErrorInsforge } from '@/lib/insforgeError';
 
 import type { Id, Tarea } from '@/types';
 
@@ -633,7 +634,10 @@ export function useOrdenesTrabajoPage() {
 
     },
 
-    onError: (err) => { console.error('[mutCompletarOT]', err); toast.error('No se pudo completar la OT.'); },
+    onError: (err) => {
+      console.error('[mutCompletarOT]', err);
+      toast.error(mensajeErrorInsforge(err, 'No se pudo completar la OT.'));
+    },
 
   });
 

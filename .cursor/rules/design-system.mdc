@@ -79,15 +79,16 @@ import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 <span className="ds-status-badge ds-status-badge--atrasada">...</span>
 ```
 
-### 2.2 Mapa completo de badge por estado (fuente: `TAREA_BADGE` en `estadoConfig.ts`)
+### 2.2 Mapa completo de badge por clave visual (fuente: `TAREA_BADGE` en `estadoConfig.ts`)
 
-| Estado | Clase badge | Color | Nota |
+Claves = `ClaveVisualTarea` (`estado` persistido + `atrasada`/`reprogramada` de `situacion`). Ver `web/CONTEXT/TAREA-MODEL.md`.
+
+| Clave visual | Clase badge | Color | Nota |
 |---|---|---|---|
 | `pendiente` | `mc-badge-neutral` | Gris neutro | |
 | `en_progreso` | `mc-badge-info` | Azul info | Usa `--mc-color-info`, **no** brand/accent |
 | `completada` | `mc-badge-success` | Verde | |
-| `bloqueada` | `mc-badge-warning` | Ámbar | |
-| `atrasada` | `mc-badge-danger` | Rojo | |
+| `atrasada` | `mc-badge-danger` | Rojo | Eje 2 — no es valor de `estado` en BD |
 | `reprogramada` | `mc-badge-neutral` | Gris neutro | Badge es neutral; `TAREA_PILL` usa violeta — ver §2.5 |
 | `cancelada` | `mc-badge-neutral` | Gris neutro | |
 

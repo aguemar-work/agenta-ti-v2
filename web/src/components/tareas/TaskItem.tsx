@@ -6,7 +6,7 @@ import { useMenuPosition } from '@/hooks/useMenuPosition';
 import { URGENCIA_LABEL, STATE_TOKENS, URGENCIA_TOKENS } from '@/lib/estadoConfig';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { urgenciaHoraria } from '@/lib/tareaUrgencia';
-import type { EstadoTarea, Tarea, UrgenciaHoraria } from '@/types';
+import type { ClaveVisualTarea, Tarea, UrgenciaHoraria } from '@/types';
 
 export type TaskItemVariant = 'card' | 'week' | 'kanban';
 
@@ -14,7 +14,7 @@ export type TaskItemProps = {
   variant:              TaskItemVariant;
   tarea:                Tarea;
   readOnly?:            boolean;
-  estadoVisual?:        EstadoTarea;
+  estadoVisual?:        ClaveVisualTarea;
   sinAccionesRapidas?:  boolean;
   asignadoNombre?:      string;
   objetivoTitulo?:      string | null;
@@ -24,7 +24,6 @@ export type TaskItemProps = {
   onOpenDetalle?:       (t: Tarea) => void;
   onEditar?:            (t: Tarea) => void;
   onEliminar?:          (t: Tarea) => void;
-  onBloquear?:          (t: Tarea) => void;
   onReprogramar?:       (t: Tarea) => void;
   onCompletar?:         (t: Tarea) => void;
   onIniciar?:           (t: Tarea) => void;
@@ -38,16 +37,15 @@ export type TaskItemProps = {
  * Devuelve el color del borde izquierdo de alerta, o null si no hay alerta.
  * Usado de forma uniforme en las tres variantes.
  */
-function borderColorAlerta(urgencia: UrgenciaHoraria, est: EstadoTarea): string | null {
+function borderColorAlerta(urgencia: UrgenciaHoraria, est: ClaveVisualTarea): string | null {
   if (est === 'atrasada')          return STATE_TOKENS.atrasada.border;
-  if (est === 'bloqueada')         return STATE_TOKENS.bloqueada.border;
   if (urgencia === 'vencida_hoy')  return URGENCIA_TOKENS.vencida_hoy.border;
   if (urgencia === 'urgente')      return URGENCIA_TOKENS.urgente.border;
   if (urgencia === 'precaucion')   return URGENCIA_TOKENS.precaucion.border;
   return null;
 }
 
-function urgenciaStyles(urgencia: UrgenciaHoraria, est: EstadoTarea): {
+function urgenciaStyles(urgencia: UrgenciaHoraria, est: ClaveVisualTarea): {
   containerClass: string;
   bgColor:        string | null;
   textColor:      string;
@@ -55,9 +53,6 @@ function urgenciaStyles(urgencia: UrgenciaHoraria, est: EstadoTarea): {
   if (est === 'atrasada') {
     const t = STATE_TOKENS.atrasada;
     return { containerClass: '', bgColor: t.bg, textColor: t.fg };
-  }
-  if (est === 'bloqueada') {
-    return { containerClass: '', bgColor: null, textColor: '' };
   }
   switch (urgencia) {
     case 'vencida_hoy': {
@@ -84,7 +79,7 @@ export function TaskItem({
   sinAccionesRapidas = false, asignadoNombre, objetivoTitulo,
   dragHandle,
   onOpenDetalle, onEditar, onEliminar,
-  onBloquear, onReprogramar, onCompletar, onIniciar,
+  onReprogramar, onCompletar, onIniciar,
 }: TaskItemProps) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -111,9 +106,10 @@ export function TaskItem({
   const estaCompletada     = est === 'completada' || est === 'cancelada';
 
   const flagColor =
-    tarea.prioridad === 'alta'  ? 'var(--mc-color-danger)'  :
-    tarea.prioridad === 'media' ? 'var(--mc-color-warning)'  :
-                                  'var(--mc-color-text-secondary)';
+    tarea.prioridad === 'critica' ? 'var(--mc-color-danger)'  :
+    tarea.prioridad === 'alta'    ? 'var(--mc-color-danger)'  :
+    tarea.prioridad === 'media'   ? 'var(--mc-color-warning)' :
+                                    'var(--mc-color-text-secondary)';
 
   const lineThrough = est === 'completada' ? 'line-through opacity-60' : '';
 
@@ -173,7 +169,7 @@ export function TaskItem({
 
   // ── Menú de opciones ──────────────────────────────────────────────────────
   const tieneMenu = !readOnly && !estaCompletada &&
-    (onReprogramar || onEliminar || onBloquear || onEditar);
+    (onReprogramar || onEliminar || onEditar);
 
   const menuOpciones = tieneMenu ? (
     <div
@@ -210,17 +206,6 @@ export function TaskItem({
               onClick={() => { setMenuAbierto(false); onReprogramar(tarea); }}
             >
               Reprogramar
-            </Button>
-          )}
-          {(est === 'pendiente' || est === 'atrasada' || est === 'en_progreso') && onBloquear && (
-            <Button
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal text-[var(--mc-color-text)]"
-              onClick={() => { setMenuAbierto(false); onBloquear(tarea); }}
-            >
-              Bloquear
             </Button>
           )}
           {onEditar && (

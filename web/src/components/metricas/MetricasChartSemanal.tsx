@@ -4,7 +4,6 @@ import { colorCumplimiento, pct } from '@/lib/metricasHelpers';
 const COLORES: Record<string, string> = {
   completadas: 'var(--mc-state-completada-fg)',
   atrasadas: 'var(--mc-state-atrasada-border)',
-  bloqueadas: 'var(--mc-color-warning)',
   reprogramadas: 'var(--mc-state-reprogramada-border)',
   en_progreso: 'var(--mc-state-progreso-border)',
   pendientes: 'var(--mc-color-neutral-soft)',
@@ -15,7 +14,6 @@ const LEYENDA = [
   { key: 'en_progreso', label: 'En progreso' },
   { key: 'pendientes', label: 'Pendientes' },
   { key: 'atrasadas', label: 'Atrasadas' },
-  { key: 'bloqueadas', label: 'Bloqueadas' },
   { key: 'reprogramadas', label: 'Reprogramadas' },
 ] as const;
 

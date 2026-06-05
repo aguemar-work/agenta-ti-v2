@@ -46,7 +46,6 @@ export function Planificacion() {
     incidencias,
     actividad,
     loadActividad,
-    bloqueadasSemana,
     resumenAlertas,
     mostrarHistorial,
     setMostrarHistorial,
@@ -129,11 +128,9 @@ export function Planificacion() {
         onPeriodoHasta={setPeriodoHasta}
       />
 
-      {vistaSla && ((resumenSla?.atrasadas_nuevas_24h ?? 0) + (resumenSla?.bloqueadas_criticas ?? 0) > 0) && (
+      {vistaSla && (resumenSla?.atrasadas_nuevas_24h ?? 0) > 0 && (
         <p className="mc-plan-sla-hint m-0" role="status">
-          Alertas SLA: {(resumenSla?.atrasadas_nuevas_24h ?? 0) > 0 && `${resumenSla!.atrasadas_nuevas_24h} atrasada(s) 24 h`}
-          {(resumenSla?.atrasadas_nuevas_24h ?? 0) > 0 && (resumenSla?.bloqueadas_criticas ?? 0) > 0 ? ' · ' : ''}
-          {(resumenSla?.bloqueadas_criticas ?? 0) > 0 && `${resumenSla!.bloqueadas_criticas} bloqueada(s) >48 h`}
+          Alertas SLA: {resumenSla!.atrasadas_nuevas_24h} atrasada(s) nuevas en 24 h
         </p>
       )}
 
@@ -201,7 +198,6 @@ export function Planificacion() {
 
             <PlanificacionIncidenciasLista
               incidencias={incidencias}
-              bloqueadas={bloqueadasSemana}
               loading={loadInc}
               hoyYmd={hoyYmd}
               nombreMiembro={nombreMiembro}

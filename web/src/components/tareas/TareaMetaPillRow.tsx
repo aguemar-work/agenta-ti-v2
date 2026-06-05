@@ -2,8 +2,8 @@ import { Calendar } from 'lucide-react';
 
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { fechaLocalDdMmYyyy } from '@/lib/fecha';
-import { PRIORIDAD_LABEL } from '@/lib/estadoConfig';
-import { estadoEfectivoTablero } from '@/lib/tableroEstado';
+import { ESTADO_EJECUCION_LABEL, PRIORIDAD_LABEL } from '@/lib/estadoConfig';
+import { claveVisualTarea, situacionEfectiva } from '@/lib/tableroEstado';
 import type { PrioridadTarea, Tarea } from '@/types';
 
 type Props = {
@@ -29,13 +29,23 @@ function FechaPill({ ymd }: { ymd: string }) {
   );
 }
 
-/** Estado + prioridad + fecha con el mismo lenguaje visual (pills). */
+/** Dos ejes (situación + estado) + prioridad + fecha en detalle de tarea. */
 export function TareaMetaPillRow({ tarea, hoyYmd, className = '' }: Props) {
-  const est = estadoEfectivoTablero(tarea, hoyYmd);
+  const terminal = tarea.estado === 'completada' || tarea.estado === 'cancelada';
+  const sit = situacionEfectiva(tarea, hoyYmd);
+  const muestraSituacion = !terminal && (sit === 'atrasada' || sit === 'reprogramada');
 
   return (
     <div className={['mc-tarea-meta-pills', className].filter(Boolean).join(' ')}>
-      <TareaEstadoIndicator estado={est} variant="pill" />
+      {muestraSituacion && sit && (
+        <TareaEstadoIndicator estado={sit} variant="pill" />
+      )}
+      {!terminal && (
+        <span className="mc-meta-pill mc-meta-pill--estado-ejecucion">
+          {ESTADO_EJECUCION_LABEL[tarea.estado]}
+        </span>
+      )}
+      {terminal && <TareaEstadoIndicator estado={claveVisualTarea(tarea, hoyYmd)} variant="pill" />}
       <PrioridadPill prioridad={tarea.prioridad} />
       {tarea.fecha_planificada ? <FechaPill ymd={tarea.fecha_planificada} /> : null}
     </div>

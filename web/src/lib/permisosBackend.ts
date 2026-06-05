@@ -35,10 +35,10 @@ export const REGLAS_PERMISO_BACKEND: readonly ReglaPermisoBackend[] = [
     detalle: 'UPDATE/DELETE denegado si asignado_a ≠ auth.uid(); RPCs validan auth.uid().',
   },
   {
-    accion: 'Bloquear / reprogramar / eliminar con log',
+    accion: 'Reprogramar / cancelar / eliminar con log',
     ui: 'Modales + RPC',
     capa: 'rpc',
-    detalle: 'sgtd_bloquear_tarea_con_log, sgtd_reprogramar_tarea_con_log, sgtd_eliminar_tarea_con_motivo.',
+    detalle: 'sgtd_reprogramar_tarea_con_log, sgtd_eliminar_tarea_con_motivo.',
   },
   {
     accion: 'Rutas /planificacion y /metricas',

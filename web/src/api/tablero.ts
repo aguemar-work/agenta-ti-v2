@@ -50,20 +50,18 @@ export async function getTareasTablero(filtros: FiltrosTablero): Promise<Tarea[]
   return list;
 }
 
-/** Columnas visibles del tablero (4): pendiente incluye tareas con efectivo "atrasada". */
-export type ColumnaTableroId = 'pendiente' | 'en_progreso' | 'bloqueada' | 'completada';
+/** Columnas kanban legacy: pendiente agrupa atrasada/reprogramada (situación). */
+export type ColumnaTableroId = 'pendiente' | 'en_progreso' | 'completada';
 
 export function agruparTareasTablero(tareas: Tarea[], hoyYmd: string): Record<ColumnaTableroId, Tarea[]> {
   const cols: Record<ColumnaTableroId, Tarea[]> = {
     pendiente: [],
     en_progreso: [],
-    bloqueada: [],
     completada: [],
   };
   for (const t of tareas) {
     const e = estadoEfectivoTablero(t, hoyYmd);
     if (e === 'completada') cols.completada.push(t);
-    else if (e === 'bloqueada') cols.bloqueada.push(t);
     else if (e === 'en_progreso') cols.en_progreso.push(t);
     else cols.pendiente.push(t);
   }

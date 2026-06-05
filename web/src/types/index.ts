@@ -8,14 +8,14 @@ export type EstadoObjetivo = 'activo' | 'completado' | 'cancelado';
 /** Nivel de riesgo calculado en el frontend a partir del % de avance y fecha_limite. */
 export type NivelRiesgoObjetivo = 'critico' | 'moderado' | 'aceptable' | 'en_ritmo' | 'sin_fecha';
 
-export type EstadoTarea =
-  | 'pendiente'
-  | 'en_progreso'
-  | 'reprogramada'
-  | 'completada'
-  | 'bloqueada'
-  | 'atrasada'
-  | 'cancelada';
+/** Estados persistidos en BD (migr. 040). */
+export type EstadoTarea = 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
+
+/** Situación calculada en `tarea_activa` (eje 2, no se escribe en `estado`). */
+export type SituacionTarea = 'atrasada' | 'reprogramada' | 'creada';
+
+/** Clave para badges, filtros y agrupación visual (estado + situaciones de alerta). */
+export type ClaveVisualTarea = EstadoTarea | 'atrasada' | 'reprogramada';
 
 /** Urgencia visual de una tarea según la hora del día. Solo aplica en vista HOY. */
 export type UrgenciaHoraria = 'normal' | 'precaucion' | 'urgente' | 'vencida_hoy';
@@ -23,7 +23,7 @@ export type UrgenciaHoraria = 'normal' | 'precaucion' | 'urgente' | 'vencida_hoy
 /** 'libre' eliminado — las ideas sin fecha viven en bitácora. */
 export type TipoTarea = 'planificada' | 'no_planificada';
 
-export type PrioridadTarea = 'alta' | 'media' | 'baja';
+export type PrioridadTarea = 'critica' | 'alta' | 'media' | 'baja';
 
 export type TipoEvento = 'reunion' | 'entrega' | 'personal' | 'otro';
 
@@ -85,6 +85,9 @@ export interface Tarea {
   nota_origen_id: Id | null;
   /** Soft-delete (migr. 034); null = activa. */
   eliminada_en?: string | null;
+  /** Solo en lecturas desde `tarea_activa`. */
+  situacion?: SituacionTarea | null;
+  reprogramaciones?: number;
   created_at: string;
   updated_at: string;
 }

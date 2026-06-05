@@ -1,25 +1,28 @@
 /**
  * lib/estadoConfig.ts
  *
- * FUENTE ÚNICA de verdad para labels, badges, clases CSS y colores
- * de estado. Todos los componentes que renderizan una tarea leen de aquí.
- *
- * Regla: NINGÚN componente de UI debe tener hex sueltos para estados
- * de tarea. Usar STATE_TOKENS o las constantes TAREA_* / URGENCIA_*.
+ * Fuente única de labels, badges y tokens para estados de tarea (eje 1)
+ * y situaciones calculadas (eje 2) en UI.
  */
 
-import type { EstadoObjetivo, EstadoTarea, PrioridadTarea, UrgenciaHoraria } from '@/types';
+import type {
+  ClaveVisualTarea,
+  EstadoObjetivo,
+  EstadoTarea,
+  PrioridadTarea,
+  SituacionTarea,
+  UrgenciaHoraria,
+} from '@/types';
 
 // ---------------------------------------------------------------------------
-// STATE_TOKENS — colores de estado vía CSS vars
-// Referencia: tokens.css sección "Estado de tarea"
+// Tokens — eje visual (estado persistido + situación calculada)
 // ---------------------------------------------------------------------------
 
 export interface EstadoTokens {
-  bg:     string;   // fondo del elemento
-  fg:     string;   // texto principal
-  border: string;   // borde izquierdo de acento
-  meta:   string;   // texto secundario / meta info
+  bg:     string;
+  fg:     string;
+  border: string;
+  meta:   string;
 }
 
 export interface UrgenciaTokens {
@@ -30,25 +33,12 @@ export interface UrgenciaTokens {
   badgeFg: string;
 }
 
-/**
- * Colores por estado de tarea. Usar en lugar de hex inline.
- *
- * Ejemplo:
- *   const t = STATE_TOKENS[tarea.estado];
- *   style={{ background: t.bg, color: t.fg, borderLeft: `3px solid ${t.border}` }}
- */
-export const STATE_TOKENS: Record<EstadoTarea, EstadoTokens> = {
+export const STATE_TOKENS: Record<ClaveVisualTarea, EstadoTokens> = {
   atrasada: {
     bg:     'var(--mc-state-atrasada-bg)',
     fg:     'var(--mc-state-atrasada-fg)',
     border: 'var(--mc-state-atrasada-border)',
     meta:   'var(--mc-state-atrasada-meta)',
-  },
-  bloqueada: {
-    bg:     'var(--mc-state-bloqueada-bg)',
-    fg:     'var(--mc-state-bloqueada-fg)',
-    border: 'var(--mc-state-bloqueada-border)',
-    meta:   'var(--mc-state-bloqueada-meta)',
   },
   en_progreso: {
     bg:     'var(--mc-state-progreso-bg)',
@@ -82,10 +72,6 @@ export const STATE_TOKENS: Record<EstadoTarea, EstadoTokens> = {
   },
 };
 
-/**
- * Colores por urgencia horaria (vista HOY, Kanban).
- * Solo aplica a estados pendiente / en_progreso.
- */
 export const URGENCIA_TOKENS: Record<UrgenciaHoraria, UrgenciaTokens> = {
   normal: {
     bg:      'transparent',
@@ -118,69 +104,69 @@ export const URGENCIA_TOKENS: Record<UrgenciaHoraria, UrgenciaTokens> = {
 };
 
 // ---------------------------------------------------------------------------
-// Tarea — badge class
+// Tarea — badge / label / pill (clave visual)
 // ---------------------------------------------------------------------------
-export const TAREA_BADGE: Record<EstadoTarea, string> = {
+
+export const TAREA_BADGE: Record<ClaveVisualTarea, string> = {
   pendiente:    'mc-badge-neutral',
   en_progreso:  'mc-badge-info',
   completada:   'mc-badge-success',
-  bloqueada:    'mc-badge-warning',
   atrasada:     'mc-badge-danger',
   reprogramada: 'mc-badge-neutral',
   cancelada:    'mc-badge-neutral',
 };
 
-// ---------------------------------------------------------------------------
-// Tarea — label legible
-// ---------------------------------------------------------------------------
-export const TAREA_LABEL: Record<EstadoTarea, string> = {
+export const TAREA_LABEL: Record<ClaveVisualTarea, string> = {
   pendiente:    'Pendiente',
   en_progreso:  'En progreso',
   completada:   'Completada',
-  bloqueada:    'Bloqueada',
   atrasada:     'Atrasada',
   reprogramada: 'Reprogramada',
   cancelada:    'Cancelada',
 };
 
-// ---------------------------------------------------------------------------
-// Tarea — label en plural
-// ---------------------------------------------------------------------------
-export const TAREA_LABEL_PLURAL: Record<EstadoTarea, string> = {
+export const TAREA_LABEL_PLURAL: Record<ClaveVisualTarea, string> = {
   pendiente:    'pendientes',
   en_progreso:  'en progreso',
   completada:   'completadas',
-  bloqueada:    'bloqueadas',
   atrasada:     'atrasadas',
   reprogramada: 'reprogramadas',
   cancelada:    'canceladas',
 };
 
-// ---------------------------------------------------------------------------
-// Tarea — pill (tablas, Planificación) — clases en components.css
-// ---------------------------------------------------------------------------
-export const TAREA_PILL: Record<EstadoTarea, string> = {
+/** Eje 1 — estado persistido en BD (4 valores). */
+export const ESTADO_EJECUCION_LABEL: Record<EstadoTarea, string> = {
+  pendiente:    'Pendiente',
+  en_progreso:  'En progreso',
+  completada:   'Completada',
+  cancelada:    'Cancelada',
+};
+
+/** Eje 2 — situación calculada (solo las que aportan señal en UI). */
+export const SITUACION_LABEL: Record<Exclude<SituacionTarea, 'creada'>, string> = {
+  atrasada:     'Atrasada',
+  reprogramada: 'Reprogramada',
+};
+
+export const TAREA_PILL: Record<ClaveVisualTarea, string> = {
   pendiente:    'mc-tarea-pill mc-tarea-pill--pendiente',
   en_progreso:  'mc-tarea-pill mc-tarea-pill--en_progreso',
   completada:   'mc-tarea-pill mc-tarea-pill--completada',
-  bloqueada:    'mc-tarea-pill mc-tarea-pill--bloqueada',
   atrasada:     'mc-tarea-pill mc-tarea-pill--atrasada',
   reprogramada: 'mc-tarea-pill mc-tarea-pill--reprogramada',
   cancelada:    'mc-tarea-pill mc-tarea-pill--cancelada',
 };
 
 // ---------------------------------------------------------------------------
-// Objetivo — badge class
+// Objetivo
 // ---------------------------------------------------------------------------
+
 export const OBJETIVO_BADGE: Record<EstadoObjetivo, string> = {
   activo:     'mc-badge-accent',
   completado: 'mc-badge-success',
   cancelado:  'mc-badge-neutral',
 };
 
-// ---------------------------------------------------------------------------
-// Objetivo — label legible
-// ---------------------------------------------------------------------------
 export const OBJETIVO_LABEL: Record<EstadoObjetivo, string> = {
   activo:     'Activo',
   completado: 'Completado',
@@ -188,10 +174,9 @@ export const OBJETIVO_LABEL: Record<EstadoObjetivo, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Urgencia horaria — clases y labels
-// Estas constantes quedan para compatibilidad; la lógica de color
-// debe leer de URGENCIA_TOKENS en lugar de URGENCIA_BORDER/BG.
+// Urgencia horaria
 // ---------------------------------------------------------------------------
+
 export const URGENCIA_BADGE: Record<UrgenciaHoraria, string> = {
   normal:      '',
   precaucion:  'mc-badge-warning',
@@ -207,17 +192,19 @@ export const URGENCIA_LABEL: Record<UrgenciaHoraria, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Prioridad — badge CSS y label
+// Prioridad
 // ---------------------------------------------------------------------------
 
 export const PRIORIDAD_BADGE: Record<PrioridadTarea, string> = {
-  alta:  'mc-badge mc-badge-prioridad-alta',
-  media: 'mc-badge mc-badge-prioridad-media',
-  baja:  'mc-badge mc-badge-prioridad-baja',
+  critica: 'mc-badge mc-badge-prioridad-critica',
+  alta:    'mc-badge mc-badge-prioridad-alta',
+  media:   'mc-badge mc-badge-prioridad-media',
+  baja:    'mc-badge mc-badge-prioridad-baja',
 };
 
 export const PRIORIDAD_LABEL: Record<PrioridadTarea, string> = {
-  alta:  'Alta',
-  media: 'Media',
-  baja:  'Baja',
+  critica: 'Crítica',
+  alta:    'Alta',
+  media:   'Media',
+  baja:    'Baja',
 };

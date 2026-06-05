@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { moverTareaColumna } from '@/api/tablero';
 import {
   actualizarTarea,
+  cambiarEstadoTarea,
   completarTareaConResumen,
   crearEventoUsuario,
   crearTareaPlanificada,
@@ -48,7 +49,7 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
     if (!usuarioId) return;
     await Promise.all([
       // exact:false invalida TODAS las queries que empiecen con ['semana', 'plan', usuarioId]
-      // — incluye tareas de semanas anteriores que llegaron por el filtro estado.eq.atrasada
+      // — incluye tareas de semanas anteriores que llegaron por situacion.eq.atrasada
       qc.invalidateQueries({ queryKey: ['semana', 'plan', usuarioId], exact: false }),
       qc.invalidateQueries({ queryKey: ['semana', 'eventos', usuarioId], exact: false }),
       qc.invalidateQueries({ queryKey: ['tareas-hoy', usuarioId], exact: false }),
@@ -95,6 +96,12 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const mCancelar = useMutation({
+    mutationFn: (input: { tareaId: string; motivo: string }) =>
+      cambiarEstadoTarea({ tareaId: input.tareaId, nuevoEstado: 'cancelada', justificacion: input.motivo }),
+    onSuccess: invalidate,
+  });
+
   const mCompletar = useMutation({
     mutationFn: (input: {
       tareaId: string;
@@ -124,6 +131,7 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
     moverEntre: mMoverEntre.mutateAsync,
     editarTarea: mEditar.mutateAsync,
     eliminarTarea: mEliminar.mutateAsync,
+    cancelarTarea: mCancelar.mutateAsync,
     completarTareaConResumen: mCompletar.mutateAsync,
     iniciarTarea: mIniciar.mutateAsync,
     crearEvento: mCrearEvento.mutateAsync,
@@ -133,6 +141,7 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       mMoverEntre.isPending ||
       mEditar.isPending ||
       mEliminar.isPending ||
+      mCancelar.isPending ||
       mCompletar.isPending ||
       mIniciar.isPending ||
       mCrearEvento.isPending,

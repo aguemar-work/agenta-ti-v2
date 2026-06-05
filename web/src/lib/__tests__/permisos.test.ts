@@ -69,7 +69,7 @@ describe('puedeGestionarTarea', () => {
 
   describe('el estado de la tarea no afecta el permiso', () => {
     const miembro = makeUsuario({ id: 'uuid-miembro' });
-    const estados = ['pendiente', 'en_progreso', 'completada', 'bloqueada', 'atrasada', 'reprogramada', 'cancelada'] as const;
+    const estados = ['pendiente', 'en_progreso', 'completada', 'cancelada'] as const;
 
     for (const estado of estados) {
       it(`miembro puede gestionar tarea propia en estado "${estado}"`, () => {

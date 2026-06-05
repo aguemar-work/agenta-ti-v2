@@ -12,6 +12,10 @@ function hoyYmdMetricas(): string {
   return fechaLocalYmd(new Date());
 }
 
+/** Campos mínimos para `claveVisualTarea` desde `tarea_activa`. */
+const SELECT_METRICA_TAREA =
+  'estado,tipo,fecha_planificada,situacion,reprogramaciones' as const;
+
 function acumularEstadoEfectivo(
   t: TareaParaEstadoEfectivo,
   hoyYmd: string,
@@ -20,7 +24,6 @@ function acumularEstadoEfectivo(
     en_progreso: number;
     pendientes: number;
     atrasadas: number;
-    bloqueadas: number;
     reprogramadas: number;
   },
 ): void {
@@ -29,7 +32,6 @@ function acumularEstadoEfectivo(
   else if (est === 'en_progreso') buckets.en_progreso += 1;
   else if (est === 'pendiente') buckets.pendientes += 1;
   else if (est === 'atrasada') buckets.atrasadas += 1;
-  else if (est === 'bloqueada') buckets.bloqueadas += 1;
   else if (est === 'reprogramada') buckets.reprogramadas += 1;
 }
 
@@ -42,7 +44,6 @@ function acumularEstadoEfectivoComparativa(
   const est = estadoEfectivoTablero(t, hoyYmd);
   if (est === 'completada') buckets.completadas += 1;
   else if (est === 'atrasada') buckets.atrasadas += 1;
-  else if (est === 'bloqueada') buckets.bloqueadas += 1;
   else if (est === 'reprogramada') buckets.reprogramadas += 1;
 }
 
@@ -66,7 +67,6 @@ export type KpisRango = {
   en_progreso: number;
   pendientes: number;
   atrasadas: number;
-  bloqueadas: number;
   reprogramadas: number;
   incidencias: number;
 };
@@ -76,7 +76,6 @@ export type KpisPorSemana = {
   semanaISO: string;
   completadas: number;
   atrasadas: number;
-  bloqueadas: number;
   reprogramadas: number;
   en_progreso: number;
   pendientes: number;
@@ -88,7 +87,6 @@ export type KpisComparativaMiembro = {
   nombre: string;
   completadas: number;
   atrasadas: number;
-  bloqueadas: number;
   reprogramadas: number;
 };
 
@@ -131,10 +129,13 @@ export async function getKpisUsuario(usuarioId: string): Promise<KpisUsuario> {
 
   const { data: tareas, error: e1 } = await insforge.database
     .from(TAREA_ACTIVA)
-    .select('estado,fecha_completada,tipo,fecha_planificada')
+    .select(`${SELECT_METRICA_TAREA},fecha_completada`)
     .eq('asignado_a', usuarioId);
   if (e1) throw e1;
-  const list = (tareas ?? []) as Pick<Tarea, 'estado' | 'fecha_completada' | 'tipo' | 'fecha_planificada'>[];
+  const list = (tareas ?? []) as Pick<
+    Tarea,
+    'estado' | 'fecha_completada' | 'tipo' | 'fecha_planificada' | 'situacion' | 'reprogramaciones'
+  >[];
 
   let activas = 0;
   let atrasadas = 0;
@@ -169,21 +170,23 @@ export async function getKpisRango(
   const hoyYmd = hoyYmdMetricas();
   let q = insforge.database
     .from(TAREA_ACTIVA)
-    .select('estado,es_imprevisto,fecha_planificada,tipo')
+    .select(`${SELECT_METRICA_TAREA},es_imprevisto`)
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
     .neq('estado', 'cancelada');
   if (usuarioId) q = q.eq('asignado_a', usuarioId);
   const { data, error } = await q;
   if (error) throw error;
-  const list = (data ?? []) as Pick<Tarea, 'estado' | 'es_imprevisto' | 'fecha_planificada' | 'tipo'>[];
+  const list = (data ?? []) as Pick<
+    Tarea,
+    'estado' | 'es_imprevisto' | 'fecha_planificada' | 'tipo' | 'situacion' | 'reprogramaciones'
+  >[];
 
   const buckets = {
     completadas: 0,
     en_progreso: 0,
     pendientes: 0,
     atrasadas: 0,
-    bloqueadas: 0,
     reprogramadas: 0,
   };
   let total = 0;
@@ -210,7 +213,7 @@ export async function getKpisPorSemana(
   const hoyYmd = hoyYmdMetricas();
   let q = insforge.database
     .from(TAREA_ACTIVA)
-    .select('estado,semana_planificada,es_imprevisto,fecha_planificada,tipo')
+    .select(`${SELECT_METRICA_TAREA},semana_planificada,es_imprevisto`)
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
     .neq('estado', 'cancelada')
@@ -218,7 +221,10 @@ export async function getKpisPorSemana(
   if (usuarioId) q = q.eq('asignado_a', usuarioId);
   const { data, error } = await q;
   if (error) throw error;
-  const list = (data ?? []) as Pick<Tarea, 'estado' | 'semana_planificada' | 'es_imprevisto' | 'fecha_planificada' | 'tipo'>[];
+  const list = (data ?? []) as Pick<
+    Tarea,
+    'estado' | 'semana_planificada' | 'es_imprevisto' | 'fecha_planificada' | 'tipo' | 'situacion' | 'reprogramaciones'
+  >[];
 
   const semMap = new Map<string, KpisPorSemana>();
   for (const t of list) {
@@ -230,7 +236,6 @@ export async function getKpisPorSemana(
         semanaISO: sem,
         completadas: 0,
         atrasadas: 0,
-        bloqueadas: 0,
         reprogramadas: 0,
         en_progreso: 0,
         pendientes: 0,
@@ -261,18 +266,21 @@ export async function getKpisComparativa(
 
   const { data, error: e2 } = await insforge.database
     .from(TAREA_ACTIVA)
-    .select('asignado_a,estado,es_imprevisto,fecha_planificada,tipo')
+    .select(`asignado_a,${SELECT_METRICA_TAREA},es_imprevisto`)
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
     .neq('estado', 'cancelada')
     .eq('es_imprevisto', false);
   if (e2) throw e2;
 
-  const list = (data ?? []) as Pick<Tarea, 'asignado_a' | 'estado' | 'fecha_planificada' | 'tipo'>[];
+  const list = (data ?? []) as Pick<
+    Tarea,
+    'asignado_a' | 'estado' | 'fecha_planificada' | 'tipo' | 'situacion' | 'reprogramaciones'
+  >[];
   const byUser = new Map<string, Omit<KpisComparativaMiembro, 'usuarioId' | 'nombre'>>();
 
   for (const u of (usuarios ?? []) as { id: string; nombre: string }[]) {
-    byUser.set(u.id, { completadas: 0, atrasadas: 0, bloqueadas: 0, reprogramadas: 0 });
+    byUser.set(u.id, { completadas: 0, atrasadas: 0, reprogramadas: 0 });
   }
   for (const t of list) {
     const row = byUser.get(t.asignado_a);

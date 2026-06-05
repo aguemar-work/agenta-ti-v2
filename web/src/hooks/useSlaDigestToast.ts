@@ -18,15 +18,9 @@ import { markSlaDigestShownToday, wasSlaDigestShownToday } from '@/lib/slaDigest
 import { planificacionSlaPath } from '@/lib/slaNavigation';
 import { useAuthStore } from '@/store/authStore';
 
-function mensajeResumenSla(atrasadas: number, bloqueadas: number): string {
-  const partes: string[] = [];
-  if (atrasadas > 0) {
-    partes.push(`${atrasadas} atrasada${atrasadas !== 1 ? 's' : ''} nuevas (24 h)`);
-  }
-  if (bloqueadas > 0) {
-    partes.push(`${bloqueadas} bloqueada${bloqueadas !== 1 ? 's' : ''} >48 h`);
-  }
-  return partes.join(' · ');
+function mensajeResumenSla(atrasadas: number): string {
+  if (atrasadas <= 0) return '';
+  return `${atrasadas} atrasada${atrasadas !== 1 ? 's' : ''} nuevas (24 h)`;
 }
 
 export function useSlaDigestToast(prefs: NotificationPrefs | null) {
@@ -50,7 +44,7 @@ export function useSlaDigestToast(prefs: NotificationPrefs | null) {
     shownRef.current = true;
     markSlaDigestShownToday(usuario.id);
 
-    const desc = mensajeResumenSla(data.atrasadas_nuevas_24h, data.bloqueadas_criticas);
+    const desc = mensajeResumenSla(data.atrasadas_nuevas_24h);
     const msg  = `Alertas SLA del equipo: ${desc}`;
 
     toast.warning(msg, {

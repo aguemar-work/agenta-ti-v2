@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import {
-  bloquearTarea as bloquearTareaApi,
   completarTareaConResumen as completarTareaConResumenApi,
   reprogramarTareaConLog as reprogramarTareaConLogApi,
 } from '@/api/semana';
@@ -68,9 +67,10 @@ export function useMarcarAtrasadasAlMontar(asignadoA: string | undefined) {
 }
 
 const prioridadOrden: Record<Tarea['prioridad'], number> = {
-  alta: 0,
-  media: 1,
-  baja: 2,
+  critica: 0,
+  alta: 1,
+  media: 2,
+  baja: 3,
 };
 
 export function useTareasHoy(asignadoA: string | undefined) {
@@ -85,7 +85,7 @@ export function useTareasHoy(asignadoA: string | undefined) {
         .select('*')
         .eq('asignado_a', asignadoA!)
         .eq('tipo', 'planificada')
-        .or(`fecha_planificada.eq.${hoy},estado.eq.atrasada`);
+        .or(`fecha_planificada.eq.${hoy},situacion.eq.atrasada`);
       if (error) throw error;
       const list = (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
       list.sort((a, b) => prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad]);
@@ -128,14 +128,6 @@ export async function reprogramarTareaConLog(input: {
   usuarioId:     string;
   nuevaFecha:    string;
   justificacion: string;
-  nuevoEstado?:  Tarea['estado'];
 }): Promise<void> {
   return reprogramarTareaConLogApi(input);
 }
-
-/**
- * Bloquea una tarea con justificación.
- * Usa la nueva RPC sgtd_cambiar_estado_tarea que registra el log automáticamente.
- */
-/** @deprecated Importar desde `@/api/semana` — reexport por compatibilidad. */
-export const bloquearTarea = bloquearTareaApi;

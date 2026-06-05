@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { estadoEfectivoTablero } from '@/lib/tableroEstado';
+import { claveVisualTarea, textoEjesTarea } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
 
 function tarea(overrides: Partial<Tarea>): Tarea {
@@ -28,36 +28,53 @@ function tarea(overrides: Partial<Tarea>): Tarea {
 const HOY = '2026-04-29';
 const AYER = '2026-04-28';
 
-describe('estadoEfectivoTablero', () => {
-  it('marca pendiente vencida como atrasada', () => {
+describe('claveVisualTarea', () => {
+  it('usa situacion atrasada desde la vista', () => {
+    const t = tarea({ estado: 'pendiente', situacion: 'atrasada', fecha_planificada: AYER });
+    expect(claveVisualTarea(t, HOY)).toBe('atrasada');
+  });
+
+  it('usa situacion reprogramada desde la vista', () => {
+    const t = tarea({ estado: 'pendiente', situacion: 'reprogramada', reprogramaciones: 1 });
+    expect(claveVisualTarea(t, HOY)).toBe('reprogramada');
+  });
+
+  it('calcula atrasada por fallback si no hay situacion', () => {
     const t = tarea({ estado: 'pendiente', fecha_planificada: AYER });
-    expect(estadoEfectivoTablero(t, HOY)).toBe('atrasada');
+    expect(claveVisualTarea(t, HOY)).toBe('atrasada');
   });
 
-  it('marca reprogramada vencida como atrasada', () => {
-    const t = tarea({ estado: 'reprogramada', fecha_planificada: AYER });
-    expect(estadoEfectivoTablero(t, HOY)).toBe('atrasada');
+  it('en_progreso vencida sigue siendo en_progreso (no atrasada visual si situacion no lo dice)', () => {
+    const t = tarea({ estado: 'en_progreso', situacion: 'creada', fecha_planificada: AYER });
+    expect(claveVisualTarea(t, HOY)).toBe('en_progreso');
   });
 
-  it('no degrada en_progreso vencida (acción consciente del usuario)', () => {
-    const t = tarea({ estado: 'en_progreso', fecha_planificada: AYER });
-    expect(estadoEfectivoTablero(t, HOY)).toBe('en_progreso');
-  });
-
-  it('no degrada estados terminales ni bloqueada', () => {
-    for (const estado of ['completada', 'cancelada', 'bloqueada', 'atrasada'] as const) {
-      const t = tarea({ estado, fecha_planificada: AYER });
-      expect(estadoEfectivoTablero(t, HOY)).toBe(estado);
+  it('no degrada estados terminales', () => {
+    for (const estado of ['completada', 'cancelada'] as const) {
+      const t = tarea({ estado, situacion: null, fecha_planificada: AYER });
+      expect(claveVisualTarea(t, HOY)).toBe(estado);
     }
   });
 
   it('no degrada no_planificada aunque la fecha esté vencida', () => {
     const t = tarea({ tipo: 'no_planificada', fecha_planificada: AYER, estado: 'pendiente' });
-    expect(estadoEfectivoTablero(t, HOY)).toBe('pendiente');
+    expect(claveVisualTarea(t, HOY)).toBe('pendiente');
+  });
+});
+
+describe('textoEjesTarea', () => {
+  it('combina situación y estado de ejecución', () => {
+    const t = tarea({ estado: 'pendiente', situacion: 'reprogramada', reprogramaciones: 2 });
+    expect(textoEjesTarea(t, HOY)).toBe('Reprogramada · Pendiente');
   });
 
-  it('respeta fecha futura en reprogramada', () => {
-    const t = tarea({ estado: 'reprogramada', fecha_planificada: '2026-05-01' });
-    expect(estadoEfectivoTablero(t, HOY)).toBe('reprogramada');
+  it('devuelve null para pendiente al día sin señal extra', () => {
+    const t = tarea({ estado: 'pendiente', situacion: 'creada', fecha_planificada: HOY });
+    expect(textoEjesTarea(t, HOY)).toBeNull();
+  });
+
+  it('muestra solo estado terminal', () => {
+    const t = tarea({ estado: 'completada', situacion: null });
+    expect(textoEjesTarea(t, HOY)).toBe('Completada');
   });
 });

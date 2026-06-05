@@ -267,8 +267,52 @@ npx @insforge/cli db query "SELECT (pg_get_constraintdef(c.oid) LIKE '%cancelada
 
 ---
 
+## Migración 038 — validación completa
+
+**Archivo:** `038_tarea_model_fase_aditiva.sql`  
+**Negocio:** fase aditiva del modelo v1.1 — sin tocar enums de estado.
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='tarea' AND column_name='reprogramaciones') AS migration_038_ok"
+```
+
+```sql
+SELECT situacion, count(*) FROM public.tarea_activa GROUP BY 1 ORDER BY 1;
+```
+
+---
+
+## Migración 039 — validación completa
+
+**Archivo:** `039_logica_dos_ejes.sql`  
+**Negocio:** reprogramar no cambia `estado`; SLA depreca `bloqueadas_criticas`.
+
+```bash
+npx @insforge/cli db query "SELECT pg_get_functiondef(p.oid) NOT LIKE '%bloqueada%' AS sin_bloqueada FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='public' AND proname='sgtd_cambiar_estado_tarea'"
+```
+
+---
+
+## Migración 040 — validación completa
+
+**Archivo:** `040_reduccion_enums_y_limpieza.sql`  
+**Negocio:** enum 4 estados + 2 tipos; elimina RPCs bloquear/desbloquear.
+
+```bash
+npx @insforge/cli db query "SELECT count(*) AS estados FROM pg_enum e JOIN pg_type t ON e.enumtypid=t.oid WHERE t.typname='estado_tarea'"
+```
+
+Esperado: `estados = 4`. RPCs `sgtd_bloquear_tarea_con_log` y `sgtd_desbloquear_tarea_con_log` ausentes.
+
+**No re-ejecutar** en un entorno donde 040 ya aplicó correctamente.
+
+Detalle del modelo: `web/CONTEXT/TAREA-MODEL.md`.
+
+---
+
 ## Referencias
 
+- **Modelo tarea v1.1:** `web/CONTEXT/TAREA-MODEL.md`
 - **Módulo OT (reglas):** `.cursor/rules/sgtd-ot.mdc`
 - Reglas de negocio generales: `.cursor/rules/sgtd-business-rules.mdc`
 - Auditoría deploy: `web/auditorias/auditoria_16052026_final.md`

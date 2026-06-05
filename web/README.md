@@ -2,7 +2,7 @@
 
 Aplicación web del **Sistema de Gestión de Tareas Departamental (SGTD)** para equipos de TI con roles **Jefe** y **Miembro**: planificación semanal, ejecución diaria, imprevistos, objetivos estratégicos, órdenes de trabajo formales y métricas. Marca de producto: **Nexora**.
 
-Este directorio (`web/`) es la **SPA** del monorepo `agenda-ti_v3`. Los datos viven en **InsForge** (PostgreSQL, auth, RLS). El esquema y las migraciones están en `../db/`; las reglas de dominio y convenciones en `.cursor/rules/` (fuente de verdad: `CONTEXT.mdc`).
+Este directorio (`web/`) es la **SPA** del monorepo `agenda-ti_v3`. Los datos viven en **InsForge** (PostgreSQL, auth, RLS). El esquema y las migraciones están en `../db/`; el schema canónico en `CONTEXT/CONTEXT.md` y `CONTEXT/TAREA-MODEL.md`; reglas operativas en `.cursor/rules/CONTEXT.mdc`.
 
 ---
 
@@ -126,8 +126,9 @@ Tras cambios relevantes, conviene ejecutar `npm run build` y `npm test` antes de
 - **`insforgeFetchInterceptor.ts`**: en **401** de `/api/database/` → refresh + un reintento → si falla, logout y `/login` (sin mensajes técnicos de token en UI).
 - **`AuthProvider`**: bootstrap, fila en `public.usuario`, verificación periódica de sesión.
 - **RBAC:** rol desde tabla `usuario` (`jefe` | `miembro`). La UI oculta acciones; **RLS en Postgres** es el enforcement real (`sgtd_es_jefe()`, políticas de miembro).
-- **Estado `atrasada`:** calculado en BD (trigger); la UI no debe mutarlo — solo reflejar (`estadoEfectivoTablero` para lectura).
-- **Acciones con log:** bloquear, cancelar, reprogramar y eliminar tarea requieren justificación ≥10 caracteres (RPCs `sgtd_*_con_log`).
+- **Modelo tarea v1.1:** dos ejes — `estado` (4 valores) + `situacion` en `tarea_activa`. Ver `CONTEXT/TAREA-MODEL.md`.
+- **Clave visual:** `claveVisualTarea()` en `lib/tableroEstado.ts` para badges y conteos.
+- **Acciones con log:** cancelar, reprogramar y eliminar tarea requieren justificación ≥10 caracteres (RPCs `sgtd_*_con_log`).
 
 ---
 

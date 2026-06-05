@@ -5,6 +5,7 @@ import { getInsforge } from '@/lib/insforge';
 const ResumenSlaJefeSchema = z.object({
   atrasadas_activas:    z.number(),
   atrasadas_nuevas_24h: z.number(),
+  /** Deprecado (migr. 039+): el RPC devuelve 0; se ignora en UI. */
   bloqueadas_criticas:  z.number(),
   fecha:                z.string(),
 });
@@ -28,7 +29,7 @@ export async function getResumenSlaJefe(): Promise<ResumenSlaJefe> {
   return parsed.success ? parsed.data : FALLBACK_RESUMEN;
 }
 
-/** Alertas SLA que requieren atención del jefe (nuevas 24h + bloqueadas >48h). */
+/** Alertas SLA que requieren atención del jefe (atrasadas nuevas en 24 h). */
 export function contarAlertasSla(resumen: ResumenSlaJefe): number {
-  return resumen.atrasadas_nuevas_24h + resumen.bloqueadas_criticas;
+  return resumen.atrasadas_nuevas_24h;
 }

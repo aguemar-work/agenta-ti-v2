@@ -10,6 +10,7 @@ type Props = {
   onSemanaSiguiente: () => void;
   onIrHoy: () => void;
   onNuevaTarea: () => void;
+  nuevaTareaLabel?: string;
   onNotas: () => void;
   notasOpen: boolean;
 };
@@ -21,6 +22,7 @@ export function MiSemanaHeader({
   onSemanaSiguiente,
   onIrHoy,
   onNuevaTarea,
+  nuevaTareaLabel = '+ Nueva tarea',
   onNotas,
   notasOpen,
 }: Props) {
@@ -46,7 +48,7 @@ export function MiSemanaHeader({
 
       <div className="mc-misemana-header__actions">
         <Button variant="primary" size="sm" onClick={onNuevaTarea}>
-          + Nueva tarea
+          {nuevaTareaLabel}
         </Button>
         <Button
           variant="secondary"

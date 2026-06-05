@@ -66,8 +66,9 @@ export const UMBRAL_OBJETIVO_ACEPTABLE = 70;
 // ---------------------------------------------------------------------------
 // Ponderación de prioridades (métricas)
 // ---------------------------------------------------------------------------
-export const PESO_PRIORIDAD: Record<'alta' | 'media' | 'baja', number> = {
-  alta:  3,
-  media: 2,
-  baja:  1,
+export const PESO_PRIORIDAD: Record<'critica' | 'alta' | 'media' | 'baja', number> = {
+  critica: 4,
+  alta:    3,
+  media:   2,
+  baja:    1,
 };

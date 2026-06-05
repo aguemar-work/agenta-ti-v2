@@ -40,10 +40,12 @@ alwaysApply: true
 - Si reintento falla → `signOut()` + redirect a `/login`
 - Nunca exponer errores de token al usuario
 
-## Tareas atrasadas
+## Tareas atrasadas (v1.1)
 
-Resuelto en backend mediante **trigger en BD** (migración 015).
-No calcular ni mutar el estado `atrasada` en frontend — es responsabilidad del servidor.
+- **`situacion = atrasada`** se calcula en la vista `tarea_activa` (migraciones 038–040), no se persiste en `estado`
+- No mutar `estado` a `atrasada` en frontend ni en RPCs nuevas
+- Filtros: `situacion.eq.atrasada` sobre `tarea_activa` (ver `api/semana.ts`)
+- Detalle: `web/CONTEXT/TAREA-MODEL.md`
 
 ## Reglas para el agente
 

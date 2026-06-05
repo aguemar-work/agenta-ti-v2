@@ -34,11 +34,8 @@ describe('urgenciaHoraria', () => {
   });
 
   it('devuelve normal para estados que ya tienen su propio indicador', () => {
-    expect(urgenciaHoraria('bloqueada',    17)).toBe('normal');
-    expect(urgenciaHoraria('atrasada',     17)).toBe('normal');
-    expect(urgenciaHoraria('completada',   17)).toBe('normal');
-    expect(urgenciaHoraria('cancelada',    17)).toBe('normal');
-    expect(urgenciaHoraria('reprogramada', 17)).toBe('normal');
+    expect(urgenciaHoraria('completada', 17)).toBe('normal');
+    expect(urgenciaHoraria('cancelada', 17)).toBe('normal');
   });
 });
 

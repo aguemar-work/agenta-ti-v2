@@ -86,8 +86,7 @@ import { TAREA_BADGE, TAREA_LABEL } from '@/lib/estadoConfig';
 | `pendiente` | `mc-badge-neutral` | Gris neutro | |
 | `en_progreso` | `mc-badge-info` | Azul info | Usa `--mc-color-info`, **no** brand/accent |
 | `completada` | `mc-badge-success` | Verde | |
-| `bloqueada` | `mc-badge-warning` | Ámbar | |
-| `atrasada` | `mc-badge-danger` | Rojo | |
+| `atrasada` | `mc-badge-danger` | Rojo | Eje 2 (`situacion`) — ver `web/CONTEXT/TAREA-MODEL.md` |
 | `reprogramada` | `mc-badge-neutral` | Gris neutro | Badge es neutral; `TAREA_PILL` usa violeta — ver §2.5 |
 | `cancelada` | `mc-badge-neutral` | Gris neutro | |
 
@@ -467,7 +466,7 @@ No usar color como único diferenciador. Siempre `<TareaEstadoIndicator>` en sup
 </Modal>
 ```
 
-**Modales instrumentados:** `modal-mi-semana-nuevo`, `modal-nueva-tarea`, `modal-ot-form`, `modal-bloquear-tarea`, `modal-reprogramar-tarea`, `modal-completar-tarea`, `modal-detalle-tarea`, `modal-ot-detalle`, `modal-ot-completar`, `modal-ot-rechazar`, `onboarding-welcome`, `modal-preferencias-notificaciones`.
+**Modales instrumentados:** `modal-mi-semana-nuevo`, `modal-nueva-tarea`, `modal-ot-form`, `modal-reprogramar-tarea`, `modal-completar-tarea`, `modal-detalle-tarea`, `modal-ot-detalle`, `modal-ot-completar`, `modal-ot-rechazar`, `onboarding-welcome`, `modal-preferencias-notificaciones`.
 
 Todo modal nuevo de creación o flujo crítico debe incluir `analyticsId`.
 

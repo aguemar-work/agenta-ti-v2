@@ -1,5 +1,5 @@
 /**
- * Badge/pill de estado de tarea: texto + icono (no solo color) para daltonismo.
+ * Badge/pill de estado o situación de tarea (eje visual unificado).
  */
 import {
   AlertTriangle,
@@ -7,29 +7,26 @@ import {
   CalendarClock,
   CheckCircle2,
   Circle,
-  Lock,
   PlayCircle,
   type LucideIcon,
 } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { TAREA_BADGE, TAREA_LABEL, TAREA_LABEL_PLURAL, TAREA_PILL } from '@/lib/estadoConfig';
-import type { EstadoTarea } from '@/types';
+import type { ClaveVisualTarea } from '@/types';
 
-const TAREA_ESTADO_ICON: Record<EstadoTarea, LucideIcon> = {
+const TAREA_ESTADO_ICON: Record<ClaveVisualTarea, LucideIcon> = {
   pendiente:    Circle,
   en_progreso:  PlayCircle,
   completada:   CheckCircle2,
-  bloqueada:    Lock,
   atrasada:     AlertTriangle,
   reprogramada: CalendarClock,
   cancelada:    Ban,
 };
 
 type Props = {
-  estado: EstadoTarea;
+  estado: ClaveVisualTarea;
   variant?: 'badge' | 'pill';
-  /** Usar etiqueta en plural (tablas de planificación). */
   plural?: boolean;
   className?: string;
   style?: CSSProperties;

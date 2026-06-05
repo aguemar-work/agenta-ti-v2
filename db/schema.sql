@@ -1,18 +1,17 @@
 -- =============================================================================
--- SGTD (Agenda TI v3) — Esquema consolidado v2
+-- SGTD (Agenda TI v3) — Esquema consolidado (referencia)
 -- schema.sql
 --
--- Incluye todos los cambios de las migraciones 008 al 011:
---   - tipo='libre' eliminado de tarea
---   - nota_origen_id en tarea
---   - log_accion con eventos completos (iniciada, bloqueada, desbloqueada, completada)
---   - Trigger automático de estado 'atrasada'
---   - configuracion_semana eliminada
---   - orden_trabajo con prioridad y objetivo_id
---   - log_ot para auditoría de OTs
---   - RPCs actualizadas
+-- Entornos vivos: aplicar migraciones 002–040 en orden (no ejecutar este archivo
+-- sobre una BD ya migrada). Modelo tarea v1.1 documentado en web/CONTEXT/TAREA-MODEL.md.
 --
--- USO: Solo para entornos nuevos (fresh install).
+-- Cambios clave post-040:
+--   - estado_tarea: 4 valores (pendiente, en_progreso, completada, cancelada)
+--   - situacion calculada en vista tarea_activa (atrasada / reprogramada / creada)
+--   - reprogramaciones, prioridad critica, soft-delete eliminada_en
+--   - Sin trigger que escriba 'atrasada'; sin RPCs bloquear/desbloquear
+--
+-- USO: Referencia / fresh install parcial. Fuente operativa: db/migrations/.
 -- Para entornos existentes, aplicar las migraciones 008–011 en orden.
 -- =============================================================================
 
@@ -74,13 +73,15 @@ CREATE TABLE IF NOT EXISTS public.tarea (
   descripcion         text,
   estado              text        NOT NULL DEFAULT 'pendiente'
                                   CHECK (estado IN (
-                                    'pendiente', 'en_progreso', 'reprogramada',
-                                    'completada', 'bloqueada', 'atrasada', 'cancelada'
+                                    'pendiente', 'en_progreso', 'completada', 'cancelada'
                                   )),
   tipo                text        NOT NULL DEFAULT 'planificada'
                                   CHECK (tipo IN ('planificada', 'no_planificada')),
   prioridad           text        NOT NULL DEFAULT 'media'
-                                  CHECK (prioridad IN ('alta', 'media', 'baja')),
+                                  CHECK (prioridad IN ('critica', 'alta', 'media', 'baja')),
+  reprogramaciones    integer     NOT NULL DEFAULT 0,
+  eliminada_en        timestamptz,
+  sla_atrasada_notificada_at timestamptz,
   fecha_planificada   date,
   semana_planificada  text,
   fecha_completada    timestamptz,
@@ -232,32 +233,26 @@ CREATE INDEX IF NOT EXISTS idx_log_ot_ot_id              ON public.log_ot (ot_id
 CREATE INDEX IF NOT EXISTS idx_log_ot_usuario_id         ON public.log_ot (usuario_id);
 
 -- -----------------------------------------------------------------------------
--- Trigger: marcar tareas atrasadas automáticamente
+-- Vista tarea_activa — eje 2 (situacion) calculado (migr. 038–040)
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.sgtd_fn_marcar_atrasada()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF  NEW.fecha_planificada IS NOT NULL
-  AND NEW.fecha_planificada < CURRENT_DATE
-  AND NEW.estado IN ('pendiente', 'reprogramada')
-  AND NEW.tipo = 'planificada'
-  THEN
-    NEW.estado := 'atrasada';
-  END IF;
-  RETURN NEW;
-END;
-$$;
+CREATE OR REPLACE VIEW public.tarea_activa
+  WITH (security_invoker = true) AS
+  SELECT
+    t.*,
+    CASE
+      WHEN t.estado IN ('completada','cancelada') THEN NULL
+      WHEN t.tipo = 'planificada'
+           AND t.fecha_planificada IS NOT NULL
+           AND t.fecha_planificada < CURRENT_DATE
+           AND t.estado IN ('pendiente','en_progreso')
+        THEN 'atrasada'
+      WHEN t.reprogramaciones > 0 THEN 'reprogramada'
+      ELSE 'creada'
+    END AS situacion
+  FROM public.tarea t
+  WHERE t.eliminada_en IS NULL;
 
-DROP TRIGGER IF EXISTS trg_tarea_marcar_atrasada ON public.tarea;
-CREATE TRIGGER trg_tarea_marcar_atrasada
-  BEFORE INSERT OR UPDATE OF fecha_planificada, estado
-  ON public.tarea
-  FOR EACH ROW
-  EXECUTE FUNCTION public.sgtd_fn_marcar_atrasada();
+GRANT SELECT ON public.tarea_activa TO authenticated;
 
 -- -----------------------------------------------------------------------------
 -- RLS — habilitar en todas las tablas

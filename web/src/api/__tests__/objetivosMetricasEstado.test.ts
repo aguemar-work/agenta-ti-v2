@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import type { Tarea } from '@/types';
+import type { TareaParaEstadoEfectivo } from '@/lib/tableroEstado';
 
-/** Escenario del bug: BD aún no re-sincronizó el trigger de atrasada. */
-function tareaMetricas(overrides: Partial<Tarea>): Pick<Tarea, 'estado' | 'tipo' | 'fecha_planificada'> {
+function tareaMetricas(overrides: Partial<TareaParaEstadoEfectivo>): TareaParaEstadoEfectivo {
   return {
     estado: 'pendiente',
     tipo: 'planificada',
@@ -21,9 +20,14 @@ describe('objetivosMetricas — clasificación por estado efectivo', () => {
     expect(estadoEfectivoTablero(t, hoy)).toBe('atrasada');
   });
 
-  it('reprogramada vencida se clasifica como atrasada (no reprogramada)', () => {
-    const t = tareaMetricas({ estado: 'reprogramada' });
+  it('reprogramada vencida con situacion atrasada gana sobre reprogramada', () => {
+    const t = tareaMetricas({ situacion: 'atrasada', reprogramaciones: 2 });
     expect(estadoEfectivoTablero(t, hoy)).toBe('atrasada');
+  });
+
+  it('reprogramaciones sin vencimiento muestra reprogramada', () => {
+    const t = tareaMetricas({ situacion: 'reprogramada', fecha_planificada: hoy, reprogramaciones: 1 });
+    expect(estadoEfectivoTablero(t, hoy)).toBe('reprogramada');
   });
 
   it('pendiente al día sigue siendo pendiente', () => {

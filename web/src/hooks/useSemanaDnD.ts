@@ -17,7 +17,6 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { reprogramarTareaConLog } from '@/hooks/useTareas';
-import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
 import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import type { Tarea } from '@/types';
 
@@ -40,7 +39,7 @@ export function useSemanaDnDSensors() {
 
 export function useSemanaDnD({
   tareasPlan,
-  hoyYmd,
+  hoyYmd: _hoyYmd,
   usuarioId,
   onMoverDia,
   onReprDragConfirmado,
@@ -118,15 +117,13 @@ export function useSemanaDnD({
     justificacion: string;
   }) {
     if (!reprDragTarea || !usuarioId) return;
-    const { tarea: t, semana } = reprDragTarea;
+    const { semana } = reprDragTarea;
     try {
-      const nuevoEstado = resolverEstadoReprogramacion(t, hoyYmd);
       await reprogramarTareaConLog({
         tareaId:       input.tareaId,
         usuarioId,
         nuevaFecha:    input.nuevaFecha,
         justificacion: input.justificacion,
-        nuevoEstado,
       });
       setReprDragTarea(null);
       toast.success('Tarea reprogramada');

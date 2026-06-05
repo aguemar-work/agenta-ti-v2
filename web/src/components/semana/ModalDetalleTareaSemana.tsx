@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
@@ -16,6 +16,7 @@ import { labelNumeroOT } from '@/lib/otNumero';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
 import { fechaLocalYmd } from '@/lib/fecha';
+import { claveVisualTarea, textoEjesTarea } from '@/lib/tableroEstado';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
 type EditarTareaDraft = {
@@ -34,15 +35,17 @@ const EDITAR_IDLE: EditarTareaDraft = {
   asignadoId: '',
 };
 
-type Vista = 'detalle' | 'editar' | 'eliminar';
+type Vista = 'detalle' | 'editar' | 'eliminar' | 'cancelar';
 
 const MODAL_TITULO: Record<Vista, string> = {
   detalle: 'Detalle de tarea',
   editar: 'Editar tarea',
   eliminar: 'Eliminar tarea',
+  cancelar: 'Cancelar tarea',
 };
 
 const ELIM_HINT_ID = 'modal-detalle-eliminar-hint';
+const CANCEL_HINT_ID = 'modal-detalle-cancelar-hint';
 
 type Props = {
   open: boolean;
@@ -60,10 +63,10 @@ type Props = {
     asignado_a?: string | null;
   }) => Promise<void>;
   onEliminar: (input: { tareaId: string; motivo: string }) => Promise<void>;
+  onCancelar?: (input: { tareaId: string; motivo: string }) => Promise<void>;
   onIniciar?: (t: Tarea) => Promise<void>;
   onCompletar?: (t: Tarea) => void;
   onReprogramar?: (t: Tarea) => void;
-  onBloquear?: (t: Tarea) => void;
   ot?: OrdenTrabajo | null;
   onGenerarOt?: (t: Tarea) => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
@@ -78,16 +81,17 @@ export function ModalDetalleTareaSemana({
   onClose,
   onGuardar,
   onEliminar,
+  onCancelar,
   onIniciar,
   onCompletar,
   onReprogramar,
-  onBloquear,
   ot,
   onGenerarOt,
   onOtClick,
 }: Props) {
   const [vista, setVista] = useState<Vista>('detalle');
   const [motivoEliminar, setMotivoEliminar] = useState('');
+  const [motivoCancelar, setMotivoCancelar] = useState('');
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -123,11 +127,13 @@ export function ModalDetalleTareaSemana({
     queueMicrotask(() => {
       setVista('detalle');
       setMotivoEliminar('');
+      setMotivoCancelar('');
       setMenuOpen(false);
     });
   }, [tareaId]);
 
-  const motivoOk = motivoEliminar.trim().length >= MIN_JUSTIFICACION_CHARS;
+  const motivoEliminarOk = motivoEliminar.trim().length >= MIN_JUSTIFICACION_CHARS;
+  const motivoCancelarOk = motivoCancelar.trim().length >= MIN_JUSTIFICACION_CHARS;
 
   async function guardar() {
     if (readOnly || !tarea || !editarForm.titulo.trim()) return;
@@ -149,10 +155,22 @@ export function ModalDetalleTareaSemana({
   }
 
   async function eliminar() {
-    if (readOnly || !tarea || !motivoOk) return;
+    if (readOnly || !tarea || !motivoEliminarOk) return;
     setBusy(true);
     try {
       await onEliminar({ tareaId: tarea.id, motivo: motivoEliminar.trim() });
+      markModalCompleted('modal-detalle-tarea');
+      handleModalClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelar() {
+    if (readOnly || !tarea || !motivoCancelarOk || !onCancelar) return;
+    setBusy(true);
+    try {
+      await onCancelar({ tareaId: tarea.id, motivo: motivoCancelar.trim() });
       markModalCompleted('modal-detalle-tarea');
       handleModalClose();
     } finally {
@@ -194,10 +212,23 @@ export function ModalDetalleTareaSemana({
       return (
         <div className="mc-tarea-detalle-footer">
           <Button variant="ghost" onClick={() => setVista('detalle')} disabled={busy}>
-            Cancelar
+            Volver
           </Button>
-          <Button variant="danger" onClick={() => void eliminar()} disabled={busy || !motivoOk}>
+          <Button variant="danger" onClick={() => void eliminar()} disabled={busy || !motivoEliminarOk}>
             {busy ? 'Eliminando…' : 'Confirmar eliminación'}
+          </Button>
+        </div>
+      );
+    }
+
+    if (vista === 'cancelar') {
+      return (
+        <div className="mc-tarea-detalle-footer">
+          <Button variant="ghost" onClick={() => setVista('detalle')} disabled={busy}>
+            Volver
+          </Button>
+          <Button variant="danger" onClick={() => void cancelar()} disabled={busy || !motivoCancelarOk}>
+            {busy ? 'Cancelando…' : 'Confirmar cancelación'}
           </Button>
         </div>
       );
@@ -205,9 +236,12 @@ export function ModalDetalleTareaSemana({
 
     if (readOnly || !tarea) return null;
 
-    const puedeIniciar = ['pendiente', 'atrasada', 'reprogramada'].includes(tarea.estado);
+    const puedeIniciar = tarea.estado === 'pendiente';
     const puedeCompletar = tarea.estado === 'en_progreso';
     const puedeDestruir = !['completada', 'cancelada'].includes(tarea.estado);
+    const puedeReprogramar =
+      Boolean(onReprogramar) &&
+      ['pendiente', 'atrasada', 'reprogramada', 'en_progreso'].includes(claveVisualTarea(tarea, hoyYmd));
     const puedeSecundario = puedeDestruir;
     const puedeGenerarOt =
       Boolean(onGenerarOt) &&
@@ -217,6 +251,16 @@ export function ModalDetalleTareaSemana({
 
     return (
       <div className="mc-tarea-detalle-footer mc-tarea-detalle-footer--actions-end">
+        {puedeReprogramar && onReprogramar && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onReprogramar(tarea);
+            }}
+          >
+            Reprogramar
+          </Button>
+        )}
         {puedeGenerarOt && onGenerarOt && (
           <Button variant="ghost" onClick={() => onGenerarOt(tarea)}>
             Generar OT
@@ -244,34 +288,6 @@ export function ModalDetalleTareaSemana({
                   }
                 }}
               >
-                {['pendiente', 'atrasada', 'reprogramada', 'en_progreso'].includes(tarea.estado) &&
-                  onReprogramar && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="mc-dropdown-item"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onReprogramar(tarea);
-                      }}
-                    >
-                      Reprogramar
-                    </button>
-                  )}
-                {['pendiente', 'atrasada', 'en_progreso', 'reprogramada'].includes(tarea.estado) &&
-                  onBloquear && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="mc-dropdown-item"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onBloquear(tarea);
-                      }}
-                    >
-                      Bloquear
-                    </button>
-                  )}
                 <button
                   type="button"
                   role="menuitem"
@@ -283,20 +299,33 @@ export function ModalDetalleTareaSemana({
                 >
                   Editar
                 </button>
+                {onCancelar && ['pendiente', 'en_progreso'].includes(tarea.estado) && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="mc-dropdown-item mc-dropdown-item--danger"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setVista('cancelar');
+                    }}
+                  >
+                    Cancelar tarea
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="mc-dropdown-item mc-dropdown-item--danger"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setVista('eliminar');
+                  }}
+                >
+                  Eliminar tarea
+                </button>
               </div>
             )}
           </div>
-        )}
-
-        {puedeDestruir && (
-          <button
-            type="button"
-            className="mc-btn-icon-danger"
-            aria-label="Eliminar tarea"
-            onClick={() => setVista('eliminar')}
-          >
-            <Trash2 size={18} aria-hidden />
-          </button>
         )}
 
         {puedeIniciar && onIniciar && (
@@ -320,7 +349,9 @@ export function ModalDetalleTareaSemana({
       case 'detalle':
         return (
           <div className="mc-tarea-detalle">
-            <p className="mc-tarea-detalle__kicker">Tarea</p>
+            <p className="mc-tarea-detalle__kicker">
+              {textoEjesTarea(tarea, hoyYmd) ?? 'Tarea planificada'}
+            </p>
             <h2 className="mc-tarea-detalle__titulo">{tarea.titulo}</h2>
 
             {tarea.descripcion?.trim() ? (
@@ -420,6 +451,7 @@ export function ModalDetalleTareaSemana({
                 <option value="baja">Baja</option>
                 <option value="media">Media</option>
                 <option value="alta">Alta</option>
+                <option value="critica">Crítica</option>
               </select>
             </div>
             <div className="mc-field">
@@ -492,6 +524,24 @@ export function ModalDetalleTareaSemana({
           </div>
         );
 
+      case 'cancelar':
+        return (
+          <div className="flex flex-col gap-4">
+            <p id={CANCEL_HINT_ID} className="text-sm text-[var(--mc-color-text-secondary)]">
+              La tarea quedará como cancelada y el jefe podrá revisar tu justificación. Mínimo{' '}
+              {MIN_JUSTIFICACION_CHARS} caracteres.
+            </p>
+            <JustificacionField
+              label="Motivo de cancelación"
+              value={motivoCancelar}
+              onChange={setMotivoCancelar}
+              placeholder="Indica por qué cancelas la tarea…"
+              disabled={busy}
+              autoFocus
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -507,7 +557,11 @@ export function ModalDetalleTareaSemana({
       bodyClassName="mc-tarea-detalle-modal-body"
       footerClassName="mc-tarea-detalle-modal-footer"
       hasUnsavedChanges={vista === 'editar' && editarHasChanges}
-      {...(vista === 'eliminar' ? { descriptionElementId: ELIM_HINT_ID } : {})}
+      {...(vista === 'eliminar'
+        ? { descriptionElementId: ELIM_HINT_ID }
+        : vista === 'cancelar'
+          ? { descriptionElementId: CANCEL_HINT_ID }
+          : {})}
       footer={renderFooter()}
     >
       {renderCuerpo()}

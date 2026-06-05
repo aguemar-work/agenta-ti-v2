@@ -15,15 +15,13 @@ import type { Evento, EstadoTarea, Tarea, TipoEvento } from '@/types';
 export async function getTareasSemana(usuarioId: string, semanaISO: string): Promise<Tarea[]> {
   const insforge = getInsforge();
 
-  // Traer tareas de la semana actual + atrasadas de semanas anteriores
-  // Las atrasadas de semanas previas tienen semana_planificada distinta pero
-  // estado='atrasada', por lo que deben aparecer en la vista Hoy/Semana.
+  // Semana actual + tareas atrasadas de semanas anteriores (situación calculada).
   const { data, error } = await insforge.database
     .from(TAREA_ACTIVA)
     .select('*')
     .eq('asignado_a', usuarioId)
     .eq('tipo', 'planificada')
-    .or(`semana_planificada.eq.${semanaISO},estado.eq.atrasada`)
+    .or(`semana_planificada.eq.${semanaISO},situacion.eq.atrasada`)
     .order('fecha_planificada', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
@@ -128,14 +126,14 @@ export async function actualizarTarea(input: ActualizarTareaInput): Promise<void
  * Cambia el estado de una tarea vía RPC sgtd_cambiar_estado_tarea.
  * El log se registra automáticamente en el servidor.
  *
- * Estados que requieren justificación: 'bloqueada', 'cancelada'
+ * Estado que requiere justificación: 'cancelada'
  */
 export async function cambiarEstadoTarea(input: {
   tareaId:        string;
   nuevoEstado:    EstadoTarea;
   justificacion?: string;
 }): Promise<void> {
-  const requiereJustificacion = ['bloqueada', 'cancelada'].includes(input.nuevoEstado);
+  const requiereJustificacion = input.nuevoEstado === 'cancelada';
 
   if (requiereJustificacion) {
     const j = (input.justificacion ?? '').trim();
@@ -173,7 +171,6 @@ export async function reprogramarTareaConLog(input: {
   usuarioId:     string;
   nuevaFecha:    string;
   justificacion: string;
-  nuevoEstado?:  Tarea['estado'];
 }): Promise<void> {
   const j = input.justificacion.trim();
   if (j.length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
@@ -182,23 +179,7 @@ export async function reprogramarTareaConLog(input: {
     p_usuario_id:   input.usuarioId,
     p_nueva_fecha:  input.nuevaFecha,
     p_justificacion: j,
-    p_nuevo_estado: input.nuevoEstado ?? null,
-  });
-  if (error) throw error;
-}
-
-export async function desbloquearTareaConLog(input: {
-  tareaId:       string;
-  usuarioId:     string;
-  nuevaFecha:    string;
-  justificacion: string;
-}): Promise<void> {
-  if (input.justificacion.trim().length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
-  const { error } = await getInsforge().database.rpc('sgtd_desbloquear_tarea_con_log', {
-    p_tarea_id:      input.tareaId,
-    p_usuario_id:    input.usuarioId,
-    p_nueva_fecha:   input.nuevaFecha,
-    p_justificacion: input.justificacion.trim(),
+    p_nuevo_estado: null,
   });
   if (error) throw error;
 }
@@ -234,19 +215,6 @@ export async function completarTareaConResumen(input: {
       }),
     ));
   }
-}
-
-/** Bloquea tarea con justificación (delega en cambiarEstadoTarea). */
-export async function bloquearTarea(input: {
-  tareaId:       string;
-  usuarioId:     string;
-  justificacion: string;
-}): Promise<void> {
-  return cambiarEstadoTarea({
-    tareaId:       input.tareaId,
-    nuevoEstado:   'bloqueada',
-    justificacion: input.justificacion,
-  });
 }
 
 // ---------------------------------------------------------------------------

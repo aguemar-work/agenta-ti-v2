@@ -1,26 +1,22 @@
 /**
  * hooks/useSemanaModales.ts
  *
- * Estado de los 9 modales de la vista Mi Semana y sus handlers de acción
- * (completar, bloquear, reprogramar desde detalle, editar, eliminar, iniciar).
- * Extraído de useMiSemanaPage para separar responsabilidades.
+ * Estado de modales de Mi Semana y handlers (completar, reprogramar, editar, eliminar, iniciar).
  */
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { bloquearTarea, reprogramarTareaConLog } from '@/api/semana';
+import { reprogramarTareaConLog } from '@/api/semana';
 import { useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
-import { resolverEstadoReprogramacion } from '@/lib/tareaEstado';
 import type { Tarea, TipoEvento, Usuario } from '@/types';
 
 type MiSemanaMut = ReturnType<typeof useMiSemanaMutations>;
 
 export function useSemanaModales({
   tareasPlan,
-  hoyYmd,
   usuario,
   jefesNotificacion,
   mut,
@@ -33,49 +29,31 @@ export function useSemanaModales({
 }) {
   const qc = useQueryClient();
 
-  // ── Estado de modales ─────────────────────────────────────────────────────
-  const [modal,              setModal]              = useState<{ fecha: string } | null>(null);
-  const [modalInc,           setModalInc]           = useState(false);
-  const [detalleTareaId,     setDetalleTareaId]     = useState<string | null>(null);
-  const [completarTareaId,   setCompletarTareaId]   = useState<string | null>(null);
-  const [bloquearTareaState, setBloquearTareaState] = useState<Tarea | null>(null);
-  const [reprDetalleTarea,   setReprDetalleTarea]   = useState<Tarea | null>(null);
+  const [modal,            setModal]            = useState<{ fecha: string } | null>(null);
+  const [modalInc,         setModalInc]         = useState(false);
+  const [detalleTareaId,   setDetalleTareaId]   = useState<string | null>(null);
+  const [completarTareaId, setCompletarTareaId] = useState<string | null>(null);
+  const [reprDetalleTarea, setReprDetalleTarea] = useState<Tarea | null>(null);
 
-  // ── Datos derivados ───────────────────────────────────────────────────────
   const tareaPorId = new Map(tareasPlan.map((t) => [t.id, t]));
 
   const tareaDetalle   = detalleTareaId   ? (tareaPorId.get(detalleTareaId)   ?? null) : null;
   const tareaCompletar = completarTareaId ? (tareaPorId.get(completarTareaId) ?? null) : null;
 
-  // ── Handlers de acciones ──────────────────────────────────────────────────
   async function confirmarReprDetalle(input: {
     tareaId:       string;
     nuevaFecha:    string;
     justificacion: string;
   }) {
     if (!reprDetalleTarea || !usuario) return;
-    const nuevoEstado = resolverEstadoReprogramacion(reprDetalleTarea, hoyYmd);
     try {
-      await reprogramarTareaConLog({ ...input, usuarioId: usuario.id, nuevoEstado });
+      await reprogramarTareaConLog({ ...input, usuarioId: usuario.id });
       setReprDetalleTarea(null);
       toast.success('Tarea reprogramada');
       await invalidateRelatedQueries(qc, ['semana', 'tareas-hoy', 'planificacion']);
     } catch (err) {
       console.error('[confirmarReprDetalle]', err);
       toast.error('No se pudo reprogramar la tarea.');
-    }
-  }
-
-  async function confirmarBloqueo(input: { tareaId: string; justificacion: string }) {
-    if (!usuario) return;
-    try {
-      await bloquearTarea({ ...input, usuarioId: usuario.id });
-      setBloquearTareaState(null);
-      toast.success('Tarea bloqueada');
-      await invalidateRelatedQueries(qc, ['semana', 'tablero', 'tareas-hoy']);
-    } catch (err) {
-      console.error('[confirmarBloqueo]', err);
-      toast.error('No se pudo bloquear la tarea.');
     }
   }
 
@@ -174,6 +152,19 @@ export function useSemanaModales({
     }
   }
 
+  async function cancelarDesdeDetalle(input: { tareaId: string; motivo: string }) {
+    if (!usuario) return;
+    try {
+      await mut.cancelarTarea({ tareaId: input.tareaId, motivo: input.motivo });
+      setDetalleTareaId(null);
+      toast.success('Tarea cancelada');
+      await invalidateRelatedQueries(qc, ['semana', 'tareas-hoy', 'planificacion']);
+    } catch (err) {
+      console.error('[cancelarDesdeDetalle]', err);
+      toast.error('No se pudo cancelar la tarea.');
+    }
+  }
+
   async function iniciarDesdeDetalle(t: Tarea) {
     if (!usuario) return;
     try {
@@ -187,26 +178,20 @@ export function useSemanaModales({
   }
 
   return {
-    // Estado de modales
-    modal,              setModal,
-    modalInc,           setModalInc,
-    detalleTareaId,     setDetalleTareaId,
-    completarTareaId,   setCompletarTareaId,
-    bloquearTareaState, setBloquearTareaState,
-    reprDetalleTarea,   setReprDetalleTarea,
-
-    // Datos derivados
+    modal,            setModal,
+    modalInc,         setModalInc,
+    detalleTareaId,   setDetalleTareaId,
+    completarTareaId, setCompletarTareaId,
+    reprDetalleTarea, setReprDetalleTarea,
     tareaDetalle,
     tareaCompletar,
-
-    // Handlers
     confirmarReprDetalle,
-    confirmarBloqueo,
     confirmarCompletar,
     crearTareaDesdeModal,
     crearEventoDesdeModal,
     guardarDetalle,
     eliminarDesdeDetalle,
+    cancelarDesdeDetalle,
     iniciarDesdeDetalle,
   };
 }

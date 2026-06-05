@@ -173,9 +173,6 @@ export const tareaHandlers = [
   http.post(`${BASE}/rpc/sgtd_reprogramar_tarea_con_log`, () =>
     HttpResponse.json(null),
   ),
-  http.post(`${BASE}/rpc/sgtd_desbloquear_tarea_con_log`, () =>
-    HttpResponse.json(null),
-  ),
   http.post(`${BASE}/rpc/sgtd_mover_tarea_dia`, () =>
     HttpResponse.json(null),
   ),
