@@ -175,6 +175,14 @@
     .mc-btn-tertiary.mc-btn-xs {
       padding: 4px 10px;
       font-size: 12px;
+      gap: 4px;
+    }
+
+    .mc-btn-icon-only.mc-btn-xs {
+      padding: 4px;
+      min-width: 28px;
+      width: 28px;
+      height: 28px;
     }
   
     .mc-btn-lg,
@@ -278,6 +286,10 @@
       padding: 10px 12px;
       resize: vertical;
       display: block;
+    }
+
+    textarea.mc-input.mc-input--tall {
+      min-height: 96px;
     }
   
     /* select: chevron custom */

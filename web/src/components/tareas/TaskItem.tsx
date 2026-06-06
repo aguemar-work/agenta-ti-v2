@@ -1,4 +1,4 @@
-import { Clock, Flag, Lock, MoreHorizontal } from 'lucide-react';
+import { Clock, Flame, MoreHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 
@@ -147,7 +147,6 @@ export function TaskItem({
       {asignadoNombre && <span>{asignadoNombre}</span>}
       {objetivoTitulo && <span>· {objetivoTitulo}</span>}
       {tarea.fecha_planificada && <span>· {tarea.fecha_planificada}</span>}
-      {readOnly && <Lock className="inline" size={12} aria-label="Solo lectura" />}
     </div>
   );
 
@@ -266,7 +265,9 @@ export function TaskItem({
               >
                 {tarea.titulo}
               </h3>
-              {tarea.prioridad !== 'baja' && <Flag size={14} style={{ color: flagColor, flexShrink: 0 }} aria-hidden />}
+              {tarea.prioridad === 'critica' && (
+                <Flame size={14} style={{ color: flagColor, flexShrink: 0 }} aria-hidden />
+              )}
             </div>
             {meta}
           </div>
@@ -279,11 +280,10 @@ export function TaskItem({
 
   // ── Variante WEEK ─────────────────────────────────────────────────────────
   // Meta reducido: solo estado + urgencia. Asignado/objetivo/fecha van al detalle.
-  const metaWeek = est !== 'pendiente' || urgenciaTag || readOnly ? (
+  const metaWeek = est !== 'pendiente' || urgenciaTag ? (
     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs" style={textColorStyle}>
       {est !== 'pendiente' && <TareaEstadoIndicator estado={est} />}
       {urgenciaTag}
-      {readOnly && <Lock className="inline" size={12} aria-label="Solo lectura" />}
     </div>
   ) : null;
 
@@ -319,8 +319,8 @@ export function TaskItem({
                 >
                   {tarea.titulo}
                 </h3>
-                {tarea.prioridad !== 'baja' && (
-                  <Flag size={12} style={{ color: flagColor, flexShrink: 0, marginTop: 3 }} aria-hidden />
+                {tarea.prioridad === 'critica' && (
+                  <Flame size={12} style={{ color: flagColor, flexShrink: 0, marginTop: 3 }} aria-hidden />
                 )}
               </div>
               {metaWeek}
@@ -362,7 +362,9 @@ export function TaskItem({
           >
             {tarea.titulo}
           </h3>
-          {tarea.prioridad !== 'baja' && <Flag size={14} style={{ color: flagColor }} aria-hidden />}
+          {tarea.prioridad === 'critica' && (
+            <Flame size={14} style={{ color: flagColor }} aria-hidden />
+          )}
         </div>
         {tarea.descripcion && (
           <p className="mt-1 line-clamp-2 text-xs text-[var(--mc-color-text-secondary)]">{tarea.descripcion}</p>

@@ -10,7 +10,10 @@ import {
 } from '@/components/semana/MiSemanaHeader';
 import { MiSemanaToolbar } from '@/components/semana/MiSemanaToolbar';
 import { useSwipeDiaSemana } from '@/hooks/useSwipeDiaSemana';
-import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
+import {
+  ModalDetalleTareaSemana,
+  type DetalleTareaVistaInicial,
+} from '@/components/semana/ModalDetalleTareaSemana';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { ModalConvertirNota } from '@/components/semana/ModalConvertirNota';
 import { NotasDrawer } from '@/components/semana/NotasDrawer';
@@ -27,8 +30,8 @@ import { Calendar } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
 import type { Tarea } from '@/types';
 
-const MiSemanaGrillaDnD = lazy(() =>
-  import('@/components/semana/MiSemanaGrillaDnD').then((m) => ({ default: m.MiSemanaGrillaDnD })),
+const MiSemanaGrilla = lazy(() =>
+  import('@/components/semana/MiSemanaGrilla').then((m) => ({ default: m.MiSemanaGrilla })),
 );
 
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -80,12 +83,6 @@ export function MiSemana() {
     usuariosAsignables,
     tareaDetalle,
     tareaCompletar,
-    activeTareaDrag,
-    activeDragId,
-    setActiveDragId,
-    overId,
-    onDragOver,
-    onDragEnd,
     modal,
     setModal,
     detalleTareaId,
@@ -94,10 +91,7 @@ export function MiSemana() {
     setCompletarTareaId,
     reprDetalleTarea,
     setReprDetalleTarea,
-    reprDragTarea,
-    setReprDragTarea,
     puedeGestionar,
-    confirmarReprDrag,
     confirmarReprDetalle,
     confirmarCompletar,
     crearTareaDesdeModal,
@@ -114,6 +108,10 @@ export function MiSemana() {
   const [notasDrawerOpen, setNotasDrawerOpen] = useState(false);
   const [otViendo, setOtViendo] = useState<OrdenTrabajo | null>(null);
   const [diaMobileYmd, setDiaMobileYmd] = useState(hoyYmd);
+  const [incidenciaFecha, setIncidenciaFecha] = useState<string | null>(null);
+  const [detalleVistaInicial, setDetalleVistaInicial] = useState<DetalleTareaVistaInicial | null>(
+    null,
+  );
 
   useEffect(() => {
     const ids = diasSemana.map((d) => fechaLocalYmd(d));
@@ -256,7 +254,7 @@ export function MiSemana() {
           </div>
         }
       >
-        <MiSemanaGrillaDnD
+        <MiSemanaGrilla
           diasSemana={diasSemana}
           hoyYmd={hoyYmd}
           diaMobileYmd={diaMobileYmd}
@@ -267,20 +265,25 @@ export function MiSemana() {
           ordenesPorTarea={ordenesPorTarea}
           nombresPorId={nombresPorId}
           ocultarCompletadas={ocultarCompletadas}
-          activeDragId={activeDragId}
-          setActiveDragId={setActiveDragId}
-          overId={overId}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-          activeTareaDrag={activeTareaDrag}
           puedeGestionar={puedeGestionar}
           onAbrirModalDia={(fecha) => setModal({ fecha })}
           onAbrirDetalle={setDetalleTareaId}
-          onRegistrarIncidencia={() => setModalInc(true)}
+          onRegistrarIncidencia={(fecha) => {
+            setIncidenciaFecha(fecha);
+            setModalInc(true);
+          }}
           onOtClick={setOtViendo}
           onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
           onCompletarTarea={(t) => setCompletarTareaId(t.id)}
           onReprogramarTarea={(t) => setReprDetalleTarea(t)}
+          onCancelarTarea={(t) => {
+            setDetalleVistaInicial('cancelar');
+            setDetalleTareaId(t.id);
+          }}
+          onEliminarTarea={(t) => {
+            setDetalleVistaInicial('eliminar');
+            setDetalleTareaId(t.id);
+          }}
         />
       </Suspense>
 
@@ -320,11 +323,14 @@ export function MiSemana() {
       <ModalNuevaTarea
         open={modalInc}
         modo="incidencia"
-        fechaReferencia={hoyYmd}
+        fechaReferencia={incidenciaFecha ?? hoyYmd}
         usuarioActualId={uid ?? ''}
         usuariosAsignables={usuariosAsignables}
         objetivos={objetivosActivos}
-        onClose={() => setModalInc(false)}
+        onClose={() => {
+          setModalInc(false);
+          setIncidenciaFecha(null);
+        }}
         onSubmit={async (input) => {
           await crearIncidenciaHoy({
             titulo: input.titulo,
@@ -341,12 +347,6 @@ export function MiSemana() {
         tarea={tareaCompletar}
         onClose={() => setCompletarTareaId(null)}
         onConfirm={confirmarCompletar}
-      />
-      <ModalReprogramar
-        tarea={reprDragTarea?.tarea ?? null}
-        {...(reprDragTarea?.fecha ? { fechaFija: reprDragTarea.fecha } : {})}
-        onClose={() => setReprDragTarea(null)}
-        onConfirm={confirmarReprDrag}
       />
       <ModalReprogramar
         tarea={reprDetalleTarea}
@@ -375,7 +375,11 @@ export function MiSemana() {
         usuariosAsignables={usuariosAsignables}
         ot={tareaDetalle ? ordenesPorTarea.get(tareaDetalle.id) ?? null : null}
         readOnly={Boolean(tareaDetalle && !esJefe && tareaDetalle.asignado_a !== usuario.id)}
-        onClose={() => setDetalleTareaId(null)}
+        {...(detalleVistaInicial ? { vistaInicial: detalleVistaInicial } : {})}
+        onClose={() => {
+          setDetalleTareaId(null);
+          setDetalleVistaInicial(null);
+        }}
         onGuardar={guardarDetalle}
         onEliminar={eliminarDesdeDetalle}
         onCancelar={cancelarDesdeDetalle}

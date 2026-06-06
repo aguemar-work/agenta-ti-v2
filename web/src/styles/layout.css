@@ -174,6 +174,10 @@
   
     .mc-filter-select:hover { border-color: var(--mc-color-border-hover, var(--mc-color-accent)); }
     .mc-filter-select:focus { outline: none; border-color: var(--mc-color-accent); }
+
+    .mc-filter-select--w120 { min-width: 120px; }
+    .mc-filter-select--w150 { min-width: 150px; }
+    .mc-filter-select--w180 { min-width: 180px; }
   
     /* Pills */
     .mc-filter-pills {

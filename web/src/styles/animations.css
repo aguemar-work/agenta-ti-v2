@@ -52,7 +52,7 @@
 /* Pulso suave en tarea por vencer (4–5pm) */
 @keyframes mc-pulse-border-amber {
   0%, 100% { border-left-color: var(--mc-state-precaucion-border); }
-  50%       { border-left-color: var(--mc-state-bloqueada-meta); }
+  50%       { border-left-color: var(--mc-color-warning); }
 }
 
 .task-precaucion {

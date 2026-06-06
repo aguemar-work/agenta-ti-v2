@@ -69,13 +69,14 @@ FilterBar.Select = function FilterSelect({
   disabled = false,
   minWidth = 150,
 }: FilterSelectProps) {
+  const widthClass =
+    minWidth <= 120 ? 'mc-filter-select--w120' : minWidth >= 180 ? 'mc-filter-select--w180' : 'mc-filter-select--w150';
   return (
     <label className="mc-filter-item" htmlFor={id}>
       <span className="mc-filter-label">{label}</span>
       <select
         id={id}
-        className="mc-filter-select"
-        style={{ minWidth }}
+        className={['mc-filter-select', widthClass].join(' ')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}

@@ -36,8 +36,7 @@ export function JustificacionField({
       </label>
       <textarea
         id={id}
-        className="mc-input"
-        style={{ minHeight: 96, resize: 'vertical' }}
+        className="mc-input mc-input--tall"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

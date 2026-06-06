@@ -10,7 +10,7 @@ const LABEL_TIPO: Record<TipoAccionLog, string> = {
   iniciada: 'Iniciada',
   reprogramada: 'Reprogramada',
   eliminada: 'Eliminada',
-  estado_cambiado: 'Estado',
+  estado_cambiado: 'Estado actualizado',
   prioridad_cambiada: 'Prioridad',
   editada: 'Editada',
   cancelada: 'Cancelada',
@@ -19,7 +19,6 @@ const LABEL_TIPO: Record<TipoAccionLog, string> = {
   completada: 'Completada',
 };
 
-/** Mapeo log → pill de estado cuando aplica el mismo diseño. */
 const LOG_A_ESTADO: Partial<Record<TipoAccionLog, ClaveVisualTarea>> = {
   reprogramada: 'reprogramada',
   desbloqueada: 'pendiente',
@@ -34,13 +33,13 @@ type Props = {
   defaultOpen?: boolean;
 };
 
-function LogTipoPill({ tipo }: { tipo: TipoAccionLog }) {
+function LogTipoBadge({ tipo }: { tipo: TipoAccionLog }) {
   const estado = LOG_A_ESTADO[tipo];
   if (estado) {
     return <TareaEstadoIndicator estado={estado} variant="pill" />;
   }
   return (
-    <span className="mc-meta-pill mc-meta-pill--neutral">
+    <span className="mc-tarea-timeline__badge-neutral">
       {LABEL_TIPO[tipo] ?? tipo}
     </span>
   );
@@ -66,31 +65,36 @@ export function TareaHistorialSection({ tareaId, defaultOpen = true }: Props) {
       </summary>
       <div className="mc-tarea-historial__body">
         {isLoading ? (
-          <p className="text-xs text-[var(--mc-color-text-secondary)]">Cargando…</p>
+          <p className="mc-tarea-historial__empty">Cargando…</p>
         ) : logs.length === 0 ? (
-          <p className="text-xs text-[var(--mc-color-text-secondary)]">Sin registros.</p>
+          <p className="mc-tarea-historial__empty">Sin registros en el historial.</p>
         ) : (
-          <ul className="mc-tarea-historial__list">
-            {logs.map((log) => (
-              <li key={log.id} className="mc-tarea-historial__item">
-                <time className="mc-tarea-historial__time" dateTime={log.created_at}>
-                  {new Date(log.created_at).toLocaleString('es', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  })}
-                </time>
-                <LogTipoPill tipo={log.tipo_accion} />
-                {log.justificacion ? (
-                  <p className="mc-tarea-historial__just">{log.justificacion}</p>
-                ) : null}
+          <ol className="mc-tarea-timeline">
+            {logs.map((log, idx) => (
+              <li key={log.id} className="mc-tarea-timeline__item">
+                <span className="mc-tarea-timeline__rail" aria-hidden>
+                  <span className="mc-tarea-timeline__dot" />
+                  {idx < logs.length - 1 ? <span className="mc-tarea-timeline__line" /> : null}
+                </span>
+                <div className="mc-tarea-timeline__content">
+                  <div className="mc-tarea-timeline__head">
+                    <LogTipoBadge tipo={log.tipo_accion} />
+                    <time className="mc-tarea-timeline__time" dateTime={log.created_at}>
+                      {new Date(log.created_at).toLocaleString('es', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </time>
+                  </div>
+                  {log.justificacion ? (
+                    <p className="mc-tarea-timeline__just">{log.justificacion}</p>
+                  ) : null}
+                </div>
               </li>
             ))}
-          </ul>
-        )}
-        {logs.length > 0 && (
-          <p className="mc-tarea-historial__footer" role="status">
-            Mostrando {logs.length} de {logs.length} cambios
-          </p>
+          </ol>
         )}
       </div>
     </details>

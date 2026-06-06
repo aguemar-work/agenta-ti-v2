@@ -47,7 +47,7 @@ Meta Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
 
 ### Tipografía
 - Font: Inter (400/500/600) via `--mc-font-sans`
-- Escalas: `--mc-text-xs` (12) · `--mc-text-sm` (14) · `--mc-text-md` (16) · `--mc-text-lg` (20) · `--mc-text-xl` (24)
+- Escalas (tokens reales): `--mc-text-xs` (11) · `--mc-text-sm` (13) · `--mc-text-base` (14) · `--mc-text-md` (16) · `--mc-text-lg` (18) · `--mc-text-xl` (22)
 - Cabeceras de tabla: 10–11px, `uppercase`, `letter-spacing: 0.06em`, `--mc-color-text-secondary`
 
 ### Iconos

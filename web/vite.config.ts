@@ -42,7 +42,6 @@ export default defineConfig({
             if (id.includes('@insforge/')) return 'vendor-insforge';
             if (id.includes('@sentry/')) return 'vendor-sentry';
             if (id.includes('/zod/')) return 'vendor-zod';
-            if (id.includes('@dnd-kit/')) return 'vendor-dnd';
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }

@@ -115,10 +115,8 @@
   --mc-shadow-md:   0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
   --mc-shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
   --mc-shadow-xl:   0 16px 48px rgba(0, 0, 0, 0.16), 0 8px 16px rgba(0, 0, 0, 0.08);
-  --mc-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.22), 0 12px 24px -8px rgba(0, 0, 0, 0.12);
   /* Aliases semánticos */
   --mc-card-shadow:      var(--mc-shadow-sm);
-  --mc-card-shadow-drag: var(--mc-shadow-drag);
   --mc-modal-shadow:     var(--mc-shadow-lg);
   --mc-dropdown-shadow:  var(--mc-shadow-md);
   /* Legacy — mantener para no romper usos existentes */
@@ -143,12 +141,6 @@
   --mc-ot-vencida-bg:     color-mix(in srgb, var(--mc-color-danger) 8%, transparent);
   --mc-ot-vencida-border: var(--mc-color-danger);
   --mc-ot-rechazo-bg:     color-mix(in srgb, var(--mc-color-danger) 6%, transparent);
-
-  /* bloqueada */
-  --mc-state-bloqueada-bg:       rgba(247, 185, 40, 0.08);
-  --mc-state-bloqueada-border:   var(--mc-color-warning);
-  --mc-state-bloqueada-fg:       #7A4F00;
-  --mc-state-bloqueada-meta:     #854F0B;
 
   /* Urgencia horaria — tokens adicionales (auditoría) */
   --mc-urgencia-vencida-hoy-bg:     #FFF0F0;

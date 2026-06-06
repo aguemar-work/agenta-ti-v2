@@ -15,7 +15,6 @@ import { toast } from 'sonner';
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { useIncidenciasDelDia, useNotasBitacoraHoy, Q_INC_HOY, Q_NOTAS_HOY } from '@/hooks/useHoyColumnas';
 import { useJefesNotificacion } from '@/hooks/useUsuarios';
-import { useSemanaDnD } from '@/hooks/useSemanaDnD';
 import { useSemanaModales } from '@/hooks/useSemanaModales';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
@@ -226,14 +225,6 @@ export function useMiSemanaPage() {
     toast.success('Nota convertida en evento');
   }
 
-  // ── DnD ───────────────────────────────────────────────────────────────────
-  const dnd = useSemanaDnD({
-    tareasPlan,
-    hoyYmd,
-    usuarioId: usuario?.id,
-    onMoverDia: mut.moverDia,
-  });
-
   // ── Modales ───────────────────────────────────────────────────────────────
   const modales = useSemanaModales({
     tareasPlan,
@@ -287,12 +278,6 @@ export function useMiSemanaPage() {
     objetivosActivos, usuariosAsignables,
     tareaDetalle:   modales.tareaDetalle,
     tareaCompletar: modales.tareaCompletar,
-    activeTareaDrag:  dnd.activeTareaDrag,
-    activeDragId:     dnd.activeDragId,
-    setActiveDragId:  dnd.setActiveDragId,
-    overId:           dnd.overId,
-    onDragOver:       dnd.onDragOver,
-    onDragEnd:        dnd.onDragEnd,
     modal:               modales.modal,
     setModal:            modales.setModal,
     detalleTareaId:      modales.detalleTareaId,
@@ -301,10 +286,7 @@ export function useMiSemanaPage() {
     setCompletarTareaId: modales.setCompletarTareaId,
     reprDetalleTarea:    modales.reprDetalleTarea,
     setReprDetalleTarea: modales.setReprDetalleTarea,
-    reprDragTarea:       dnd.reprDragTarea,
-    setReprDragTarea:    dnd.setReprDragTarea,
     puedeGestionar,
-    confirmarReprDrag:     dnd.confirmarReprDrag,
     confirmarReprDetalle:  modales.confirmarReprDetalle,
     confirmarCompletar:    modales.confirmarCompletar,
     crearTareaDesdeModal:  modales.crearTareaDesdeModal,

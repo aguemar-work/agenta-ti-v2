@@ -67,8 +67,8 @@
   height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--mc-brand-violet) 14%, transparent);
-  color: var(--mc-brand-violet);
+  background: color-mix(in srgb, var(--mc-color-accent) 14%, transparent);
+  color: var(--mc-color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,8 +124,8 @@
   font-family: inherit;
 }
 .mc-sidebar-nav-link[aria-current="page"] {
-  background: var(--mc-brand-violet-soft);
-  color: var(--mc-brand-violet);
+  background: var(--mc-color-accent-soft);
+  color: var(--mc-color-accent);
   font-weight: 600;
 }
 

@@ -37,6 +37,8 @@ const EDITAR_IDLE: EditarTareaDraft = {
 
 type Vista = 'detalle' | 'editar' | 'eliminar' | 'cancelar';
 
+export type DetalleTareaVistaInicial = Vista;
+
 const MODAL_TITULO: Record<Vista, string> = {
   detalle: 'Detalle de tarea',
   editar: 'Editar tarea',
@@ -70,6 +72,7 @@ type Props = {
   ot?: OrdenTrabajo | null;
   onGenerarOt?: (t: Tarea) => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
+  vistaInicial?: Vista;
 };
 
 export function ModalDetalleTareaSemana({
@@ -88,6 +91,7 @@ export function ModalDetalleTareaSemana({
   ot,
   onGenerarOt,
   onOtClick,
+  vistaInicial,
 }: Props) {
   const [vista, setVista] = useState<Vista>('detalle');
   const [motivoEliminar, setMotivoEliminar] = useState('');
@@ -125,12 +129,12 @@ export function ModalDetalleTareaSemana({
   useEffect(() => {
     if (!tareaId) return;
     queueMicrotask(() => {
-      setVista('detalle');
+      setVista(vistaInicial ?? 'detalle');
       setMotivoEliminar('');
       setMotivoCancelar('');
       setMenuOpen(false);
     });
-  }, [tareaId]);
+  }, [tareaId, vistaInicial]);
 
   const motivoEliminarOk = motivoEliminar.trim().length >= MIN_JUSTIFICACION_CHARS;
   const motivoCancelarOk = motivoCancelar.trim().length >= MIN_JUSTIFICACION_CHARS;
