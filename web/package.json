@@ -2,6 +2,7 @@
   "name": "web",
   "private": true,
   "version": "0.0.0",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "license:check": "license-checker --production --summary --excludePrivatePackages --onlyAllow \"MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;Unlicense;Python-2.0;CC0-1.0;BlueOak-1.0.0;MIT-0;Zlib\""
   },
   "dependencies": {
     "@insforge/sdk": "^1.2.5",
@@ -39,6 +41,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "license-checker": "^25.0.1",
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
     "postcss": "^8.4.49",

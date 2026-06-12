@@ -4,6 +4,12 @@
  */
 
 import type { Tarea, Usuario } from '@/types';
+import { useWorkspaceStore } from '@/store/workspaceStore';
+
+/** Sincroniza rolActivo del workspaceStore para tests (V5). */
+export function setRolActivoTest(rol: 'jefe' | 'miembro' | null): void {
+  useWorkspaceStore.setState({ rolActivo: rol });
+}
 
 // ---------------------------------------------------------------------------
 // Factory de Tarea — crea una tarea base con los mínimos requeridos.

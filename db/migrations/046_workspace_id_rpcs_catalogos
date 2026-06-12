@@ -1,0 +1,961 @@
+-- =============================================================================
+-- Migración 046 — workspace_id en RPCs + catálogos (cliente/proyecto/área)
+-- =============================================================================
+-- Descripción : Corrige un bug latente de V5: las RPCs que insertan en `tarea`
+--               y/o `log_accion` no escriben `workspace_id`, que pasó a NOT NULL
+--               en la migración 043. Esto hace que crear/cambiar/reprogramar/
+--               eliminar tareas FALLE en runtime. Esta migración recrea las 11
+--               RPCs afectadas preservando su lógica y agregando workspace_id.
+--
+--               Adicionalmente, las 3 RPCs de escritura de tarea (Fase 5) suman
+--               los parámetros cliente_id, proyecto_id, area_id.
+--
+-- GRUPO A (cambian firma: + workspace_id + 3 catálogos):
+--   sgtd_crear_tarea_planificada · sgtd_crear_incidencia · sgtd_actualizar_tarea
+--
+-- GRUPO B (solo workspace_id en su INSERT, SIN cambiar firma):
+--   sgtd_convertir_nota_en_tarea · sgtd_cambiar_estado_tarea
+--   sgtd_completar_tarea_con_resumen · sgtd_reprogramar_tarea_con_log
+--   sgtd_eliminar_tarea_con_motivo · sgtd_completar_ot · sgtd_eliminar_objetivo
+--   sgtd_cancelar_ots_vinculadas_tarea (helper encadenada; SECURITY DEFINER)
+--
+-- Total: 11 RPCs recreadas.
+-- Prerequisito : Migraciones 043, 044, 045 aplicadas.
+-- Seguridad    : Todas SECURITY INVOKER excepto sgtd_cancelar_ots_vinculadas_tarea
+--                (DEFINER, como en 035).
+-- Reversible   : Ver ROLLBACK al final (recrear cuerpos previos desde 040/039/034/007).
+--
+-- Identificador de validación:
+--   SELECT bool_and(def LIKE '%workspace_id%') AS rpcs_046_ok FROM (
+--     SELECT pg_get_functiondef(p.oid) AS def
+--     FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+--     WHERE n.nspname='public' AND p.proname IN (
+--       'sgtd_crear_tarea_planificada','sgtd_crear_incidencia','sgtd_actualizar_tarea',
+--       'sgtd_convertir_nota_en_tarea','sgtd_cambiar_estado_tarea',
+--       'sgtd_completar_tarea_con_resumen','sgtd_reprogramar_tarea_con_log',
+--       'sgtd_eliminar_tarea_con_motivo','sgtd_completar_ot',
+--       'sgtd_cancelar_ots_vinculadas_tarea','sgtd_eliminar_objetivo')
+--   ) s;
+-- =============================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------------
+-- DROP de firmas viejas del Grupo A (cambian de aridad → CREATE OR REPLACE NO
+-- las reemplaza, crearía overloads en paralelo y el bug seguiría vivo).
+-- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.sgtd_crear_tarea_planificada(
+  TEXT, TEXT, TEXT, TEXT, TEXT, UUID, UUID, UUID, UUID, BOOLEAN
+);
+DROP FUNCTION IF EXISTS public.sgtd_crear_incidencia(
+  TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN, UUID, UUID
+);
+DROP FUNCTION IF EXISTS public.sgtd_actualizar_tarea(
+  UUID, UUID, TEXT, TEXT, TEXT, UUID, UUID
+);
+
+-- =============================================================================
+-- GRUPO A — RPCs con firma nueva (workspace_id + catálogos)
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- A.1 — sgtd_crear_tarea_planificada
+-- Agrega p_cliente_id, p_proyecto_id, p_area_id + setea workspace_id en tarea y log.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_crear_tarea_planificada(
+  p_titulo             text,
+  p_descripcion        text DEFAULT NULL::text,
+  p_prioridad          text DEFAULT 'media'::text,
+  p_fecha_planificada  text DEFAULT NULL::text,
+  p_semana_planificada text DEFAULT NULL::text,
+  p_asignado_a         uuid DEFAULT NULL::uuid,
+  p_creado_por         uuid DEFAULT NULL::uuid,
+  p_objetivo_id        uuid DEFAULT NULL::uuid,
+  p_nota_origen_id     uuid DEFAULT NULL::uuid,
+  p_es_imprevisto      boolean DEFAULT false,
+  p_cliente_id         uuid DEFAULT NULL::uuid,
+  p_proyecto_id        uuid DEFAULT NULL::uuid,
+  p_area_id            uuid DEFAULT NULL::uuid
+)
+RETURNS SETOF tarea
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_asignado UUID;
+  v_creador  UUID;
+  v_tarea_id UUID;
+  v_ws_id    UUID;
+BEGIN
+  v_ws_id := public.sgtd_workspace_id();
+  IF v_ws_id IS NULL THEN
+    RAISE EXCEPTION 'Sin workspace activo (header x-workspace-id ausente)' USING ERRCODE = 'P0001';
+  END IF;
+  IF NOT public.sgtd_puede_acceder_workspace(v_ws_id) THEN
+    RAISE EXCEPTION 'Sin acceso al workspace activo' USING ERRCODE = 'P0001';
+  END IF;
+
+  v_asignado := COALESCE(p_asignado_a, auth.uid());
+  v_creador  := COALESCE(p_creado_por, auth.uid());
+
+  IF p_titulo IS NULL OR length(trim(p_titulo)) = 0 THEN
+    RAISE EXCEPTION 'El título es obligatorio' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Validación temprana de catálogos (errores claros antes del trigger 045)
+  IF p_cliente_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.cliente WHERE id = p_cliente_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El cliente no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+  IF p_proyecto_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.proyecto WHERE id = p_proyecto_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El proyecto no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+  IF p_area_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.area WHERE id = p_area_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El área no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+
+  INSERT INTO public.tarea (
+    titulo, descripcion,
+    estado, tipo, prioridad,
+    fecha_planificada, semana_planificada,
+    asignado_a, creado_por,
+    objetivo_id, nota_origen_id,
+    es_imprevisto,
+    workspace_id, cliente_id, proyecto_id, area_id
+  ) VALUES (
+    trim(p_titulo),
+    nullif(trim(coalesce(p_descripcion, '')), ''),
+    'pendiente'::public.estado_tarea,
+    'planificada'::public.tipo_tarea,
+    p_prioridad::public.prioridad_tarea,
+    p_fecha_planificada::DATE,
+    p_semana_planificada,
+    v_asignado,
+    v_creador,
+    p_objetivo_id,
+    p_nota_origen_id,
+    p_es_imprevisto,
+    v_ws_id, p_cliente_id, p_proyecto_id, p_area_id
+  )
+  RETURNING id INTO v_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    v_tarea_id, auth.uid(), 'creada',
+    NULL,
+    jsonb_build_object('tipo', 'planificada', 'estado', 'pendiente'),
+    NULL, false,
+    v_ws_id
+  );
+
+  PERFORM public.sgtd_notificar_tarea_asignada(
+    v_tarea_id, v_asignado, trim(p_titulo), v_creador
+  );
+
+  RETURN QUERY SELECT * FROM public.tarea WHERE id = v_tarea_id;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- A.2 — sgtd_crear_incidencia
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_crear_incidencia(
+  p_titulo       text,
+  p_descripcion  text,
+  p_prioridad    text,
+  p_fecha        text,
+  p_semana       text,
+  p_ya_resuelta  boolean,
+  p_asignado_a   uuid DEFAULT NULL::uuid,
+  p_objetivo_id  uuid DEFAULT NULL::uuid,
+  p_cliente_id   uuid DEFAULT NULL::uuid,
+  p_proyecto_id  uuid DEFAULT NULL::uuid,
+  p_area_id      uuid DEFAULT NULL::uuid
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_asignado UUID;
+  v_estado   TEXT;
+  v_tarea_id UUID;
+  v_ws_id    UUID;
+BEGIN
+  v_ws_id := public.sgtd_workspace_id();
+  IF v_ws_id IS NULL THEN
+    RAISE EXCEPTION 'Sin workspace activo (header x-workspace-id ausente)' USING ERRCODE = 'P0001';
+  END IF;
+  IF NOT public.sgtd_puede_acceder_workspace(v_ws_id) THEN
+    RAISE EXCEPTION 'Sin acceso al workspace activo' USING ERRCODE = 'P0001';
+  END IF;
+
+  v_asignado := COALESCE(p_asignado_a, auth.uid());
+  v_estado   := CASE WHEN p_ya_resuelta THEN 'completada' ELSE 'pendiente' END;
+
+  IF p_cliente_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.cliente WHERE id = p_cliente_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El cliente no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+  IF p_proyecto_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.proyecto WHERE id = p_proyecto_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El proyecto no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+  IF p_area_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.area WHERE id = p_area_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El área no pertenece a este workspace' USING ERRCODE = 'P0002'; END IF;
+
+  INSERT INTO public.tarea (
+    titulo, descripcion, estado, tipo, prioridad,
+    fecha_planificada, semana_planificada,
+    fecha_completada,
+    asignado_a, creado_por,
+    es_imprevisto, objetivo_id,
+    workspace_id, cliente_id, proyecto_id, area_id
+  ) VALUES (
+    trim(p_titulo),
+    nullif(trim(coalesce(p_descripcion, '')), ''),
+    v_estado::public.estado_tarea,
+    'no_planificada'::public.tipo_tarea,
+    p_prioridad::public.prioridad_tarea,
+    p_fecha::DATE,
+    p_semana,
+    CASE WHEN p_ya_resuelta THEN now() ELSE NULL END,
+    v_asignado,
+    auth.uid(),
+    true,
+    p_objetivo_id,
+    v_ws_id, p_cliente_id, p_proyecto_id, p_area_id
+  )
+  RETURNING id INTO v_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo,
+    justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    v_tarea_id, auth.uid(), 'creada',
+    NULL,
+    jsonb_build_object('tipo', 'no_planificada', 'estado', v_estado, 'es_imprevisto', true),
+    NULL, false,
+    v_ws_id
+  );
+
+  RETURN v_tarea_id;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- A.3 — sgtd_actualizar_tarea
+-- Suma cliente/proyecto/área editables. workspace_id se lee de la tarea (no cambia).
+-- Catálogos con COALESCE: si el frontend no envía un catálogo (NULL), conserva el
+-- valor existente en vez de borrarlo. Permite deploy BD antes que el formulario.
+-- (Para "limpiar" un catálogo desde la UI se necesitará una convención explícita futura.)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_actualizar_tarea(
+  p_tarea_id    uuid,
+  p_usuario_id  uuid,
+  p_titulo      text,
+  p_prioridad   text,
+  p_descripcion text DEFAULT NULL::text,
+  p_objetivo_id uuid DEFAULT NULL::uuid,
+  p_asignado_a  uuid DEFAULT NULL::uuid,
+  p_cliente_id  uuid DEFAULT NULL::uuid,
+  p_proyecto_id uuid DEFAULT NULL::uuid,
+  p_area_id     uuid DEFAULT NULL::uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_asignado_actual UUID;
+  v_asignado_nuevo  UUID;
+  v_ws_id           UUID;
+BEGIN
+  SELECT asignado_a, workspace_id
+    INTO v_asignado_actual, v_ws_id
+  FROM public.tarea
+  WHERE id = p_tarea_id
+    AND (asignado_a = auth.uid() OR public.sgtd_es_jefe());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tarea no encontrada o sin permisos (id: %)', p_tarea_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF p_titulo IS NULL OR length(trim(p_titulo)) = 0 THEN
+    RAISE EXCEPTION 'El título es obligatorio' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- Validación de catálogos contra el workspace de la tarea
+  IF p_cliente_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.cliente WHERE id = p_cliente_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El cliente no pertenece al workspace de la tarea' USING ERRCODE = 'P0003'; END IF;
+  IF p_proyecto_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.proyecto WHERE id = p_proyecto_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El proyecto no pertenece al workspace de la tarea' USING ERRCODE = 'P0003'; END IF;
+  IF p_area_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.area WHERE id = p_area_id AND workspace_id = v_ws_id
+  ) THEN RAISE EXCEPTION 'El área no pertenece al workspace de la tarea' USING ERRCODE = 'P0003'; END IF;
+
+  v_asignado_nuevo := COALESCE(p_asignado_a, v_asignado_actual);
+
+  UPDATE public.tarea
+  SET
+    titulo       = trim(p_titulo),
+    prioridad    = p_prioridad::public.prioridad_tarea,
+    descripcion  = nullif(trim(coalesce(p_descripcion, '')), ''),
+    objetivo_id  = COALESCE(p_objetivo_id, objetivo_id),
+    asignado_a   = v_asignado_nuevo,
+    cliente_id   = COALESCE(p_cliente_id, cliente_id),
+    proyecto_id  = COALESCE(p_proyecto_id, proyecto_id),
+    area_id      = COALESCE(p_area_id, area_id),
+    updated_at   = now()
+  WHERE id = p_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    p_tarea_id, auth.uid(), 'editada',
+    NULL,
+    jsonb_build_object('titulo', p_titulo, 'prioridad', p_prioridad),
+    NULL, false,
+    v_ws_id
+  );
+
+  IF v_asignado_nuevo IS DISTINCT FROM v_asignado_actual THEN
+    PERFORM public.sgtd_notificar_tarea_asignada(
+      p_tarea_id, v_asignado_nuevo, trim(p_titulo), auth.uid()
+    );
+  END IF;
+END;
+$function$;
+
+
+-- =============================================================================
+-- GRUPO B — Solo workspace_id en el log (firma SIN cambios)
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- B.1 — sgtd_convertir_nota_en_tarea (INSERT tarea: + workspace_id)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_convertir_nota_en_tarea(
+  p_nota_id uuid,
+  p_titulo text,
+  p_descripcion text,
+  p_prioridad text,
+  p_fecha_planificada text,
+  p_semana text,
+  p_asignado_a uuid,
+  p_creado_por uuid
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_convertida TEXT;
+  v_tarea_id   UUID;
+  v_ws_id      UUID;
+BEGIN
+  v_ws_id := public.sgtd_workspace_id();
+  IF v_ws_id IS NULL THEN
+    RAISE EXCEPTION 'Sin workspace activo' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT convertida_en INTO v_convertida
+  FROM public.nota_bitacora
+  WHERE id = p_nota_id
+    AND usuario_id = p_creado_por;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Nota no encontrada o sin permiso (id: %)', p_nota_id
+      USING ERRCODE = 'P0001';
+  END IF;
+  IF v_convertida IS NOT NULL THEN
+    RAISE EXCEPTION 'La nota ya fue convertida en "%"', v_convertida
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  INSERT INTO public.tarea (
+    titulo, descripcion, estado, tipo, prioridad,
+    fecha_planificada, semana_planificada,
+    asignado_a, creado_por, es_imprevisto,
+    nota_origen_id,
+    workspace_id
+  ) VALUES (
+    trim(p_titulo),
+    nullif(trim(p_descripcion), ''),
+    'pendiente'::public.estado_tarea,
+    'planificada'::public.tipo_tarea,
+    p_prioridad::public.prioridad_tarea,
+    p_fecha_planificada::DATE,
+    p_semana,
+    p_asignado_a,
+    p_creado_por,
+    false,
+    p_nota_id,
+    v_ws_id
+  )
+  RETURNING id INTO v_tarea_id;
+
+  UPDATE public.nota_bitacora
+  SET convertida_en = 'tarea', updated_at = now()
+  WHERE id = p_nota_id;
+
+  RETURN v_tarea_id;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.2 — sgtd_cambiar_estado_tarea (log: + workspace_id de la tarea)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_cambiar_estado_tarea(
+  p_tarea_id uuid,
+  p_nuevo_estado text,
+  p_justificacion text DEFAULT NULL::text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_estado_actual TEXT;
+  v_tipo_log      TEXT;
+  v_ws_id         UUID;
+BEGIN
+  SELECT estado::TEXT, workspace_id
+    INTO v_estado_actual, v_ws_id
+  FROM public.tarea
+  WHERE id = p_tarea_id
+    AND (asignado_a = auth.uid() OR public.sgtd_es_jefe());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tarea no encontrada o sin permisos (id: %)', p_tarea_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF NOT (
+       (v_estado_actual = 'pendiente'   AND p_nuevo_estado IN ('en_progreso','cancelada'))
+    OR (v_estado_actual = 'en_progreso' AND p_nuevo_estado IN ('completada','cancelada'))
+  ) THEN
+    RAISE EXCEPTION 'Transición inválida: % → %', v_estado_actual, p_nuevo_estado
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  IF p_nuevo_estado = 'cancelada' THEN
+    IF p_justificacion IS NULL OR length(trim(p_justificacion)) < 10 THEN
+      RAISE EXCEPTION 'Se requiere justificación de al menos 10 caracteres para cancelar'
+        USING ERRCODE = 'P0003';
+    END IF;
+  END IF;
+
+  v_tipo_log := CASE p_nuevo_estado
+    WHEN 'en_progreso' THEN 'iniciada'
+    WHEN 'completada'  THEN 'completada'
+    WHEN 'cancelada'   THEN 'cancelada'
+    ELSE 'estado_cambiado'
+  END;
+
+  UPDATE public.tarea
+  SET
+    estado           = p_nuevo_estado::public.estado_tarea,
+    fecha_completada = CASE WHEN p_nuevo_estado = 'completada' THEN now() ELSE fecha_completada END,
+    updated_at       = now()
+  WHERE id = p_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    p_tarea_id, auth.uid(), v_tipo_log,
+    jsonb_build_object('estado', v_estado_actual),
+    jsonb_build_object('estado', p_nuevo_estado),
+    nullif(trim(coalesce(p_justificacion, '')), ''),
+    false,
+    v_ws_id
+  );
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.3 — sgtd_completar_tarea_con_resumen
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_completar_tarea_con_resumen(
+  p_tarea_id uuid,
+  p_usuario_id uuid,
+  p_resumen text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_estado text;
+  v_ws_id  UUID;
+BEGIN
+  IF p_resumen IS NULL OR length(trim(p_resumen)) < 10 THEN
+    RAISE EXCEPTION 'Se requiere un resumen de al menos 10 caracteres'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT estado::text, workspace_id INTO v_estado, v_ws_id
+  FROM public.tarea
+  WHERE id = p_tarea_id
+    AND (asignado_a = auth.uid() OR public.sgtd_es_jefe());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tarea no encontrada o sin permisos (id: %)', p_tarea_id
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_estado <> 'en_progreso' THEN
+    RAISE EXCEPTION 'Solo se puede completar una tarea en progreso (estado actual: "%")', v_estado
+      USING ERRCODE = 'P0003';
+  END IF;
+
+  UPDATE public.tarea
+  SET estado = 'completada'::public.estado_tarea,
+      fecha_completada = now(),
+      updated_at = now()
+  WHERE id = p_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    p_tarea_id, auth.uid(), 'completada',
+    jsonb_build_object('estado', v_estado),
+    jsonb_build_object('estado', 'completada'),
+    trim(p_resumen),
+    false,
+    v_ws_id
+  );
+
+  PERFORM public.sgtd_cancelar_ots_vinculadas_tarea(
+    p_tarea_id, p_usuario_id,
+    'Tarea completada directamente; OT vinculada cancelada'
+  );
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.4 — sgtd_reprogramar_tarea_con_log
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_reprogramar_tarea_con_log(
+  p_tarea_id uuid,
+  p_usuario_id uuid,
+  p_nueva_fecha text,
+  p_justificacion text,
+  p_nuevo_estado text DEFAULT NULL::text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_estado_actual   TEXT;
+  v_fecha_anterior  DATE;
+  v_semana_anterior TEXT;
+  v_nueva_semana    TEXT;
+  v_ws_id           UUID;
+BEGIN
+  IF p_justificacion IS NULL OR length(trim(p_justificacion)) < 10 THEN
+    RAISE EXCEPTION 'Se requiere justificación de al menos 10 caracteres'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT estado::TEXT, fecha_planificada, semana_planificada, workspace_id
+    INTO v_estado_actual, v_fecha_anterior, v_semana_anterior, v_ws_id
+  FROM public.tarea
+  WHERE id = p_tarea_id
+    AND (asignado_a = auth.uid() OR public.sgtd_es_jefe());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tarea no encontrada o sin permisos (id: %)', p_tarea_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_estado_actual NOT IN ('pendiente','en_progreso') THEN
+    RAISE EXCEPTION 'Solo se reprograman tareas pendientes o en progreso (estado: %)', v_estado_actual
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT to_char(date_trunc('week', p_nueva_fecha::DATE), 'IYYYIW')
+    INTO v_nueva_semana;
+
+  UPDATE public.tarea
+  SET
+    fecha_planificada  = p_nueva_fecha::DATE,
+    semana_planificada = v_nueva_semana,
+    reprogramaciones   = reprogramaciones + 1,
+    updated_at         = now()
+  WHERE id = p_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    p_tarea_id, auth.uid(), 'reprogramada',
+    jsonb_build_object('fecha_planificada', v_fecha_anterior::TEXT, 'semana_planificada', v_semana_anterior),
+    jsonb_build_object('fecha_planificada', p_nueva_fecha,          'semana_planificada', v_nueva_semana),
+    trim(p_justificacion),
+    false,
+    v_ws_id
+  );
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.5 — sgtd_eliminar_tarea_con_motivo
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_eliminar_tarea_con_motivo(
+  p_tarea_id uuid,
+  p_usuario_id uuid,
+  p_motivo text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_estado TEXT;
+  v_titulo TEXT;
+  v_ws_id  UUID;
+BEGIN
+  IF p_motivo IS NULL OR length(trim(p_motivo)) < 10 THEN
+    RAISE EXCEPTION 'El motivo debe tener al menos 10 caracteres'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT estado::TEXT, titulo, workspace_id
+    INTO v_estado, v_titulo, v_ws_id
+  FROM public.tarea
+  WHERE id = p_tarea_id
+    AND eliminada_en IS NULL
+    AND (asignado_a = auth.uid() OR public.sgtd_es_jefe());
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tarea no encontrada, ya eliminada o sin permisos (id: %)', p_tarea_id
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_estado IN ('completada', 'cancelada') THEN
+    RAISE EXCEPTION 'No se puede eliminar una tarea en estado "%"', v_estado
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.tarea
+  SET eliminada_en = now(),
+      updated_at   = now()
+  WHERE id = p_tarea_id;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    p_tarea_id, auth.uid(), 'eliminada',
+    jsonb_build_object('estado', v_estado, 'titulo', v_titulo),
+    NULL,
+    trim(p_motivo),
+    false,
+    v_ws_id
+  );
+
+  BEGIN
+    PERFORM public.sgtd_cancelar_ots_vinculadas_tarea(
+      p_tarea_id, p_usuario_id,
+      'Tarea eliminada; OT vinculada cancelada'
+    );
+  EXCEPTION
+    WHEN undefined_function THEN NULL;
+  END;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.6 — sgtd_completar_ot (el log de tarea vinculada: + workspace_id de la tarea)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_completar_ot(
+  p_ot_id uuid,
+  p_usuario_id uuid,
+  p_receptor_nombre text,
+  p_receptor_dni text,
+  p_receptor_cargo text,
+  p_observaciones_cierre text DEFAULT NULL::text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_estado       text;
+  v_solicitante  uuid;
+  v_tarea_id     uuid;
+  v_estado_tarea text;
+  v_ws_tarea     uuid;
+  v_ws_ot        uuid;
+BEGIN
+  SELECT estado, creado_por, tarea_id, workspace_id
+    INTO v_estado, v_solicitante, v_tarea_id, v_ws_ot
+  FROM public.orden_trabajo
+  WHERE id = p_ot_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'OT no encontrada (id: %)', p_ot_id USING ERRCODE = 'P0001';
+  END IF;
+  IF v_estado <> 'aprobada' THEN
+    RAISE EXCEPTION 'Solo se puede completar una OT aprobada (estado actual: "%")', v_estado
+      USING ERRCODE = 'P0002';
+  END IF;
+  IF v_solicitante <> p_usuario_id AND NOT public.sgtd_es_jefe() THEN
+    RAISE EXCEPTION 'Sin permiso para completar esta OT' USING ERRCODE = 'P0003';
+  END IF;
+  IF btrim(coalesce(p_receptor_nombre, '')) = '' THEN
+    RAISE EXCEPTION 'El nombre del receptor es obligatorio' USING ERRCODE = 'P0004';
+  END IF;
+  IF btrim(coalesce(p_receptor_dni, '')) = '' THEN
+    RAISE EXCEPTION 'El DNI del receptor es obligatorio' USING ERRCODE = 'P0005';
+  END IF;
+  IF btrim(p_receptor_dni) !~ '^[0-9]{8}$' THEN
+    RAISE EXCEPTION 'El DNI debe tener exactamente 8 dígitos' USING ERRCODE = 'P0006';
+  END IF;
+
+  UPDATE public.orden_trabajo
+  SET estado               = 'completada',
+      fecha_fin_real       = now(),
+      receptor_nombre      = btrim(p_receptor_nombre),
+      receptor_dni         = btrim(p_receptor_dni),
+      receptor_cargo       = nullif(btrim(coalesce(p_receptor_cargo, '')), ''),
+      observaciones_cierre = nullif(btrim(coalesce(p_observaciones_cierre, '')), ''),
+      updated_at           = now()
+  WHERE id = p_ot_id;
+
+  INSERT INTO public.log_ot (ot_id, workspace_id, usuario_id, accion, estado_anterior, estado_nuevo)
+  VALUES (p_ot_id, v_ws_ot, p_usuario_id, 'completada', 'aprobada', 'completada');
+
+  IF v_tarea_id IS NOT NULL THEN
+    SELECT estado::text, workspace_id INTO v_estado_tarea, v_ws_tarea
+    FROM public.tarea
+    WHERE id = v_tarea_id
+      AND eliminada_en IS NULL;
+
+    IF FOUND AND v_estado_tarea NOT IN ('completada', 'cancelada') THEN
+      UPDATE public.tarea
+      SET estado = 'completada'::public.estado_tarea,
+          fecha_completada = now(),
+          updated_at = now()
+      WHERE id = v_tarea_id;
+
+      INSERT INTO public.log_accion (
+        tarea_id, usuario_id, tipo_accion,
+        valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+        workspace_id
+      ) VALUES (
+        v_tarea_id, p_usuario_id, 'completada',
+        jsonb_build_object('estado', v_estado_tarea),
+        jsonb_build_object('estado', 'completada'),
+        'Completada automáticamente al cerrar OT vinculada',
+        false,
+        v_ws_tarea
+      );
+    END IF;
+  END IF;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.7 — sgtd_eliminar_objetivo (log con tarea_id NULL: + workspace_id del objetivo)
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_eliminar_objetivo(
+  p_objetivo_id uuid,
+  p_usuario_id uuid,
+  p_motivo text
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_creado_por UUID;
+  v_ws_id      UUID;
+BEGIN
+  IF length(trim(p_motivo)) < 10 THEN
+    RAISE EXCEPTION 'El motivo debe tener al menos 10 caracteres'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT creado_por, workspace_id INTO v_creado_por, v_ws_id
+  FROM public.objetivo
+  WHERE id = p_objetivo_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Objetivo no encontrado (id: %)', p_objetivo_id
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_creado_por <> p_usuario_id AND NOT public.sgtd_es_jefe() THEN
+    RAISE EXCEPTION 'Sin permiso para eliminar este objetivo'
+      USING ERRCODE = 'P0003';
+  END IF;
+
+  INSERT INTO public.log_accion (
+    tarea_id, usuario_id, tipo_accion,
+    valor_anterior, valor_nuevo, justificacion, leido_por_jefe,
+    workspace_id
+  ) VALUES (
+    NULL, p_usuario_id, 'eliminada',
+    jsonb_build_object('objetivo_id', p_objetivo_id),
+    NULL, trim(p_motivo), false,
+    v_ws_id
+  );
+
+  DELETE FROM public.objetivo WHERE id = p_objetivo_id;
+END;
+$function$;
+
+-- ---------------------------------------------------------------------------
+-- B.8 — sgtd_cancelar_ots_vinculadas_tarea (helper encadenada desde B.3 y B.5)
+-- Corrige el INSERT en log_ot agregando workspace_id (de la OT). Firma sin cambios.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.sgtd_cancelar_ots_vinculadas_tarea(
+  p_tarea_id   uuid,
+  p_usuario_id uuid,
+  p_motivo     text DEFAULT 'Tarea completada sin cierre formal de OT'::text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_ot record;
+BEGIN
+  IF p_usuario_id <> auth.uid() AND NOT public.sgtd_es_jefe() THEN
+    RAISE EXCEPTION 'Sin permiso (usuario_id no coincide con la sesión)'
+      USING ERRCODE = '42501';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tarea t
+    WHERE t.id = p_tarea_id
+      AND (t.asignado_a = auth.uid() OR public.sgtd_es_jefe())
+  ) THEN
+    RAISE EXCEPTION 'Sin permiso para cancelar OTs vinculadas a esta tarea'
+      USING ERRCODE = '42501';
+  END IF;
+
+  FOR v_ot IN
+    SELECT id, estado, workspace_id
+    FROM public.orden_trabajo
+    WHERE tarea_id = p_tarea_id
+      AND estado NOT IN ('completada', 'cancelada', 'rechazada')
+  LOOP
+    UPDATE public.orden_trabajo
+    SET estado = 'cancelada',
+        updated_at = now()
+    WHERE id = v_ot.id;
+
+    INSERT INTO public.log_ot (ot_id, workspace_id, usuario_id, accion, estado_anterior, estado_nuevo, motivo)
+    VALUES (
+      v_ot.id,
+      v_ot.workspace_id,
+      p_usuario_id,
+      'cancelada',
+      v_ot.estado,
+      'cancelada',
+      nullif(trim(coalesce(p_motivo, '')), '')
+    );
+  END LOOP;
+END;
+$function$;
+
+
+-- =============================================================================
+-- GRANTS — re-emitir permisos (DROP elimina los del Grupo A; los demás por consistencia)
+-- =============================================================================
+
+REVOKE ALL ON FUNCTION public.sgtd_crear_tarea_planificada(
+  TEXT,TEXT,TEXT,TEXT,TEXT,UUID,UUID,UUID,UUID,BOOLEAN,UUID,UUID,UUID
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sgtd_crear_tarea_planificada(
+  TEXT,TEXT,TEXT,TEXT,TEXT,UUID,UUID,UUID,UUID,BOOLEAN,UUID,UUID,UUID
+) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.sgtd_crear_incidencia(
+  TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN,UUID,UUID,UUID,UUID,UUID
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sgtd_crear_incidencia(
+  TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN,UUID,UUID,UUID,UUID,UUID
+) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.sgtd_actualizar_tarea(
+  UUID,UUID,TEXT,TEXT,TEXT,UUID,UUID,UUID,UUID,UUID
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sgtd_actualizar_tarea(
+  UUID,UUID,TEXT,TEXT,TEXT,UUID,UUID,UUID,UUID,UUID
+) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.sgtd_cancelar_ots_vinculadas_tarea(uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sgtd_cancelar_ots_vinculadas_tarea(uuid, uuid, text) TO authenticated;
+
+COMMIT;
+
+
+-- =============================================================================
+-- SMOKE TESTS — ejecutar tras apply (con header x-workspace-id en la app)
+-- =============================================================================
+
+-- T1: todas las RPCs mencionan workspace_id
+-- (usar el identificador de validación de la cabecera) → true
+
+-- T2: crear tarea planificada vía RPC ahora FUNCIONA (antes fallaba por NOT NULL)
+-- SELECT * FROM sgtd_crear_tarea_planificada('Test', null, 'media', '2026-06-15', null);
+-- esperado: fila con workspace_id = workspace activo
+
+-- T3: crear tarea con área válida del workspace
+-- SELECT * FROM sgtd_crear_tarea_planificada('Con area', null, 'media', '2026-06-15', null,
+--   null, null, null, null, false, null, null, '<area_id_del_ws>');
+-- (orden: titulo, desc, prioridad, fecha, semana, asignado, creado_por, objetivo,
+--         nota_origen, es_imprevisto, cliente_id, proyecto_id, area_id)
+-- esperado: tarea con area_id seteado
+
+-- T4: crear tarea con área de OTRO workspace → error claro
+-- esperado: EXCEPTION 'El área no pertenece a este workspace'
+
+-- T5: cambiar estado / reprogramar / eliminar — el log ya no falla por workspace_id
+-- SELECT sgtd_cambiar_estado_tarea('<tarea_id>', 'en_progreso');
+-- esperado: OK, log_accion creado con workspace_id
+
+-- T6: incidencia, convertir nota, completar con resumen, eliminar objetivo — todas OK
+
+
+-- =============================================================================
+-- ROLLBACK — solo staging
+-- =============================================================================
+-- Recrear los cuerpos previos (sin workspace_id ni catálogos) desde:
+--   040_rebind_funciones_vivos.sql (crear_tarea_planificada, crear_incidencia,
+--     actualizar_tarea, convertir_nota, cambiar_estado, completar_resumen, completar_ot)
+--   039 (reprogramar_tarea_con_log)
+--   034 (eliminar_tarea_con_motivo)
+--   007 (eliminar_objetivo)
+-- NOTA: revertir reintroduce el bug de workspace_id NOT NULL. Solo para staging.
+
+
+-- =============================================================================
+-- POST-MIGRACIÓN: checklist
+-- =============================================================================
+-- [ ] Ejecutar T1–T6 en dev (con la app enviando x-workspace-id)
+-- [ ] Verificar que crear tarea desde Mi Semana ya funciona
+-- [ ] Frontend: agregar cliente_id/proyecto_id/area_id a Tarea + TareaSchema
+-- [ ] Frontend: pasar los 3 params en crearTareaPlanificada / actualizarTarea
+-- [ ] Marcar 046 ✅ en CONTEXT.mdc §12
+-- =============================================================================

@@ -241,7 +241,7 @@ export const objetivoHandlers = [
   http.post(`${BASE}/rpc/sgtd_completar_objetivo`, () =>
     HttpResponse.json(null),
   ),
-  http.post(`${BASE}/rpc/sgtd_eliminar_objetivo_con_motivo`, () =>
+  http.post(`${BASE}/rpc/sgtd_eliminar_objetivo`, () =>
     HttpResponse.json(null),
   ),
 ];

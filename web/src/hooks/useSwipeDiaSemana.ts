@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { MOBILE_MEDIA_QUERY } from '@/hooks/useIsMobile';
+
 const SWIPE_MIN_PX = 48;
 const SWIPE_MAX_VERTICAL_PX = 40;
 
@@ -15,7 +17,7 @@ export function useSwipeDiaSemana(
   const startRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
+    const mq = window.matchMedia(MOBILE_MEDIA_QUERY);
     if (!mq.matches || diasYmd.length < 2) return;
 
     function onTouchStart(e: TouchEvent) {

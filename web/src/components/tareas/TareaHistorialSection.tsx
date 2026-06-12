@@ -3,21 +3,10 @@ import { ChevronDown } from 'lucide-react';
 
 import { getLogsPorTarea } from '@/api/audit';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
+import { labelLogAccion } from '@/lib/logAccionLabels';
+import { qkWsId } from '@/lib/queryKeys';
 import type { ClaveVisualTarea, TipoAccionLog } from '@/types';
-
-const LABEL_TIPO: Record<TipoAccionLog, string> = {
-  creada: 'Creada',
-  iniciada: 'Iniciada',
-  reprogramada: 'Reprogramada',
-  eliminada: 'Eliminada',
-  estado_cambiado: 'Estado actualizado',
-  prioridad_cambiada: 'Prioridad',
-  editada: 'Editada',
-  cancelada: 'Cancelada',
-  bloqueada: 'Bloqueada',
-  desbloqueada: 'Desbloqueada',
-  completada: 'Completada',
-};
 
 const LOG_A_ESTADO: Partial<Record<TipoAccionLog, ClaveVisualTarea>> = {
   reprogramada: 'reprogramada',
@@ -40,15 +29,16 @@ function LogTipoBadge({ tipo }: { tipo: TipoAccionLog }) {
   }
   return (
     <span className="mc-tarea-timeline__badge-neutral">
-      {LABEL_TIPO[tipo] ?? tipo}
+      {labelLogAccion(tipo)}
     </span>
   );
 }
 
 export function TareaHistorialSection({ tareaId, defaultOpen = true }: Props) {
+  const workspaceId = useWorkspaceId();
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ['tarea-logs', tareaId],
-    enabled: Boolean(tareaId),
+    queryKey: qkWsId(workspaceId, 'tarea-logs', tareaId),
+    enabled: Boolean(tareaId) && Boolean(workspaceId),
     queryFn: () => getLogsPorTarea(tareaId!),
   });
 

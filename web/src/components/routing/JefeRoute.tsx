@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import { useAuthStore } from '@/store/authStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
 type Props = { children: ReactNode };
 
 export function JefeRoute({ children }: Props) {
-  const rol = useAuthStore((s) => s.usuario?.rol);
+  const esJefe = useWorkspaceStore((s) => s.esJefe());
 
-  if (rol !== 'jefe') {
+  if (!esJefe) {
     return <Navigate to="/semana" replace />;
   }
 

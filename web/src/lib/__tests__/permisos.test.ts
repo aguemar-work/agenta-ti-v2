@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 
 import { puedeGestionarTarea } from '@/lib/permisos';
-import { makeTarea, makeUsuario, makeJefe } from '@/test/helpers';
+import { makeTarea, makeUsuario, makeJefe, setRolActivoTest } from '@/test/helpers';
 
 describe('puedeGestionarTarea', () => {
 
@@ -21,6 +21,10 @@ describe('puedeGestionarTarea', () => {
 
   describe('jefe', () => {
     const jefe = makeJefe();
+
+    beforeEach(() => {
+      setRolActivoTest('jefe');
+    });
 
     it('puede gestionar su propia tarea', () => {
       const t = makeTarea({ asignado_a: jefe.id });
@@ -42,6 +46,10 @@ describe('puedeGestionarTarea', () => {
 
   describe('miembro', () => {
     const miembro = makeUsuario({ id: 'uuid-miembro' });
+
+    beforeEach(() => {
+      setRolActivoTest('miembro');
+    });
 
     it('puede gestionar tarea que le fue asignada', () => {
       const t = makeTarea({ asignado_a: miembro.id });

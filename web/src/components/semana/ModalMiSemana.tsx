@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
+import { TareaCatalogoSelects } from '@/components/semana/TareaCatalogoSelects';
 import {
   crearRecurrenciaEvento,
   RecurrenciaValidationError,
@@ -9,6 +10,10 @@ import {
 import { toast } from 'sonner';
 import { CancelButton } from '@/components/ui/Button';
 import { useDraftForm } from '@/hooks/useDraftForm';
+import { fechaLocalDdMmYyyy, parseYmdLocal } from '@/lib/fecha';
+import type { Cliente } from '@/api/clientes';
+import type { Proyecto } from '@/api/proyectos';
+import type { Area } from '@/api/areas';
 import type { Objetivo, Tarea, TipoEvento, Usuario } from '@/types';
 
 type ModoOrigen = 'dia';
@@ -20,6 +25,9 @@ type MiSemanaDraft = {
   descripcion: string;
   objetivoId: string;
   asignadoId: string;
+  clienteId: string;
+  proyectoId: string;
+  areaId: string;
   tipoEv: TipoEvento;
   horaIni: string;
   horaFin: string;
@@ -34,6 +42,12 @@ type Props = {
   usuariosAsignables: Pick<Usuario, 'id' | 'nombre'>[];
   /** Responsable por defecto (p. ej. dueño de la semana vista). */
   asignadoPorDefectoId: string;
+  clientes: Pick<Cliente, 'id' | 'nombre'>[];
+  proyectos: Pick<Proyecto, 'id' | 'nombre' | 'cliente_id'>[];
+  areas: Pick<Area, 'id' | 'nombre'>[];
+  moduloClientes: boolean;
+  moduloProyectos: boolean;
+  moduloAreas: boolean;
   onClose: () => void;
   onCrearTarea: (input: {
     titulo: string;
@@ -41,6 +55,9 @@ type Props = {
     descripcion: string;
     objetivo_id?: string | null;
     asignado_a?: string | null;
+    cliente_id?: string | null;
+    proyecto_id?: string | null;
+    area_id?: string | null;
   }) => Promise<void>;
   onCrearEvento: (input: {
     titulo: string;
@@ -59,6 +76,9 @@ function draftInicial(asignadoPorDefectoId: string): MiSemanaDraft {
     descripcion: '',
     objetivoId: '',
     asignadoId: asignadoPorDefectoId,
+    clienteId: '',
+    proyectoId: '',
+    areaId: '',
     tipoEv: 'reunion',
     horaIni: '09:00',
     horaFin: '10:00',
@@ -73,6 +93,12 @@ export function ModalMiSemana({
   objetivos,
   usuariosAsignables,
   asignadoPorDefectoId,
+  clientes,
+  proyectos,
+  areas,
+  moduloClientes,
+  moduloProyectos,
+  moduloAreas,
   onClose,
   onCrearTarea,
   onCrearEvento,
@@ -88,6 +114,9 @@ export function ModalMiSemana({
   });
 
   const fechaEvento = modoOrigen === 'dia' ? fechaDia : undefined;
+  const fechaLegible =
+    modoOrigen === 'dia' && fechaDia ? fechaLocalDdMmYyyy(parseYmdLocal(fechaDia)) : '';
+  const tituloModal = form.tab === 'tarea' ? 'Nueva tarea' : 'Nuevo evento';
 
   function cerrar() {
     clearDraft();
@@ -104,6 +133,9 @@ export function ModalMiSemana({
         descripcion: form.descripcion.trim(),
         objetivo_id: form.objetivoId || null,
         asignado_a: form.asignadoId.trim() || asignadoPorDefectoId,
+        cliente_id:  form.clienteId || null,
+        proyecto_id: form.proyectoId || null,
+        area_id:     form.areaId || null,
       });
       markModalCompleted('modal-mi-semana-nuevo');
       clearDraft();
@@ -165,7 +197,7 @@ export function ModalMiSemana({
     <Modal
       open={open}
       onClose={cerrar}
-      title={`Nuevo ítem · ${fechaDia ?? ''}`}
+      title={tituloModal}
       size="md"
       analyticsId="modal-mi-semana-nuevo"
       hasUnsavedChanges={hasChanges}
@@ -204,26 +236,7 @@ export function ModalMiSemana({
       )}
     >
       <div className="flex flex-col gap-4">
-        {modoOrigen === 'dia' && fechaDia && (
-          <div className="mc-field">
-            <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
-            <input
-              id="new-fecha"
-              type="date"
-              className="mc-input"
-              readOnly
-              disabled
-              value={fechaDia}
-              aria-readonly
-              title="Fecha fijada al día seleccionado"
-            />
-            <p className="mt-1 text-xs text-[var(--mc-color-text-secondary)]">
-              Fecha fijada al día seleccionado
-            </p>
-          </div>
-        )}
-
-        <div className="mc-modal-form-tabs">
+        <div className="mc-modal-form-tabs mc-modal-form-tabs--pill">
           <button
             type="button"
             className={form.tab === 'tarea' ? 'mc-modal-form-tabs__active' : ''}
@@ -241,6 +254,22 @@ export function ModalMiSemana({
             Evento
           </button>
         </div>
+
+        {modoOrigen === 'dia' && fechaDia && (
+          <div className="mc-field">
+            <label className="mc-field-label" htmlFor="new-fecha">Fecha límite</label>
+            <input
+              id="new-fecha"
+              type="text"
+              className="mc-input"
+              readOnly
+              disabled
+              value={fechaLegible}
+              aria-readonly
+              title="Fecha fijada al día seleccionado"
+            />
+          </div>
+        )}
 
         {form.tab === 'tarea' ? (
           <div className="flex flex-col gap-4">
@@ -287,6 +316,23 @@ export function ModalMiSemana({
                     </select>
                   </div>
                 )}
+                {moduloClientes || moduloProyectos || moduloAreas ? (
+                  <TareaCatalogoSelects
+                    idPrefix="task"
+                    values={{
+                      clienteId:  form.clienteId,
+                      proyectoId: form.proyectoId,
+                      areaId:     form.areaId,
+                    }}
+                    onChange={(patch) => setForm((p) => ({ ...p, ...patch }))}
+                    clientes={clientes}
+                    proyectos={proyectos}
+                    areas={areas}
+                    moduloClientes={moduloClientes}
+                    moduloProyectos={moduloProyectos}
+                    moduloAreas={moduloAreas}
+                  />
+                ) : null}
               </>
             )}
           </div>

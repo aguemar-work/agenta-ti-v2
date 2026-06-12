@@ -9,15 +9,18 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { useUsuariosParaSelector } from '@/hooks/useTareas';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { fechaLocalYmd } from '@/lib/fecha';
+import { qkWsId } from '@/lib/queryKeys';
 import { agregarDias, inicioSemanaIso, semanaIsoDesdeFecha } from '@/lib/semanas';
 import { useAuthStore } from '@/store/authStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useVistaStore } from '@/store/vistaStore';
 import { getObjetivosActivos } from '@/api/objetivos';
 
 export function useSemanaNavegacion() {
   const usuario = useAuthStore((s) => s.usuario);
-  const esJefe  = usuario?.rol === 'jefe';
+  const esJefe  = useWorkspaceStore((s) => s.esJefe());
 
   // ── Banner viernes ────────────────────────────────────────────────────────
   const esBannerViernes = new Date().getDay() === 5;
@@ -45,10 +48,12 @@ export function useSemanaNavegacion() {
 
   const { data: usuariosJefe }           = useUsuariosParaSelector(Boolean(esJefe));
   const { data: usuariosAsignables = [] } = useUsuariosActivos();
+  const workspaceId = useWorkspaceId();
 
   // ── Objetivos activos ─────────────────────────────────────────────────────
   const { data: objetivosActivos = [] } = useQuery({
-    queryKey: ['objetivos-activos-mi-semana'],
+    queryKey: qkWsId(workspaceId, 'objetivos-activos-mi-semana'),
+    enabled: Boolean(workspaceId),
     queryFn:  () => getObjetivosActivos(),
   });
 

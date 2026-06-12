@@ -5,7 +5,8 @@
 
 import { getInsforge } from '@/lib/insforge';
 import { parseOrdenTrabajo, parseTipoTrabajoOT } from '@/lib/schemas';
-import type { Id } from '@/types';
+import { TAREA_ACTIVA } from '@/lib/tareaTables';
+import type { Id, Tarea } from '@/types';
 
 
 // ---------------------------------------------------------------------------
@@ -301,4 +302,18 @@ export async function crearOtDesdeTarea(input: {
   });
   if (error) throw error;
   return data as Id;
+}
+
+/** Tareas abiertas del usuario vinculables a una OT nueva. */
+export async function getTareasVinculablesOT(
+  asignadoA: string,
+): Promise<Pick<Tarea, 'id' | 'titulo' | 'estado'>[]> {
+  const { data, error } = await getInsforge().database
+    .from(TAREA_ACTIVA)
+    .select('id,titulo,estado')
+    .eq('asignado_a', asignadoA)
+    .in('estado', ['pendiente', 'en_progreso'])
+    .order('fecha_planificada', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
 }

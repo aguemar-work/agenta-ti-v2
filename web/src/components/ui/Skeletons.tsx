@@ -154,6 +154,33 @@ export function SkeletonRow({ cols = 4 }: { cols?: number }) {
     );
 }
 
+// ---------------------------------------------------------------------------
+// SkeletonSemanaGrilla — columnas de Mi Semana (1 móvil / 6 desktop)
+// ---------------------------------------------------------------------------
+export function SkeletonSemanaGrilla() {
+  return (
+    <div
+      className="grid min-h-[220px] flex-1 grid-cols-1 gap-3 md:grid-cols-6"
+      aria-busy="true"
+      aria-label="Cargando agenda"
+    >
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className={[
+            'flex flex-col gap-2 rounded-[var(--mc-radius-lg)] border border-[var(--mc-color-border)] p-3',
+            i === 0 ? 'flex' : 'hidden md:flex',
+          ].join(' ')}
+          aria-hidden={i > 0}
+        >
+          <Bone w="50%" h={12} />
+          <SkeletonTareaList count={2} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SkeletonTable({ rows = 3, cols = 4 }: { rows?: number; cols?: number }) {
     return (
         <div

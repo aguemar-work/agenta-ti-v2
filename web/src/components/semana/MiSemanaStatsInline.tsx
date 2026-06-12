@@ -15,19 +15,25 @@ type Props = {
   ariaLabel?: string;
   /** Solo lectura: sin botones interactivos. */
   readOnly?: boolean;
+  /** Una línea densa: sin separadores, espaciado entre pares. */
+  compact?: boolean;
 };
 
-/** Contadores de estado en cabecera — sin cajas ni bordes (Meta Canvas denso). */
-export function MiSemanaStatsInline({ items, ariaLabel = 'Resumen de tareas de la semana', readOnly = false }: Props) {
+/** Contadores de estado en cabecera — sin cajas ni bordes (Materen Canvas denso). */
+export function MiSemanaStatsInline({
+  items,
+  ariaLabel = 'Resumen de tareas de la semana',
+  readOnly = false,
+  compact = false,
+}: Props) {
   return (
     <div
-      className="mc-misemana-stats"
+      className={['mc-misemana-stats', compact ? 'mc-misemana-stats--compact' : ''].filter(Boolean).join(' ')}
       role="group"
       aria-label={ariaLabel}
     >
-      {items.map((item, i) => (
+      {items.map((item) => (
         <span key={item.key} className="mc-misemana-stats__item">
-          {i > 0 ? <span className="mc-misemana-stats__sep" aria-hidden>·</span> : null}
           {readOnly ? (
             <span className="mc-misemana-stats__readonly">
               <span

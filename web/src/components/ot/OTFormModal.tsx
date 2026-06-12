@@ -3,6 +3,8 @@
  * Formulario crear/editar OT — se usa en OrdenesTrabajo.tsx
  */
 
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
+
 import { Modal } from '@/components/ui/Modal';
 import { CancelButton } from '@/components/ui/Button';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
@@ -37,28 +39,32 @@ function DraftStatusLine({
 }) {
     if (cargando) {
         return (
-            <p className="m-0 text-center text-[11px] text-[var(--mc-color-text-secondary)]">
+            <p className="mc-draft-status" role="status" aria-live="polite">
+                <Loader2 size={14} className="mc-draft-status__icon mc-btn-spinner" aria-hidden />
                 Recuperando borrador…
             </p>
         );
     }
     if (status === 'saving') {
         return (
-            <p className="m-0 text-center text-[11px] text-[var(--mc-color-text-secondary)]">
+            <p className="mc-draft-status" role="status" aria-live="polite">
+                <Loader2 size={14} className="mc-draft-status__icon mc-btn-spinner" aria-hidden />
                 Guardando borrador…
             </p>
         );
     }
     if (status === 'error') {
         return (
-            <p className="m-0 text-center text-[11px] text-[var(--mc-color-danger)]">
-                No se pudo guardar el borrador
+            <p className="mc-draft-status mc-draft-status--error" role="alert">
+                <AlertCircle size={14} className="mc-draft-status__icon" aria-hidden />
+                No se pudo guardar el borrador. Revisa tu conexión.
             </p>
         );
     }
     if (label) {
         return (
-            <p className="m-0 text-center text-[11px] text-[var(--mc-color-text-secondary)]">
+            <p className="mc-draft-status" role="status">
+                <Check size={14} className="mc-draft-status__icon" aria-hidden />
                 Borrador guardado {label}
             </p>
         );

@@ -2,7 +2,7 @@
  * components/ot/OTImpresion.tsx
  * Documento imprimible compacto — media A4, mitad de página aprox.
  * - "ÁREA DE TI" en lugar de "Departamento de TI"
- * - "OT generado por Nexora" al pie
+ * - "OT generado por Materen" al pie
  * - Diseño compacto: todo visible sin scroll en hoja A4
  */
 
@@ -154,7 +154,7 @@ export function OTImpresion({ ot, onClose }: Props) {
                     </div>
 
                     {/* Pie */}
-                    <p className="ot-footer">OT generado por Nexora · {ot.numero} · {fechaEmision}</p>
+                    <p className="ot-footer">OT generado por Materen · {ot.numero} · {fechaEmision}</p>
                 </div>
             </div>
         </>

@@ -27,6 +27,15 @@ export async function getCargaEquipoSemana(semanaISO: string): Promise<Tarea[]> 
   return (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
 }
 
+export async function getOTsPendientesIds(): Promise<{ id: string }[]> {
+  const { data, error } = await getInsforge().database
+    .from('orden_trabajo')
+    .select('id')
+    .eq('estado', 'pendiente');
+  if (error) throw error;
+  return (data ?? []) as { id: string }[];
+}
+
 export async function getMiembrosActivos(): Promise<Pick<Usuario, 'id' | 'nombre' | 'email'>[]> {
   const insforge = getInsforge();
   const { data, error } = await insforge.database

@@ -1,4 +1,4 @@
-import { Ban, CalendarClock, Check, Clock, Flame, MoreVertical, Play, Trash2 } from 'lucide-react';
+import { Ban, CalendarClock, Check, Circle, Flame, MoreVertical, Play, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
@@ -8,11 +8,11 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { PopoverMenu, type PopoverMenuItem } from '@/components/ui/PopoverMenu';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRIORIDAD_LABEL } from '@/lib/estadoConfig';
 import { claveVisualTarea } from '@/lib/tableroEstado';
 import {
   claseBarraPrioridad,
-  labelSenalSituacion,
   muestraChipPrioridad,
   senalSituacionCard,
 } from '@/lib/tareaCardSemana';
@@ -23,6 +23,7 @@ type Props = {
   hoyYmd: string;
   ot?: OrdenTrabajo | null;
   responsableNombre?: string;
+  areaNombre?: string;
   readOnly?: boolean;
   onOpenDetalle?: (t: Tarea) => void;
   onIniciar?: (t: Tarea) => void;
@@ -31,6 +32,8 @@ type Props = {
   onCancelar?: (t: Tarea) => void;
   onEliminar?: (t: Tarea) => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
+  completandoEsta?: boolean;
+  iniciandoEsta?:   boolean;
 };
 
 function estadoEjecucionPill(estado: EstadoTarea): ClaveVisualTarea {
@@ -43,6 +46,7 @@ export function TareaSemanaCard({
   hoyYmd,
   ot,
   responsableNombre = '—',
+  areaNombre,
   readOnly,
   onOpenDetalle,
   onIniciar,
@@ -51,10 +55,14 @@ export function TareaSemanaCard({
   onCancelar,
   onEliminar,
   onOtClick,
+  completandoEsta = false,
+  iniciandoEsta   = false,
 }: Props) {
   const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  const isMobile = useIsMobile();
 
   const senalSit = senalSituacionCard(tarea, hoyYmd);
+  const senalSitVisible = senalSit && senalSit !== 'vence_hoy' ? senalSit : null;
   const terminal = tarea.estado === 'completada' || tarea.estado === 'cancelada';
 
   const puedeIniciar = !readOnly && tarea.estado === 'pendiente' && Boolean(onIniciar);
@@ -102,6 +110,7 @@ export function TareaSemanaCard({
   const hayPrimario = puedeIniciar || puedeCompletar;
   const hayMenu = menuItems.length > 0;
   const hayFilaAcciones = hayPrimario || hayMenu;
+  const accionPrimariaVariant = isMobile ? 'secondary' : 'primary';
 
   if (tarea.estado === 'completada') {
     return (
@@ -176,15 +185,19 @@ export function TareaSemanaCard({
             </div>
 
             <div className="mc-semana-task-card__pills">
-              {senalSit === 'vence_hoy' ? (
-                <span className="mc-chip mc-chip--vence-hoy">
-                  <Clock size={12} aria-hidden />
-                  {labelSenalSituacion(senalSit)}
-                </span>
-              ) : senalSit ? (
-                <TareaEstadoIndicator estado={senalSit} variant="pill" />
+              {senalSitVisible ? (
+                <TareaEstadoIndicator estado={senalSitVisible} variant="pill" />
               ) : null}
-              <TareaEstadoIndicator estado={estadoEjecucionPill(tarea.estado)} variant="pill" />
+              {tarea.estado === 'pendiente' ? (
+                <span className="mc-semana-task-card__estado-pendiente" aria-label="Pendiente">
+                  <Circle size={12} strokeWidth={2} aria-hidden />
+                </span>
+              ) : (
+                <TareaEstadoIndicator estado={estadoEjecucionPill(tarea.estado)} variant="pill" />
+              )}
+              {areaNombre ? (
+                <span className="mc-chip mc-chip--area">{areaNombre}</span>
+              ) : null}
             </div>
 
             <div className="mc-semana-task-card__usuario-line">
@@ -198,19 +211,37 @@ export function TareaSemanaCard({
 
           {hayFilaAcciones && (
             <div
-              className="mc-semana-task-card__actions mc-semana-task-card__actions--split"
+              className={[
+                'mc-semana-task-card__actions',
+                'mc-semana-task-card__actions--split',
+                isMobile ? 'mc-semana-task-card__actions--mobile' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
             >
               <div className="mc-semana-task-card__action-primary">
                 {puedeIniciar && (
-                  <Button variant="primary" size="xs" fullWidth onClick={() => onIniciar!(tarea)}>
+                  <Button
+                    variant={accionPrimariaVariant}
+                    size="xs"
+                    fullWidth
+                    loading={iniciandoEsta}
+                    onClick={() => onIniciar!(tarea)}
+                  >
                     <Play size={12} aria-hidden />
                     Iniciar
                   </Button>
                 )}
                 {puedeCompletar && (
-                  <Button variant="primary" size="xs" fullWidth onClick={() => onCompletar!(tarea)}>
+                  <Button
+                    variant={accionPrimariaVariant}
+                    size="xs"
+                    fullWidth
+                    loading={completandoEsta}
+                    onClick={() => onCompletar!(tarea)}
+                  >
                     <Check size={12} aria-hidden />
                     Completar
                   </Button>
@@ -240,7 +271,7 @@ export function TareaSemanaCard({
         open={confirmarEliminar}
         titulo="Eliminar tarea"
         mensaje="Se abrirá el formulario para indicar el motivo. ¿Continuar?"
-        labelConfirmar="Eliminar"
+        labelConfirmar="Sí, eliminar tarea"
         variantConfirmar="danger"
         analyticsId="modal-confirmar-eliminar-tarea-card"
         onCancelar={() => setConfirmarEliminar(false)}

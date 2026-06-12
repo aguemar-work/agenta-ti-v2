@@ -32,6 +32,7 @@
  /* Evita barra horizontal por rail + tooltips o ancho 100vw vs scrollbar */
  html {
    overflow-x: hidden;
+   transition: background-color 0.2s var(--mc-ease), color 0.2s var(--mc-ease);
  }
  
  body {
@@ -40,4 +41,5 @@
    font-size: var(--mc-text-sm);
    background: var(--mc-color-bg);
    color: var(--mc-color-text);
+   font-feature-settings: 'cv11', 'ss01';
  }

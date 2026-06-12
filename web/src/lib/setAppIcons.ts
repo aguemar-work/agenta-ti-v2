@@ -1,4 +1,4 @@
-import iconUrl from '@/assets/icon-nexora-png.png';
+import iconUrl from '@/assets/icon_materen.png';
 
 /** Favicon y apple-touch-icon desde assets (URLs resueltas por Vite). */
 export function setAppIcons(): void {

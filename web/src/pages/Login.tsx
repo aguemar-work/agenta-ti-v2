@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -6,22 +7,8 @@ import { asegurarUsuario } from '@/api/usuario';
 import { AppLogo } from '@/components/brand/AppLogo';
 import { Button } from '@/components/ui/Button';
 import { getInsforge } from '@/lib/insforge';
+import { destinoPostLogin } from '@/lib/rutasInternas';
 import { useAuthStore } from '@/store/authStore';
-
-function IconEye({ off }: { off?: boolean }) {
-  return off ? (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  ) : (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
 
 export function Login() {
   const navigate = useNavigate();
@@ -37,37 +24,46 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const formIncomplete = !email.trim() || !password;
 
   if (!isLoading && authUser && usuario) {
-    return <Navigate to={from === '/login' || from === '/hoy' ? '/semana' : from} replace />;
+    return <Navigate to={destinoPostLogin(from)} replace />;
   }
 
   function validate() {
-    const e: typeof errors = {};
+    const e: typeof fieldErrors = {};
     if (!email.trim()) e.email = 'El correo es requerido';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Ingresa un correo válido';
     if (!password) e.password = 'La contraseña es requerida';
-    setErrors(e);
+    setFieldErrors(e);
+    setAuthError(null);
     return Object.keys(e).length === 0;
+  }
+
+  function clearAuthFeedback() {
+    setAuthError(null);
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setBusy(true);
-    setErrors({});
+    setFieldErrors({});
+    setAuthError(null);
     const insforge = getInsforge();
     const { data, error } = await insforge.auth.signInWithPassword({ email, password });
     if (error || !data?.user) {
-      setErrors({ password: 'Correo o contraseña incorrectos' });
+      setAuthError('Correo o contraseña incorrectos');
       setBusy(false);
       return;
     }
     try {
       const row = await asegurarUsuario(data.user);
       setAuth(data.user, row);
-      navigate(from === '/login' ? '/hoy' : from, { replace: true });
+      navigate(destinoPostLogin(from), { replace: true });
     } catch (err) {
       console.error('[onSubmit]', err);
       toast.error('No se pudo cargar tu perfil. Intenta de nuevo.');
@@ -80,32 +76,38 @@ export function Login() {
   return (
     <div className="mc-auth-page">
       <div className="mc-auth-container">
-        <div className="mc-auth-logo">
-          <AppLogo height={52} className="max-w-[min(280px,85vw)]" />
-        </div>
-
         <div className="mc-auth-card">
           <header className="mc-auth-card-header">
+            <div className="mc-auth-brand">
+              <AppLogo height={32} className="max-w-[min(200px,70vw)]" />
+            </div>
             <h1 className="mc-auth-title">Iniciar sesión</h1>
             <p className="mc-auth-subtitle">Ingresa tus credenciales para continuar</p>
           </header>
 
           <form onSubmit={(e) => void onSubmit(e)} className="mc-auth-form" noValidate>
+            {authError ? (
+              <div className="mc-auth-alert" role="alert">
+                {authError}
+              </div>
+            ) : null}
+
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="lf-email">
                 Correo electrónico
               </label>
               <input
                 id="lf-email"
-                className={`mc-input${errors.email ? ' mc-input-error' : ''}`}
+                className={`mc-input${fieldErrors.email ? ' mc-input-error' : ''}`}
                 type="email"
                 autoComplete="email"
                 placeholder="tu@empresa.com"
                 value={email}
                 onChange={(ev) => {
                   setEmail(ev.target.value);
-                  if (errors.email) {
-                    setErrors((p) => {
+                  clearAuthFeedback();
+                  if (fieldErrors.email) {
+                    setFieldErrors((p) => {
                       const next = { ...p };
                       delete next.email;
                       return next;
@@ -113,7 +115,11 @@ export function Login() {
                   }
                 }}
               />
-              {errors.email ? <span className="mc-field-error">{errors.email}</span> : null}
+              <div className="mc-field-feedback">
+                {fieldErrors.email ? (
+                  <span className="mc-field-error">{fieldErrors.email}</span>
+                ) : null}
+              </div>
             </div>
 
             <div className="mc-field">
@@ -128,15 +134,16 @@ export function Login() {
               <div className="mc-auth-pwd">
                 <input
                   id="lf-pwd"
-                  className={`mc-input${errors.password ? ' mc-input-error' : ''}`}
+                  className={`mc-input${fieldErrors.password ? ' mc-input-error' : ''}`}
                   type={showPwd ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(ev) => {
                     setPassword(ev.target.value);
-                    if (errors.password) {
-                      setErrors((p) => {
+                    clearAuthFeedback();
+                    if (fieldErrors.password) {
+                      setFieldErrors((p) => {
                         const next = { ...p };
                         delete next.password;
                         return next;
@@ -151,21 +158,37 @@ export function Login() {
                   tabIndex={-1}
                   aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
-                  <IconEye off={showPwd} />
+                  {showPwd ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
                 </button>
               </div>
-              {errors.password ? <span className="mc-field-error">{errors.password}</span> : null}
+              <div className="mc-field-feedback">
+                {fieldErrors.password ? (
+                  <span className="mc-field-error">{fieldErrors.password}</span>
+                ) : null}
+              </div>
             </div>
 
             <div className="mc-divider" />
 
-            <Button type="submit" variant="primary" fullWidth disabled={busy}>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              loading={busy}
+              className={formIncomplete ? 'mc-btn--incomplete' : ''}
+            >
               {busy ? 'Verificando…' : 'Entrar'}
             </Button>
           </form>
         </div>
 
-        <p className="mc-auth-footer">¿Problemas para acceder? Contacta al administrador.</p>
+        <p className="mc-auth-footer">
+          ¿Problemas para acceder? Contacta al administrador.
+          {' · '}
+          <Link to="/privacidad" className="mc-link">
+            Tratamiento de datos
+          </Link>
+        </p>
       </div>
     </div>
   );

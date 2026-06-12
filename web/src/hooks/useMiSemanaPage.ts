@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { useIncidenciasDelDia, useNotasBitacoraHoy, Q_INC_HOY, Q_NOTAS_HOY } from '@/hooks/useHoyColumnas';
 import { useJefesNotificacion } from '@/hooks/useUsuarios';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { useSemanaModales } from '@/hooks/useSemanaModales';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
@@ -25,10 +26,15 @@ import {
   getIncidenciasRangoUsuario,
   insertarNotaBitacoraRapida,
 } from '@/api/hoyColumnas';
+import { getAreas, Q_AREAS } from '@/api/areas';
+import { getClientes, Q_CLIENTES } from '@/api/clientes';
+import { getProyectos, Q_PROYECTOS } from '@/api/proyectos';
 import { getOrdenesPorTareaIds, crearOtDesdeTarea, type OrdenTrabajo } from '@/api/ordenTrabajo';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import { qkWsId } from '@/lib/queryKeys';
 import { puedeGestionarTarea } from '@/lib/permisos';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { NotaBitacora, Tarea, TipoEvento } from '@/types';
@@ -45,6 +51,40 @@ export function useMiSemanaPage() {
   } = nav;
 
   const qc = useQueryClient();
+  const workspaceId = useWorkspaceId();
+  const tieneModulo = useWorkspaceStore((s) => s.tieneModulo);
+  const moduloClientes  = tieneModulo('clientes');
+  const moduloProyectos = tieneModulo('proyectos');
+  const moduloAreas     = tieneModulo('areas');
+
+  const { data: clientesCatalogo = [] } = useQuery({
+    queryKey: qkWsId(workspaceId, Q_CLIENTES),
+    enabled: Boolean(workspaceId) && moduloClientes,
+    queryFn: getClientes,
+  });
+
+  const { data: proyectosCatalogo = [] } = useQuery({
+    queryKey: qkWsId(workspaceId, Q_PROYECTOS),
+    enabled: Boolean(workspaceId) && moduloProyectos,
+    queryFn: getProyectos,
+  });
+
+  const { data: areasCatalogo = [] } = useQuery({
+    queryKey: qkWsId(workspaceId, Q_AREAS),
+    enabled: Boolean(workspaceId) && moduloAreas,
+    queryFn: getAreas,
+  });
+
+  const proyectosActivos = useMemo(
+    () => proyectosCatalogo.filter((p) => p.estado === 'activo'),
+    [proyectosCatalogo],
+  );
+
+  const areasPorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of areasCatalogo) m.set(a.id, a.nombre);
+    return m;
+  }, [areasCatalogo]);
 
   useMarcarAtrasadasAlMontar(uid);
   const { tareasPlan, eventos, isError } = useMiSemanaData(uid, semanaISO, lunes);
@@ -63,15 +103,15 @@ export function useMiSemanaPage() {
   const hastaYmd = fechaLocalYmd(sabado);
   /** Siempre incidencias del usuario de la vista activa (el jefe ve las suyas; otras vías selector). */
   const { data: incidenciasSemana = [] } = useQuery({
-    queryKey: ['semana', 'incidencias', semanaISO, uid],
-    enabled: Boolean(uid),
+    queryKey: qkWsId(workspaceId, 'semana', 'incidencias', semanaISO, uid),
+    enabled: Boolean(uid) && Boolean(workspaceId),
     queryFn: () => getIncidenciasRangoUsuario(uid!, desdeYmd, hastaYmd),
   });
 
   const tareaIds = useMemo(() => tareasPlan.map((t) => t.id), [tareasPlan]);
   const { data: ordenesPorTarea = new Map<string, OrdenTrabajo>() } = useQuery({
-    queryKey: ['semana', 'ot-por-tarea', tareaIds],
-    enabled: tareaIds.length > 0,
+    queryKey: qkWsId(workspaceId, 'semana', 'ot-por-tarea', tareaIds),
+    enabled: tareaIds.length > 0 && Boolean(workspaceId),
     queryFn: () => getOrdenesPorTareaIds(tareaIds),
   });
 
@@ -94,25 +134,6 @@ export function useMiSemanaPage() {
     return { pendientesHoy, atrasadas };
   }, [tareasPlan, hoyYmd]);
 
-  const [ocultarCompletadas, setOcultarCompletadas] = useState(() => {
-    try {
-      const v = localStorage.getItem('mc-misemana-hide-completed');
-      if (v !== null) return v === '1';
-      return localStorage.getItem('mc-misemana-compact') === '1';
-    } catch { return false; }
-  });
-
-  function toggleOcultarCompletadas() {
-    setOcultarCompletadas((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem('mc-misemana-hide-completed', next ? '1' : '0');
-        localStorage.removeItem('mc-misemana-compact');
-      } catch { /* ignore */ }
-      return next;
-    });
-  }
-
   // ── Incidencias de hoy (registro rápido) y notas ─────────────────────────
   const { data: incidenciasHoy = [] } = useIncidenciasDelDia(uid, hoyYmd);
   const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid, esJefe);
@@ -127,7 +148,7 @@ export function useMiSemanaPage() {
 
   async function invalidarNotasYSemana() {
     await invalidateRelatedQueries(qc, ['semana', 'bitacora']);
-    await qc.invalidateQueries({ queryKey: [Q_NOTAS_HOY], exact: false });
+    await qc.invalidateQueries({ queryKey: qkWsId(workspaceId, Q_NOTAS_HOY), exact: false });
   }
 
   async function crearIncidenciaHoy(input: {
@@ -163,7 +184,7 @@ export function useMiSemanaPage() {
     }
 
     await invalidateRelatedQueries(qc, ['planificacion', 'semana']);
-    await qc.invalidateQueries({ queryKey: [Q_INC_HOY], exact: false });
+    await qc.invalidateQueries({ queryKey: qkWsId(workspaceId, Q_INC_HOY), exact: false });
     toast.success(input.ya_resuelta ? 'Incidencia registrada' : 'Incidencia agendada');
     setModalInc(false);
   }
@@ -269,13 +290,21 @@ export function useMiSemanaPage() {
     tareasPlan, eventos, isError, hoyYmd, conteos,
     incidenciasSemana, incidenciasHoy, notasHoy,
     ordenesPorTarea, nombresPorId, resumenDia,
-    ocultarCompletadas, toggleOcultarCompletadas,
     modalInc, setModalInc,
     notaRapida, setNotaRapida,
     notaConvertir, setNotaConvertir,
     crearIncidenciaHoy, guardarNotaRapida,
     confirmarConvertirNotaTarea, confirmarConvertirNotaEvento,
     objetivosActivos, usuariosAsignables,
+    clientesCatalogo,
+    proyectosActivos,
+    areasCatalogo,
+    areasPorId,
+    moduloClientes,
+    moduloProyectos,
+    moduloAreas,
+    completarPendingId: mut.completarPendingId,
+    iniciarPendingId:   mut.iniciarPendingId,
     tareaDetalle:   modales.tareaDetalle,
     tareaCompletar: modales.tareaCompletar,
     modal:               modales.modal,

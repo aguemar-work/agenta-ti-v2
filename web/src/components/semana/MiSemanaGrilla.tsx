@@ -4,7 +4,7 @@
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { EventoCard } from '@/components/semana/EventoCard';
 import { SemanaIncidenciasAcordeon } from '@/components/semana/SemanaIncidenciasAcordeon';
-import { SemanaColumnaResumen } from '@/components/semana/SemanaColumnaResumen';
+import { SemanaColumnaScrollArea } from '@/components/semana/SemanaColumnaScrollArea';
 import { MiSemanaLeyendaEstados } from '@/components/semana/MiSemanaLeyendaEstados';
 import { TareaSemanaCard } from '@/components/semana/TareaSemanaCard';
 import { Button } from '@/components/ui/Button';
@@ -26,12 +26,14 @@ export type MiSemanaGrillaProps = {
   incidenciasSemana: Tarea[];
   ordenesPorTarea: Map<string, OrdenTrabajo>;
   nombresPorId: Map<string, string>;
-  ocultarCompletadas?: boolean;
+  areasPorId: Map<string, string>;
   puedeGestionar: (t: Tarea) => boolean;
   onAbrirModalDia: (fecha: string) => void;
   onAbrirDetalle: (tareaId: string) => void;
   onRegistrarIncidencia: (fecha: string) => void;
   onOtClick?: (ot: OrdenTrabajo) => void;
+  completarPendingId?: string | null;
+  iniciarPendingId?:   string | null;
   onIniciarTarea?: (t: Tarea) => void;
   onCompletarTarea?: (t: Tarea) => void;
   onReprogramarTarea?: (t: Tarea) => void;
@@ -54,11 +56,13 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
     incidenciasSemana,
     ordenesPorTarea,
     nombresPorId,
-    ocultarCompletadas = false,
+    areasPorId,
     puedeGestionar,
     onAbrirModalDia,
     onAbrirDetalle,
     onRegistrarIncidencia,
+    completarPendingId,
+    iniciarPendingId,
     onIniciarTarea,
     onCompletarTarea,
     onReprogramarTarea,
@@ -83,16 +87,7 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
             const delDiaFiltradas = filtroEstado
               ? delDia.filter((t) => estadoEfectivoTablero(t, hoyYmd) === filtroEstado)
               : delDia;
-            const completadasOcultas = ocultarCompletadas
-              ? delDiaFiltradas.filter((t) => {
-                  const est = estadoEfectivoTablero(t, hoyYmd);
-                  return est !== 'completada' && est !== 'cancelada';
-                })
-              : delDiaFiltradas;
-            const nCompletadasOcultas = ocultarCompletadas
-              ? delDiaFiltradas.length - completadasOcultas.length
-              : 0;
-            const delDiaVis = completadasOcultas
+            const delDiaVis = delDiaFiltradas
               .slice()
               .sort(
                 (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
@@ -141,8 +136,6 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                   </span>
                 </div>
 
-                <SemanaColumnaResumen tareas={delDia} hoyYmd={hoyYmd} />
-
                 <Button
                   variant="ghost"
                   size="xs"
@@ -152,13 +145,14 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                   + Tarea / evento
                 </Button>
 
-                <div className="mc-semana-dia-col__body relative flex min-h-0 flex-1 flex-col">
-                  <div className="mc-semana-dia-drop flex min-h-0 flex-1 flex-col gap-2 p-2">
+                <SemanaColumnaScrollArea>
+                  <div className="mc-semana-dia-drop flex flex-col gap-2 p-2">
                     {eventosEnDia(eventos, ymd).map((ev) => (
                       <EventoCard key={ev.id} evento={ev} />
                     ))}
                     {delDiaVis.map((t) => {
                       const gestiona = puedeGestionar(t);
+                      const areaNombre = t.area_id ? areasPorId.get(t.area_id) : undefined;
                       return (
                         <TareaSemanaCard
                           key={t.id}
@@ -166,7 +160,10 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                           hoyYmd={hoyYmd}
                           ot={ordenesPorTarea.get(t.id) ?? null}
                           responsableNombre={nombresPorId.get(t.asignado_a) ?? '—'}
+                          {...(areaNombre ? { areaNombre } : {})}
                           readOnly={!gestiona}
+                          completandoEsta={completarPendingId === t.id}
+                          iniciandoEsta={iniciarPendingId === t.id}
                           onOpenDetalle={(x) => onAbrirDetalle(x.id)}
                           {...(gestiona && onIniciarTarea ? { onIniciar: onIniciarTarea } : {})}
                           {...(gestiona && onCompletarTarea
@@ -185,14 +182,8 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                         />
                       );
                     })}
-                    {nCompletadasOcultas > 0 && (
-                      <p className="mc-incidencia-row__ocultas" role="status">
-                        {nCompletadasOcultas} completada{nCompletadasOcultas !== 1 ? 's' : ''}{' '}
-                        oculta{nCompletadasOcultas !== 1 ? 's' : ''}
-                      </p>
-                    )}
                   </div>
-                </div>
+                </SemanaColumnaScrollArea>
 
                 <div className="mc-semana-dia-col__pie shrink-0">
                   <SemanaIncidenciasAcordeon

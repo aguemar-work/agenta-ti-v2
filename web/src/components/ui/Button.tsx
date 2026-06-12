@@ -26,6 +26,7 @@
  *                    No usa el sistema de variantes para no contaminar.
  */
 
+import { Loader2 } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'danger' | 'quaternary';
@@ -36,6 +37,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?:  Variant;
   size?:     Size;
   fullWidth?: boolean;
+  /** Muestra spinner y deshabilita el botón durante acciones asíncronas. */
+  loading?:  boolean;
 };
 
 const VARIANT_CLASS: Record<Variant, string> = {
@@ -59,19 +62,31 @@ export function Button({
   variant   = 'primary',
   size      = 'default',
   fullWidth = false,
+  loading   = false,
   className = '',
   type      = 'button',
+  disabled,
   ...rest
 }: Props) {
   const classes = [
     VARIANT_CLASS[variant],
     SIZE_CLASS[size],
     fullWidth ? 'mc-btn-full' : '',
+    loading ? 'mc-btn--loading' : '',
     className,
   ].filter(Boolean).join(' ');
 
   return (
-    <button type={type} className={classes} {...rest}>
+    <button
+      type={type}
+      className={classes}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...rest}
+    >
+      {loading ? (
+        <Loader2 size={16} className="mc-btn-spinner" aria-hidden />
+      ) : null}
       {children}
     </button>
   );

@@ -43,7 +43,7 @@ Redirección: `/` → `/semana`.
 - **Orquestación:** hooks por vista (`useMiSemanaPage`, `usePlanificacionPage`, `useOrdenesTrabajoPage`, etc.) encapsulan queries, mutaciones y estado de UI.
 - **Datos:** `src/api/*` habla con InsForge; validación y contratos con **Zod** en `src/lib/schemas.ts` donde aplica.
 - **Estado transversal:** `authStore`, `vistaStore`; realtime opcional vía hooks y publicación de eventos.
-- **Estilos:** sistema **Meta Canvas** (`mc-*`, `tokens.css`); Tailwind para utilidades.
+- **Estilos:** sistema **Materen Canvas** (`mc-*`, `tokens.css`); Tailwind para utilidades.
 - **Reglas de negocio:** documentadas en `.cursor/rules/sgtd-business-rules.mdc` y alineadas con el esquema canónico (p. ej. imprevistos, log con justificación, métricas ponderadas); la **autoridad** en permisos es **RLS + rol en tabla `usuario`**.
 
 ### 1.5 Fortalezas actuales

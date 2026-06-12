@@ -12,7 +12,7 @@
 
 
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -26,9 +26,7 @@ import {
 
   aprobarOT, cancelarOrdenTrabajo, completarOT,
 
-  crearOrdenTrabajo, enviarOTAlJefe, getBorradorOTUsuario, getOrdenesTrabajoMiembro, getOrdenesTrabajoTodas,
-
-  getTiposTrabajoOT, rechazarOT, actualizarOrdenTrabajo,
+  crearOrdenTrabajo, enviarOTAlJefe, rechazarOT, actualizarOrdenTrabajo,
 
   crearTipoTrabajoOT, toggleTipoTrabajoOT,
 
@@ -53,28 +51,25 @@ import {
 } from '@/lib/otFormDraft';
 
 import { useAuthStore } from '@/store/authStore';
+import { getWorkspaceId, useWorkspaceStore } from '@/store/workspaceStore';
 
 import { publicarEventoUsuario } from '@/lib/realtimePublish';
 
-import { getInsforge } from '@/lib/insforge';
+import { useOrdenesTrabajoQueries, Q_OT, Q_OT_BORRADOR, Q_TIPOS_OT } from '@/hooks/useOrdenesTrabajoQueries';
 
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
-import { TAREA_ACTIVA } from '@/lib/tareaTables';
+import { qkWsId } from '@/lib/queryKeys';
 import { puedeCompletarOTReceptor } from '@/lib/otComplecion';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { otVencida } from '@/lib/otHelpers';
 import { labelNumeroOT } from '@/lib/otNumero';
 import { mensajeErrorInsforge } from '@/lib/insforgeError';
 
-import type { Id, Tarea } from '@/types';
+import type { Id } from '@/types';
 
 
 
-export const Q_OT = 'ordenes-trabajo';
-
-export const Q_TIPOS_OT = 'tipos-trabajo-ot';
-
-export const Q_OT_BORRADOR = 'ot-borrador-usuario';
+export { Q_OT, Q_TIPOS_OT, Q_OT_BORRADOR } from '@/hooks/useOrdenesTrabajoQueries';
 
 
 
@@ -104,7 +99,7 @@ export function useOrdenesTrabajoPage() {
 
   const usuario = useAuthStore((s) => s.usuario);
 
-  const esJefe = usuario?.rol === 'jefe';
+  const esJefe = useWorkspaceStore((s) => s.esJefe());
 
   const location = useLocation();
 
@@ -116,67 +111,26 @@ export function useOrdenesTrabajoPage() {
 
 
 
-  // ── Queries ───────────────────────────────────────────────────────────────
-
-  const { data: ordenes = [], isLoading, isError } = useQuery({
-
-    queryKey: [Q_OT, usuario?.id, esJefe],
-
-    enabled: Boolean(usuario?.id),
-
-    queryFn: () => esJefe ? getOrdenesTrabajoTodas() : getOrdenesTrabajoMiembro(usuario!.id),
-
-  });
-
-
-
-  const { data: tiposTrabajo = [] } = useQuery({
-
-    queryKey: [Q_TIPOS_OT],
-
-    queryFn: () => getTiposTrabajoOT(),
-
-    placeholderData: keepPreviousData,
-
-  });
-
-
-
-  const { data: tareasVinculables = [] } = useQuery({
-
-    queryKey: ['ot-tareas-vinculables', usuario?.id],
-
-    enabled: Boolean(usuario?.id),
-
-    queryFn: async (): Promise<Pick<Tarea, 'id' | 'titulo' | 'estado'>[]> => {
-
-      const { data, error } = await getInsforge().database
-
-        .from(TAREA_ACTIVA)
-
-        .select('id,titulo,estado')
-
-        .eq('asignado_a', usuario!.id)
-
-        .in('estado', ['pendiente', 'en_progreso', 'atrasada'])
-
-        .order('fecha_planificada', { ascending: true });
-
-      if (error) throw error;
-
-      return (data ?? []) as Pick<Tarea, 'id' | 'titulo' | 'estado'>[];
-
-    },
-
-  });
-
-
-
   // ── Estado UI — OTs ───────────────────────────────────────────────────────
 
   const [modalForm, setModalForm] = useState(false);
 
   const [editandoOT, setEditandoOT] = useState<OrdenTrabajo | null>(null);
+
+  const {
+    ordenes,
+    isLoading,
+    isError,
+    tiposTrabajo,
+    tareasVinculables,
+    borradorServidor,
+    borradorCargando,
+  } = useOrdenesTrabajoQueries({
+    usuarioId: usuario?.id,
+    esJefe,
+    borradorModalAbierto: modalForm,
+    editandoOT: Boolean(editandoOT),
+  });
 
   const [viendoOT, setViendoOT] = useState<OrdenTrabajo | null>(null);
 
@@ -237,18 +191,6 @@ export function useOrdenesTrabajoPage() {
   const [draftTick, setDraftTick] = useState(0);
 
   const borradorHidratadoRef = useRef(false);
-
-
-
-  const { data: borradorServidor, isLoading: borradorCargando } = useQuery({
-
-    queryKey: [Q_OT_BORRADOR, usuario?.id],
-
-    enabled: Boolean(modalForm && !editandoOT && usuario?.id),
-
-    queryFn: () => getBorradorOTUsuario(usuario!.id),
-
-  });
 
 
 
@@ -378,9 +320,9 @@ export function useOrdenesTrabajoPage() {
 
           setDraftSaveStatus('saved');
 
-          void qc.invalidateQueries({ queryKey: [Q_OT] });
+          void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), Q_OT) });
 
-          void qc.invalidateQueries({ queryKey: [Q_OT_BORRADOR, usuario.id] });
+          void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), Q_OT_BORRADOR, usuario.id) });
 
         } catch (err) {
 
@@ -418,7 +360,7 @@ export function useOrdenesTrabajoPage() {
 
   const invalidarOTs = () => invalidateRelatedQueries(qc, ['ot']);
 
-  const invalidarTipos = () => qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_TIPOS_OT] });
+  const invalidarTipos = () => qc.invalidateQueries({ refetchType: 'active', queryKey: qkWsId(getWorkspaceId(), Q_TIPOS_OT) });
 
 
 
@@ -458,7 +400,7 @@ export function useOrdenesTrabajoPage() {
 
     setForm(formInicialOT(usuario?.id ?? ''));
 
-    void qc.removeQueries({ queryKey: [Q_OT_BORRADOR, usuario?.id] });
+    void qc.removeQueries({ queryKey: qkWsId(getWorkspaceId(), Q_OT_BORRADOR, usuario?.id) });
 
   }, [qc, usuario?.id]);
 
@@ -474,7 +416,7 @@ export function useOrdenesTrabajoPage() {
 
       if (ot.estado === 'pendiente') {
 
-        void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+        void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), 'planificacion', 'ots-pendientes') });
 
       }
 
@@ -502,7 +444,7 @@ export function useOrdenesTrabajoPage() {
 
       await invalidarOTs();
 
-      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+      void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), 'planificacion', 'ots-pendientes') });
 
       setModalForm(false);
 
@@ -532,7 +474,7 @@ export function useOrdenesTrabajoPage() {
 
       await invalidarOTs();
 
-      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+      void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), 'planificacion', 'ots-pendientes') });
 
       toast.success('OT aprobada');
 
@@ -570,7 +512,7 @@ export function useOrdenesTrabajoPage() {
 
       await invalidarOTs();
 
-      void qc.invalidateQueries({ queryKey: ['planificacion', 'ots-pendientes'] });
+      void qc.invalidateQueries({ queryKey: qkWsId(getWorkspaceId(), 'planificacion', 'ots-pendientes') });
 
       setModalRechazar(null); setMotivoRechazo('');
 
@@ -681,7 +623,7 @@ export function useOrdenesTrabajoPage() {
 
     onMutate: async ({ id, activo }) => {
 
-      await qc.cancelQueries({ queryKey: [Q_TIPOS_OT] });
+      await qc.cancelQueries({ queryKey: qkWsId(getWorkspaceId(), Q_TIPOS_OT) });
 
       const prev = qc.getQueryData([Q_TIPOS_OT]);
 

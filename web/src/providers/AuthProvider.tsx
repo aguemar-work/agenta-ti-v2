@@ -7,6 +7,7 @@ import { clearSentryUser, identifySentryUser } from '@/lib/sentry';
 import { getInsforge } from '@/lib/insforge';
 import { useAuthStore } from '@/store/authStore';
 import { useVistaStore } from '@/store/vistaStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
 type Props = { children: ReactNode };
 
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: Props) {
   useEffect(() => {
     const unsub = onClear(() => {
       useVistaStore.getState().reset();
+      useWorkspaceStore.getState().reset();
       resetAnalyticsUser();
       clearSentryUser();
     });
@@ -36,7 +38,6 @@ export function AuthProvider({ children }: Props) {
     identifyAnalyticsUser(usuario.id, { rol: usuario.rol });
     identifySentryUser({
       id: usuario.id,
-      email: authUser?.email ?? usuario.email,
       role: usuario.rol,
     });
   }, [usuario, authUser?.email]);

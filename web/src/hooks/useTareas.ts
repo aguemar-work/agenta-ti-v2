@@ -3,13 +3,16 @@ import { useEffect } from 'react';
 
 import {
   completarTareaConResumen as completarTareaConResumenApi,
+  getTareasHoyUsuario,
+  marcarAtrasadasEquipo,
   reprogramarTareaConLog as reprogramarTareaConLogApi,
 } from '@/api/semana';
+import { getUsuariosParaSelector } from '@/api/usuarios';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { getInsforge } from '@/lib/insforge';
+import { qkWsId } from '@/lib/queryKeys';
 import { TAREA_ACTIVA } from '@/lib/tareaTables';
-import { parseTarea } from '@/lib/schemas';
-import type { Tarea, Usuario } from '@/types';
 
 const Q_HOY = 'tareas-hoy';
 
@@ -46,68 +49,46 @@ function registrarEjecucionMarcarAtrasadas(): void {
  */
 export function useMarcarAtrasadasAlMontar(asignadoA: string | undefined) {
   const qc = useQueryClient();
+  const workspaceId = useWorkspaceId();
 
   useEffect(() => {
-    if (!asignadoA) return;
+    if (!asignadoA || !workspaceId) return;
     if (!debeEjecutarMarcarAtrasadas()) return;
     let cancelled = false;
     void (async () => {
       try {
         registrarEjecucionMarcarAtrasadas();
-        await getInsforge().database.rpc('sgtd_marcar_atrasadas_equipo');
+        await marcarAtrasadasEquipo();
         if (!cancelled) {
-          await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_HOY, asignadoA] });
+          await qc.invalidateQueries({
+            refetchType: 'active',
+            queryKey: qkWsId(workspaceId, Q_HOY, asignadoA),
+          });
         }
       } catch (err) {
         console.error('[useMarcarAtrasadasAlMontar]', err);
       }
     })();
     return () => { cancelled = true; };
-  }, [asignadoA, qc]);
+  }, [asignadoA, workspaceId, qc]);
 }
 
-const prioridadOrden: Record<Tarea['prioridad'], number> = {
-  critica: 0,
-  alta: 1,
-  media: 2,
-  baja: 3,
-};
-
 export function useTareasHoy(asignadoA: string | undefined) {
+  const workspaceId = useWorkspaceId();
   const hoy = fechaLocalYmd(new Date());
   return useQuery({
-    queryKey: [Q_HOY, asignadoA, hoy],
-    enabled: Boolean(asignadoA),
-    queryFn: async () => {
-      const insforge = getInsforge();
-      const { data, error } = await insforge.database
-        .from(TAREA_ACTIVA)
-        .select('*')
-        .eq('asignado_a', asignadoA!)
-        .eq('tipo', 'planificada')
-        .or(`fecha_planificada.eq.${hoy},situacion.eq.atrasada`);
-      if (error) throw error;
-      const list = (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
-      list.sort((a, b) => prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad]);
-      return list;
-    },
+    queryKey: qkWsId(workspaceId, Q_HOY, asignadoA, hoy),
+    enabled: Boolean(asignadoA) && Boolean(workspaceId),
+    queryFn: () => getTareasHoyUsuario(asignadoA!, hoy),
   });
 }
 
 export function useUsuariosParaSelector(esJefe: boolean) {
+  const workspaceId = useWorkspaceId();
   return useQuery({
-    queryKey: ['usuarios-selector'],
-    enabled: esJefe,
-    queryFn: async () => {
-      const insforge = getInsforge();
-      const { data, error } = await insforge.database
-        .from('usuario')
-        .select('id,nombre,email,rol')
-        .eq('activo', true)
-        .order('nombre');
-      if (error) throw error;
-      return (data ?? []) as Pick<Usuario, 'id' | 'nombre' | 'email' | 'rol'>[];
-    },
+    queryKey: qkWsId(workspaceId, 'usuarios-selector'),
+    enabled: esJefe && Boolean(workspaceId),
+    queryFn: () => getUsuariosParaSelector(),
   });
 }
 

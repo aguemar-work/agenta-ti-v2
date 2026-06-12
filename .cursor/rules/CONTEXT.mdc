@@ -4,7 +4,7 @@ alwaysApply: true
 
 # CONTEXT — Nexora / SGTD (Agenda TI v3) · V4
 
-**Última actualización:** 2026-06-05
+**Última actualización:** 2026-06-10
 **Fuente de verdad:** este archivo + `web/CONTEXT/*.md` + `.cursor/rules/*.mdc`
 **Modelo tarea v1.1:** `web/CONTEXT/TAREA-MODEL.md` · schema resumido: `web/CONTEXT/CONTEXT.md`
 **Nota:** `CONTEXT_2026-04-23.md` (raíz) está **obsoleto** para V4 — lo reemplaza este documento.
@@ -39,7 +39,7 @@ alwaysApply: true
 | Estilos | Tailwind 3.4 + tokens CSS `mc-*` | — NO usar Tailwind v4 |
 | Toasts | Sonner | — |
 | Iconos | lucide-react (con `aria-hidden`) | — |
-| Drag & Drop | @dnd-kit/core | Mi Semana (días) |
+| Mover tareas entre días | API `semana.ts` (sin @dnd-kit en V4) |
 | Backend (BaaS) | InsForge (Supabase-compatible) | SDK 1.2 |
 | BD | PostgreSQL (RLS habilitado) | via InsForge |
 | Errores | @sentry/react | activo solo si `VITE_SENTRY_DSN` tiene valor |
@@ -101,6 +101,10 @@ Page (componente visual)
 | `/ordenes-trabajo` | `OrdenesTrabajo` | Jefe + Miembro |
 | `/planificacion` | `Planificacion` | **Solo Jefe** (`JefeRoute`) |
 | `/metricas` | `Metricas` | **Solo Jefe** (`JefeRoute`) |
+| `/panel` | `PanelPrincipal` | **Solo dueño de plataforma** (`PanelRoute`) — lista orgs, crear, entrar |
+| `/panel/usuarios` | `PanelUsuarios` | **Solo dueño** — listar usuarios y asignar a org |
+
+**Modo panel:** `modoContexto='panel'` en `workspaceStore`; `AppShell` oculta el nav operativo en rutas `/panel/*`.
 
 > **ELIMINADAS en V4** (no recrear sin orden explícita): `/tablero`, `/bitacora`, `/hoy` como página dedicada.
 > Si ves referencias a estas rutas en código antiguo, son legacy.
@@ -111,7 +115,7 @@ Page (componente visual)
 
 ### Mi Semana (`/semana`)
 - Grilla Lun–Sáb (6 columnas). Sin toggle "Ahora / Semana" (eliminado en V4).
-- DnD entre columnas de día con @dnd-kit.
+- Mover tareas entre días vía acciones/API (sin @dnd-kit en V4).
 - Columna del día actual incluye bloque **Incidencias** (`ZonaIncidencias`).
 - **Panel lateral de notas** (`PanelNotas`): visible en `xl+`; nota rápida + notas recientes.
 - Hooks: `useMiSemanaPage`, `useMiSemana`, `useSemanaDnD`, `useSemanaModales`, `useSemanaNavegacion`, `useHoyColumnas`.
@@ -139,6 +143,8 @@ Page (componente visual)
 - KPIs por usuario: activas, completadas 7d, objetivos activos, atrasadas.
 - Comparativa entre miembros.
 - Hooks: `useMetricas`, `useObjetivosMetricas`. API: `objetivosMetricas.ts`.
+
+**Módulos configurables (V5):** desde 045, los módulos no dependen del tipo de workspace. Desde 047, solo `bitacora` es obligatorio; `objetivos` es opcional. El dueño gestiona módulos por org desde el panel (050).
 
 ---
 
@@ -200,7 +206,7 @@ Page (componente visual)
 
 ---
 
-## 8. Design system: Meta Canvas
+## 8. Design system: Materen Canvas
 
 - **Tokens CSS:** prefijo `mc-*` / `--mc-color-*` / `--mc-state-*` (ver `tokens.css`).
 - **Reglas de color (semántica):**
@@ -237,6 +243,20 @@ Page (componente visual)
 | 038 | Modelo v1.1 aditivo: `reprogramaciones`, `critica`, vista `tarea_activa.situacion` |
 | 039 | Lógica dos ejes: RPCs 4 estados, reprogramar sin cambiar estado, SLA por atraso |
 | 040 | Enum 4+2, DROP bloquear/desbloquear, vista `situacion` final, limpieza SLA bloqueada |
+| 041 | Índice `idx_orden_trabajo_tarea_id` (lookup OT por tarea) |
+| 042 | RPC `sgtd_objetivos_con_progreso` (agregación progreso en BD) |
+| 043 | V5 fundación: org, workspace, membresías, `workspace_id` en dominio, RLS multi-tenant |
+| 044 | `workspace_modulo` + RPC `sgtd_crear_organizacion` + backfill módulos por tipo |
+| 045 | Módulos libres: DROP enforcement tipo↔módulo; RLS por módulo activo; `tipo` = etiqueta |
+| 046 | Fix `workspace_id` en 11 RPCs + catálogos cliente/proyecto/área en tarea |
+| 047 | Dueño de plataforma (`plataforma_owner`); solo dueño crea orgs; solo `bitacora` obligatorio |
+| 048 | Superadmin: dueño ve/opera todas las orgs (bypass en helpers RLS) |
+| 049 | Gestión usuarios plataforma: listar + asignar a organización |
+| 050 | Módulos por organización desde panel (`sgtd_set_modulo_organizacion`) |
+| 051 | Backfill workspaces para orgs pre-V5 sin workspace (desbloquea panel módulos) |
+| 052 | No-op — hipótesis workspace inactivo descartada (ver 053) |
+| 053 | Fix ERRCODE 42702 en `sgtd_listar_modulos_organizacion` — alias `w.activo` para resolver ambigüedad con output var PL/pgSQL |
+| 054 | Soft-delete de org (`desactivada_en`) + purga automática a 3 meses vía pg_cron + papelera en panel |
 
 ---
 
@@ -319,6 +339,20 @@ Alternativa: **SQL Editor** del dashboard InsForge (mismas queries).
 | **038** | `reprogramaciones` + prioridad `critica` + vista `situacion` | ✅ | 📅 | 📅 | `information_schema`: columna `reprogramaciones`; enum `critica` |
 | **039** | RPCs 4 estados; reprogramar sin mutar estado; SLA depreca bloqueadas | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_cambiar_estado_tarea` sin `bloqueada` en cuerpo |
 | **040** | Enum 4 estados + 2 tipos; DROP RPCs bloquear/desbloquear | ✅ | 📅 | 📅 | `pg_proc`: ausencia `sgtd_bloquear_tarea_con_log`; enum 4 valores |
+| **041** | Índice `idx_orden_trabajo_tarea_id` (lookup OT por tarea) | ✅ | 📅 | 📅 | `pg_indexes`: `idx_orden_trabajo_tarea_id` en `orden_trabajo` |
+| **042** | RPC `sgtd_objetivos_con_progreso` (agregación en BD) | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_objetivos_con_progreso` |
+| **043** | V5 workspace foundation: org, ws, membresías, RLS `workspace_id` | ✅ | 📅 | 📅 | `information_schema`: tabla `workspace_member`; `pg_proc`: `sgtd_workspace_id` |
+| **044** | Módulos por workspace + bootstrap org | ✅ | 📅 | 📅 | `information_schema`: tabla `workspace_modulo`; `pg_proc`: `sgtd_crear_organizacion` |
+| **045** | Módulos libres (sin enforcement tipo↔módulo) | ✅ | 📅 | 📅 | Ausencia `pg_proc`: `sgtd_modulo_valido_para_tipo`; RLS OT/catálogos usan `sgtd_workspace_tiene_modulo` |
+| **046** | Fix `workspace_id` en RPCs + catálogos en tarea | ✅ | 📅 | 📅 | Crear tarea planificada funciona (RPCs escriben `workspace_id`) |
+| **047** | Dueño plataforma + solo `bitacora` obligatorio | ✅ | 📅 | 📅 | `information_schema`: tabla `plataforma_owner`; `pg_proc`: `sgtd_es_plataforma_owner` |
+| **048** | Superadmin bypass en helpers RLS | ✅ | 📅 | 📅 | `pg_get_functiondef` helpers contiene `plataforma_owner` |
+| **049** | Gestión usuarios (listar + asignar) | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_asignar_usuario_a_organizacion` |
+| **050** | Módulos por org desde panel | ✅ | 📅 | 📅 | `pg_proc`: `sgtd_set_modulo_organizacion` |
+| **051** | Backfill workspaces orgs pre-V5 | ✅ | 📅 | 📅 | `COUNT(*) = 0` en orgs activas sin workspace (ver query en README) |
+| **052** | ~~Reactivar workspaces~~ **no-op** (hipótesis descartada en dev; ver archivo) | ⏭️ | ⏭️ | ⏭️ | No aplicar UPDATE; validación `COUNT(*) = 0` orgs sin ws activo |
+| **053** | Fix ERRCODE 42702 en `sgtd_listar_modulos_organizacion` (alias ambiguo `activo`) | 📅 | 📅 | 📅 | `SELECT * FROM sgtd_listar_modulos_organizacion('<org-id>')` sin error |
+| **054** | Soft-delete org + purga automática 3 meses (pg_cron) + papelera panel | 📅 | 📅 | 📅 | `information_schema`: columna `desactivada_en` en `organizacion`; `pg_proc`: `sgtd_desactivar_organizacion` |
 
 Leyenda: ✅ aplicada y verificada · 📅 pendiente · ❌ falló / no aplicar sin revisión
 
@@ -575,13 +609,100 @@ SELECT situacion, count(*) FROM public.tarea_activa GROUP BY 1 ORDER BY 1;
 npx @insforge/cli db query "SELECT count(*) AS n FROM pg_enum e JOIN pg_type t ON e.enumtypid=t.oid WHERE t.typname='estado_tarea' AND e.enumlabel IN ('pendiente','en_progreso','completada','cancelada') HAVING count(*)=4"
 ```
 
-### Próxima migración (041+)
+### Identificadores por migración (043)
 
-Al añadir `db/migrations/041_*.sql`:
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='workspace_member') AS migration_043_ok"
+```
 
-1. Actualizar §9 (lista resumida) y esta tabla con **identificador técnico** (función, columna o política nueva).
-2. Documentar query de comprobación en `db/migrations/README.md`.
-3. Dejar Dev / Staging / Prod en 📅 hasta verificar cada entorno.
+Estado parcial: ejecutar `db/migrations/043_check_status.sql`.
+
+### Identificadores por migración (044)
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='workspace_modulo') AS migration_044_ok"
+```
+
+Complemento: `pg_proc` → `sgtd_crear_organizacion`, `sgtd_workspace_tiene_modulo`.
+
+### Identificadores por migración (045)
+
+```bash
+npx @insforge/cli db query "SELECT NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname='public' AND p.proname='sgtd_modulo_valido_para_tipo') AS migration_045_ok"
+```
+
+Complemento: políticas `orden_trabajo` y `cliente_insert`/`proyecto_insert`/`area_insert` referencian `sgtd_workspace_tiene_modulo` (no `workspace.tipo`).
+
+### Identificadores por migración (046)
+
+Smoke test: crear tarea planificada en app V5 → sin error NOT NULL en `workspace_id`.
+
+Complemento: RPCs `sgtd_crear_tarea_planificada`, `sgtd_reprogramar_tarea_con_log` y similares incluyen `workspace_id` en INSERT (ver cuerpo en `046_workspace_id_rpcs_catalogos`).
+
+### Identificadores por migración (047)
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='plataforma_owner') AS migration_047_ok"
+```
+
+Complemento: `pg_proc` → `sgtd_es_plataforma_owner`; trigger `workspace_modulo_validar` solo protege `bitacora`.
+
+### Identificadores por migración (048)
+
+```bash
+npx @insforge/cli db query "SELECT bool_and(pg_get_functiondef(p.oid) LIKE '%plataforma_owner%') AS migration_048_ok FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='public' AND p.proname IN ('sgtd_puede_acceder_workspace','sgtd_es_jefe','sgtd_es_miembro_activo')"
+```
+
+**QA crítico:** usuario NO-dueño no gana acceso extra tras 048.
+
+### Identificadores por migración (049)
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='public' AND p.proname='sgtd_asignar_usuario_a_organizacion') AS migration_049_ok"
+```
+
+Complemento: `pg_proc` → `sgtd_listar_usuarios_plataforma`.
+
+### Identificadores por migración (050)
+
+```bash
+npx @insforge/cli db query "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='public' AND p.proname='sgtd_set_modulo_organizacion') AS migration_050_ok"
+```
+
+Complemento: `pg_proc` → `sgtd_listar_modulos_organizacion`.
+
+### Identificadores por migración (051)
+
+```bash
+# Pre-apply: orgs afectadas (debe ser > 0 si hay orgs pre-V5)
+npx @insforge/cli db query "SELECT o.id, o.nombre FROM organizacion o WHERE o.activa = true AND NOT EXISTS (SELECT 1 FROM workspace w WHERE w.organizacion_id = o.id)"
+
+# Post-apply: validación (debe ser 0)
+npx @insforge/cli db query "SELECT COUNT(*) AS orgs_sin_workspace FROM organizacion o WHERE o.activa = true AND NOT EXISTS (SELECT 1 FROM workspace w WHERE w.organizacion_id = o.id)"
+```
+
+Complemento: sin duplicados — `SELECT organizacion_id, COUNT(*) FROM workspace GROUP BY organizacion_id HAVING COUNT(*) > 1` → 0 filas.
+
+### Identificadores por migración (054)
+
+```bash
+# Columna desactivada_en existe
+npx @insforge/cli db query "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='organizacion' AND column_name='desactivada_en'"
+
+# RPCs creadas
+npx @insforge/cli db query "SELECT proname FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='public' AND proname IN ('sgtd_desactivar_organizacion','sgtd_reactivar_organizacion','sgtd_listar_orgs_desactivadas','sgtd_purgar_organizaciones_inactivas')"
+
+# Cron job programado (si pg_cron disponible)
+npx @insforge/cli db query "SELECT jobname, schedule FROM cron.job WHERE jobname = 'sgtd-purgar-orgs-inactivas'"
+```
+
+Complemento: T2–T7 del smoke test en `054_desactivar_organizacion.sql`.
+
+Al añadir cada migración posterior:
+
+1. Actualizar §9 (lista resumida) y la tabla checklist con **identificador técnico**.
+2. Documentar query en `db/migrations/README.md`.
+3. Marcar ✅ solo el entorno verificado (Dev / Staging / Prod).
 
 ---
 

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { reprogramarTareaConLog } from '@/api/semana';
 import { useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { Tarea, TipoEvento, Usuario } from '@/types';
 
 type MiSemanaMut = ReturnType<typeof useMiSemanaMutations>;
@@ -28,6 +29,7 @@ export function useSemanaModales({
   mut:               MiSemanaMut;
 }) {
   const qc = useQueryClient();
+  const esJefe = useWorkspaceStore((s) => s.esJefe());
 
   const [modal,            setModal]            = useState<{ fecha: string } | null>(null);
   const [modalInc,         setModalInc]         = useState(false);
@@ -66,7 +68,7 @@ export function useSemanaModales({
         resumen:       input.resumen,
         usuarioNombre: usuario.nombre,
         ...(tareaCompletar?.titulo ? { tareaTitulo: tareaCompletar.titulo } : {}),
-        ...(usuario.rol !== 'jefe' && jefesNotificacion.length > 0
+        ...(!esJefe && jefesNotificacion.length > 0
           ? { jefeIds: jefesNotificacion.map((j) => j.id) }
           : {}),
       });
@@ -85,6 +87,9 @@ export function useSemanaModales({
     descripcion:  string;
     objetivo_id?: string | null;
     asignado_a?:  string | null;
+    cliente_id?:  string | null;
+    proyecto_id?: string | null;
+    area_id?:     string | null;
   }) {
     if (!modal || !usuario) return;
     const asignado = input.asignado_a?.trim() || usuario.id;
@@ -97,6 +102,9 @@ export function useSemanaModales({
         asignado_a:        asignado,
         creado_por:        usuario.id,
         objetivo_id:       input.objetivo_id ?? null,
+        cliente_id:        input.cliente_id ?? null,
+        proyecto_id:       input.proyecto_id ?? null,
+        area_id:           input.area_id ?? null,
       });
       toast.success('Tarea planificada');
     }
@@ -129,6 +137,9 @@ export function useSemanaModales({
     descripcion:  string;
     objetivo_id?: string | null;
     asignado_a?:  string | null;
+    cliente_id?:  string | null;
+    proyecto_id?: string | null;
+    area_id?:     string | null;
   }) {
     if (!usuario) return;
     try {

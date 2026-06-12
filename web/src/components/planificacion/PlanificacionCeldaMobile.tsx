@@ -1,4 +1,6 @@
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
@@ -19,9 +21,16 @@ export function PlanificacionCeldaMobile({ nombre, fecha, tareas, loading, hoyYm
         <button type="button" className="mc-btn-ghost mc-btn-sm" onClick={onClose}>
           ← Volver
         </button>
-        <h2 className="mc-ot-detalle-mobile__title">
-          {nombre} · {fecha}
-        </h2>
+        <div className="min-w-0 flex-1">
+          <Breadcrumb
+            items={[
+              { label: 'Planificación' },
+              { label: nombre },
+              { label: fechaLocalDdMmYyyy(new Date(fecha + 'T12:00:00')), current: true },
+            ]}
+          />
+          <h2 className="mc-ot-detalle-mobile__title m-0">{nombre}</h2>
+        </div>
       </header>
       <div className="mc-ot-detalle-mobile__body">
         {loading ? (

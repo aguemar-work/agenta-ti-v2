@@ -1,4 +1,3 @@
-import { ObjetivosLeyendaRiesgos } from '@/components/objetivos/ObjetivosLeyendaRiesgos';
 import { MiSemanaStatsInline } from '@/components/semana/MiSemanaStatsInline';
 
 type StatItem = {
@@ -31,9 +30,6 @@ export function ObjetivosToolbar({ statsItems, filtroActivoLabel, onLimpiarFiltr
             </button>
           </div>
         )}
-      </div>
-      <div className="mc-misemana-toolbar__right">
-        <ObjetivosLeyendaRiesgos compact className="mc-misemana-toolbar__leyenda" />
       </div>
     </div>
   );

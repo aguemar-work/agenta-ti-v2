@@ -44,7 +44,7 @@ Page → useXxxPage (hook) → api/xxx.ts (SDK + Zod) → InsForge
 
 ---
 
-## 3. Design system Meta Canvas
+## 3. Design system Materen Canvas
 
 - **Tokens CSS**: usar siempre `var(--mc-color-*)` y `var(--mc-state-*)`. Prohibido hardcodear hex.
 - **Estados de tarea**: `ClaveVisualTarea` vía `claveVisualTarea()` + `TAREA_*` de `lib/estadoConfig.ts` (ver `web/CONTEXT/TAREA-MODEL.md`)

@@ -57,6 +57,7 @@ export function OTToolbar({
       </div>
       <div className="mc-misemana-toolbar__right mc-ot-toolbar__right">
         <FilterBar.Pills
+          groupLabel="Filtrar órdenes de trabajo por estado"
           value={pillOptions.some((p) => p.value === filtroPillsValue) ? filtroPillsValue : 'todos'}
           onChange={(v) => onFiltroPillsChange(v as FiltroEstadoOT)}
           options={pillOptions}

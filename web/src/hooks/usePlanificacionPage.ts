@@ -17,11 +17,13 @@ import {
   type FiltrosHistorialLog,
 } from '@/api/audit';
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import {
   fechaLunesDesdeSemanaIso,
   getCargaEquipoSemana,
   getIncidenciasEquipoSemana,
   getMiembrosActivos,
+  getOTsPendientesIds,
   getTareasUsuarioDia,
 } from '@/api/planificacion';
 import {
@@ -30,8 +32,9 @@ import {
 } from '@/api/semana';
 import { getObjetivosActivos } from '@/api/objetivos';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
-import { getInsforge } from '@/lib/insforge';
+import { qkWsId } from '@/lib/queryKeys';
 import { fechaLocalYmd } from '@/lib/fecha';
+import { getWorkspaceId } from '@/store/workspaceStore';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { agregarDias, inicioSemanaIso, numeroSemanaDesdeLunes, semanaIsoDesdeFecha } from '@/lib/semanas';
 import { useAuthStore } from '@/store/authStore';
@@ -41,6 +44,7 @@ export const Q_LOGS = 'audit-logs-pendientes';
 
 export function usePlanificacionPage() {
   const qc = useQueryClient();
+  const workspaceId = useWorkspaceId();
   const usuario = useAuthStore((s) => s.usuario);
   const hoyYmd = fechaLocalYmd(new Date());
 
@@ -67,52 +71,54 @@ export function usePlanificacionPage() {
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: miembros = [] } = useQuery({
-    queryKey: ['planificacion', 'miembros'],
+    queryKey: qkWsId(workspaceId, 'planificacion', 'miembros'),
+    enabled: Boolean(workspaceId),
     queryFn: () => getMiembrosActivos(),
   });
 
   const { data: objetivosActivos = [] } = useQuery({
-    queryKey: ['objetivos-activos-planificacion'],
+    queryKey: qkWsId(workspaceId, 'objetivos-activos-planificacion'),
+    enabled: Boolean(workspaceId),
     queryFn: () => getObjetivosActivos(),
   });
 
   const { data: carga = [] } = useQuery({
-    queryKey: ['planificacion', 'carga', semanaISO],
+    queryKey: qkWsId(workspaceId, 'planificacion', 'carga', semanaISO),
+    enabled: Boolean(workspaceId),
     queryFn: () => getCargaEquipoSemana(semanaISO),
   });
 
   // OTs pendientes de aprobación — dato para el resumen ejecutivo
   const { data: otsPendientes = [] } = useQuery({
-    queryKey: ['planificacion', 'ots-pendientes'],
+    queryKey: qkWsId(workspaceId, 'planificacion', 'ots-pendientes'),
+    enabled: Boolean(workspaceId),
     queryFn: async () => {
-      const { data, error } = await getInsforge().database
-        .from('orden_trabajo')
-        .select('id')
-        .eq('estado', 'pendiente');
-      if (error) throw error;
-      return (data ?? []) as { id: string }[];
+      return getOTsPendientesIds();
     },
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: incidencias = [], isLoading: loadInc } = useQuery({
-    queryKey: ['planificacion', 'incidencias', semanaISO],
+    queryKey: qkWsId(workspaceId, 'planificacion', 'incidencias', semanaISO),
+    enabled: Boolean(workspaceId),
     queryFn: () => getIncidenciasEquipoSemana(lunes, sabado),
   });
 
   const { data: detalle = [], isLoading: loadDetalleCelda } = useQuery({
-    queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha],
-    enabled: Boolean(modal),
+    queryKey: qkWsId(workspaceId, 'planificacion', 'celda', modal?.usuarioId, modal?.fecha),
+    enabled: Boolean(modal) && Boolean(workspaceId),
     queryFn: () => getTareasUsuarioDia(modal!.usuarioId, modal!.fecha),
   });
 
   const { data: actividad = [], isLoading: loadActividad } = useQuery({
-    queryKey: ['planificacion', 'actividad', semanaISO],
+    queryKey: qkWsId(workspaceId, 'planificacion', 'actividad', semanaISO),
+    enabled: Boolean(workspaceId),
     queryFn:  () => getActividadEquipoSemana(lunes, sabado),
   });
 
   const { data: logsPend = [], isLoading: loadLogs, isError: errLogs } = useQuery({
-    queryKey: [Q_LOGS],
+    queryKey: qkWsId(workspaceId, Q_LOGS),
+    enabled: Boolean(workspaceId),
     queryFn: () => getJustificacionesPendientesJefe(),
   });
 
@@ -131,9 +137,9 @@ export function usePlanificacionPage() {
   };
 
   const { data: histResult, isLoading: loadHist } = useQuery({
-    queryKey: ['audit-historial', filtrosHist],
+    queryKey: qkWsId(workspaceId, 'audit-historial', filtrosHist),
     queryFn:  () => getHistorialLogs(filtrosHist),
-    enabled:  mostrarHistorial,
+    enabled:  mostrarHistorial && Boolean(workspaceId),
   });
 
   const histLogs  = histResult?.logs  ?? [];
@@ -150,7 +156,8 @@ export function usePlanificacionPage() {
 
   // ── Mutaciones ────────────────────────────────────────────────────────────
   async function invalidarTrasRevisionJustificacion() {
-    await qc.invalidateQueries({ refetchType: 'active', queryKey: [Q_LOGS] });
+    const wsId = getWorkspaceId();
+    await qc.invalidateQueries({ refetchType: 'active', queryKey: qkWsId(wsId, Q_LOGS) });
     await invalidateRelatedQueries(qc, ['planificacion', 'semana', 'tablero']);
   }
 
@@ -233,8 +240,12 @@ export function usePlanificacionPage() {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   async function invalidarCarga() {
+    const wsId = getWorkspaceId();
     await invalidateRelatedQueries(qc, ['planificacion', 'tablero', 'semana']);
-    await qc.invalidateQueries({ refetchType: 'active', queryKey: ['planificacion', 'celda', modal?.usuarioId, modal?.fecha] });
+    await qc.invalidateQueries({
+      refetchType: 'active',
+      queryKey: qkWsId(wsId, 'planificacion', 'celda', modal?.usuarioId, modal?.fecha),
+    });
   }
 
   async function confirmarDevolver() {

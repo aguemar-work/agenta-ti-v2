@@ -20,8 +20,22 @@ function readEnv(): { baseUrl: string; anonKey: string } {
   return env;
 }
 
+function crearCliente(): InsForgeClient {
+  const { baseUrl, anonKey } = readEnv();
+  return createClient({
+    baseUrl,
+    anonKey,
+    autoRefreshToken: true,
+  });
+}
+
 /**
- * Cliente singleton InsForge (sesión y PostgREST). Requiere `.env` con variables VITE_*.
+ * Cliente InsForge singleton (sesión y PostgREST). Requiere `.env` con variables VITE_*.
+ *
+ * El header `x-workspace-id` lo inyecta `insforgeFetchInterceptor` en cada petición
+ * de base de datos leyendo `getWorkspaceId()` en tiempo de request — no al crear el cliente.
+ * Esto evita la carrera de sesión que ocurría al recrear el cliente cuando cambiaba el wsId:
+ * el nuevo cliente arrancaba sin token (SDK lo restaura async) y la primera RPC iba como anon.
  *
  * Sesión: el SDK gestiona tokens en almacenamiento del navegador — no en authStore (solo perfil `usuario`).
  * Mitigación V4: CSP en vercel.json, sin secretos en Zustand, interceptor 401, refresh automático.
@@ -29,12 +43,7 @@ function readEnv(): { baseUrl: string; anonKey: string } {
  */
 export function getInsforge(): InsForgeClient {
   if (!client) {
-    const { baseUrl, anonKey } = readEnv();
-    client = createClient({
-      baseUrl,
-      anonKey,
-      autoRefreshToken: true,
-    });
+    client = crearCliente();
   }
   return client;
 }

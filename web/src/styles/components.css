@@ -1,6 +1,6 @@
 /**
  * styles/components.css
- * Componentes base del design system Meta Canvas:
+ * Componentes base del design system Materen Canvas:
  * card, badge, table, modal, overlay, KPIs, empty state, divider, section-header.
  * Extraído de index.css.
  */
@@ -315,7 +315,7 @@
       flex-shrink: 0;
       background: color-mix(in srgb, var(--mc-color-accent) 14%, transparent);
       color: var(--mc-color-accent);
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
       user-select: none;
     }
     .mc-avatar--sm {
@@ -329,15 +329,25 @@
       font-size: 10px;
     }
 
-    .mc-dropdown-menu--portal {
+    /* Portal: estilos completos y mayor especificidad que `.mc-dropdown-menu` base */
+    .mc-dropdown-menu.mc-dropdown-menu--portal {
       position: fixed;
       bottom: auto;
       right: auto;
+      top: auto;
+      left: auto;
       z-index: var(--mc-z-popover);
       min-width: 170px;
+      background: var(--mc-color-surface);
+      border: 0.5px solid var(--mc-color-border);
       border-radius: var(--mc-radius-lg);
-      padding: 4px 0;
+      box-shadow: var(--mc-dropdown-shadow);
+      padding: var(--mc-space-1);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       transform-origin: top right;
+      animation: mc-dropdown-in var(--mc-duration-fast) var(--mc-ease);
     }
 
     .mc-dropdown-menu {
@@ -754,6 +764,11 @@
       margin-bottom: var(--mc-space-2);
     }
 
+    .mc-auth-brand {
+      display: flex;
+      justify-content: center;
+    }
+
     .mc-auth-card {
       width: 100%;
       background: var(--mc-color-surface);
@@ -770,6 +785,11 @@
       display: flex;
       flex-direction: column;
       gap: var(--mc-space-1);
+    }
+
+    .mc-auth-card-header:has(.mc-auth-brand) {
+      align-items: center;
+      text-align: center;
     }
 
     .mc-auth-title {
@@ -789,7 +809,44 @@
     .mc-auth-form {
       display: flex;
       flex-direction: column;
-      gap: var(--mc-space-4);
+      gap: 0;
+    }
+
+    .mc-auth-alert {
+      margin-bottom: var(--mc-space-3);
+      padding: var(--mc-space-3);
+      border-radius: var(--mc-radius-md);
+      border: 1px solid color-mix(in srgb, var(--mc-color-danger) 28%, transparent);
+      background: var(--mc-color-danger-soft);
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-danger);
+      line-height: var(--mc-leading-normal);
+    }
+
+    /* Ritmo fijo: 4px label→input, 4px input→error, 12px error→siguiente campo */
+    .mc-auth-form .mc-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--mc-space-1);
+      margin-bottom: var(--mc-space-3);
+    }
+
+    .mc-auth-form .mc-field:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .mc-auth-form .mc-field-feedback {
+      min-height: 16px;
+      line-height: 16px;
+    }
+
+    .mc-auth-form .mc-field-error {
+      display: block;
+    }
+
+    .mc-auth-form .mc-divider {
+      margin-top: var(--mc-space-4);
+      margin-bottom: var(--mc-space-4);
     }
 
     .mc-auth-back-link {
@@ -1070,6 +1127,40 @@
     .mc-modal-form-tabs button:disabled {
       opacity: 0.45;
       cursor: not-allowed;
+    }
+
+    /* Tabs compactos tipo pill — modal Mi Semana (Tarea | Evento) */
+    .mc-modal-form-tabs--pill {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+      gap: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+    }
+    .mc-modal-form-tabs--pill button {
+      flex: 0 0 auto;
+      min-width: 96px;
+      padding: 6px 20px;
+      border-radius: 0;
+      background: var(--mc-color-bg-secondary);
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-modal-form-tabs--pill button:first-child {
+      border-radius: var(--mc-radius-pill) 0 0 var(--mc-radius-pill);
+    }
+    .mc-modal-form-tabs--pill button:last-child {
+      border-radius: 0 var(--mc-radius-pill) var(--mc-radius-pill) 0;
+    }
+    .mc-modal-form-tabs--pill button.mc-modal-form-tabs__active {
+      background: var(--mc-color-accent);
+      color: var(--mc-color-on-accent);
+      box-shadow: none;
+    }
+    .mc-modal-form-tabs--pill button:hover:not(:disabled):not(.mc-modal-form-tabs__active) {
+      background: var(--mc-color-surface-hover);
+      color: var(--mc-color-text);
     }
 
     /* Modal: bottom sheet en viewport estrecho (mejor uso táctil y altura) */
@@ -1821,7 +1912,7 @@
     }
     .mc-metricas-hero__value {
       font-size: 48px;
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
@@ -1992,7 +2083,7 @@
     }
     .mc-metricas-donut-ot__total {
       font-size: 22px;
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
       color: var(--mc-color-text);
       line-height: 1;
     }
@@ -2039,7 +2130,7 @@
       align-items: center;
       justify-content: center;
       font-size: 10px;
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
     }
     .mc-metricas-comparativa__scroll {
       overflow-x: auto;
@@ -2409,8 +2500,6 @@
       align-items: stretch;
       gap: 0;
       padding: 0;
-      overflow: hidden;
-      min-height: 0;
       box-shadow: var(--mc-shadow-xs);
       transition: box-shadow 0.15s ease, border-color 0.12s ease;
     }
@@ -2440,6 +2529,7 @@
       flex-direction: column;
       gap: var(--mc-space-1);
       padding: var(--mc-space-2) var(--mc-space-3);
+      position: relative;
     }
     .mc-semana-task-card__prio-chip {
       flex-shrink: 0;
@@ -2540,6 +2630,13 @@
       gap: var(--mc-space-1);
       margin-top: var(--mc-space-1);
     }
+    .mc-semana-task-card__estado-pendiente {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mc-color-text-tertiary);
+      line-height: 0;
+    }
     .mc-semana-task-card__meta-chips {
       display: inline-flex;
       flex-wrap: wrap;
@@ -2555,6 +2652,49 @@
     }
     .mc-semana-task-card__actions--split {
       flex-wrap: nowrap;
+    }
+
+    /* Desktop: acciones al hover (overlay en la base de la card) */
+    @media (min-width: 768px) {
+      .mc-semana-task-card--v2:not(.mc-semana-task-card--completada):not(.mc-semana-task-card--cancelada)
+        .mc-semana-task-card__actions {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        padding: var(--mc-space-2) var(--mc-space-3);
+        border-top: 1px solid var(--mc-color-border);
+        background: color-mix(in srgb, var(--mc-color-surface) 96%, transparent);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transform: translateY(6px);
+        pointer-events: none;
+        transition:
+          opacity 0.15s ease,
+          transform 0.15s ease;
+        z-index: 1;
+      }
+      .mc-semana-task-card--v2:not(.mc-semana-task-card--completada):not(.mc-semana-task-card--cancelada):hover
+        .mc-semana-task-card__actions,
+      .mc-semana-task-card--v2:not(.mc-semana-task-card--completada):not(.mc-semana-task-card--cancelada):focus-within
+        .mc-semana-task-card__actions {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    /* Móvil: acciones siempre visibles en flujo normal */
+    @media (max-width: 767px) {
+      .mc-semana-task-card__actions--mobile {
+        position: static;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+        border-top: 1px solid var(--mc-color-border);
+        background: var(--mc-color-surface);
+      }
     }
     .mc-semana-task-card__action-primary {
       flex: 1;
@@ -2586,6 +2726,15 @@
       background: var(--mc-color-surface-hover);
     }
 
+    @media (max-width: 767px) {
+      .mc-semana-task-card__menu-trigger {
+        min-width: 44px;
+        min-height: 44px;
+        width: 44px;
+        height: 44px;
+      }
+    }
+
     .mc-semana-col-conteo {
       margin: 0;
       padding: var(--mc-space-1) var(--mc-space-2);
@@ -2595,6 +2744,31 @@
       color: var(--mc-color-text-secondary);
       text-align: center;
       font-variant-numeric: tabular-nums;
+    }
+    .mc-semana-dia-col__scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mc-semana-dia-col__scroll-hint {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: 0;
+      padding: var(--mc-space-1) var(--mc-space-2) var(--mc-space-2);
+      text-align: center;
+      font-size: 10px;
+      line-height: 1.3;
+      color: var(--mc-color-text-tertiary);
+      pointer-events: none;
+      background: linear-gradient(
+        to top,
+        var(--mc-color-surface) 55%,
+        color-mix(in srgb, var(--mc-color-surface) 0%, transparent)
+      );
     }
     .mc-semana-dia-col__pie {
       border-top: 1px solid var(--mc-color-border);
@@ -2840,7 +3014,7 @@
     .mc-kpi-card-icon { flex-shrink: 0; width: 20px; height: 20px; }
     .mc-kpi-card-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
     .mc-kpi-card-value {
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
       line-height: 1.1;
       color: var(--mc-color-text);
       display: inline-flex;
@@ -2927,7 +3101,7 @@
 
     .mc-chart-segment-value {
       font-size: 9px;
-      font-weight: 700;
+      font-weight: var(--mc-weight-semibold);
       color: color-mix(in srgb, var(--mc-color-on-accent) 90%, transparent);
       user-select: none;
     }
@@ -3194,6 +3368,12 @@
       align-items: center;
       gap: var(--mc-space-1);
     }
+    .mc-misemana-header__ver-semana {
+      margin-left: var(--mc-space-2);
+    }
+    .mc-misemana-header__ver-semana .mc-filter-item--no-label {
+      gap: 0;
+    }
     .mc-misemana-header__rango {
       font-size: var(--mc-text-sm);
       color: var(--mc-color-text-secondary);
@@ -3235,12 +3415,6 @@
       gap: var(--mc-space-3);
       min-width: 0;
     }
-    .mc-misemana-toolbar__right {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--mc-space-3);
-    }
     .mc-misemana-toolbar__filtro {
       display: inline-flex;
       align-items: center;
@@ -3253,52 +3427,6 @@
       .mc-misemana-toolbar__leyenda {
         display: flex;
       }
-    }
-    .mc-misemana-toggle-completadas {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--mc-space-2);
-      cursor: pointer;
-      font-size: var(--mc-text-xs);
-      color: var(--mc-color-text-secondary);
-      user-select: none;
-    }
-    .mc-misemana-toggle-completadas__input {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-    .mc-misemana-toggle-completadas__track {
-      position: relative;
-      width: 32px;
-      height: 18px;
-      border-radius: 9px;
-      background: var(--mc-color-border);
-      flex-shrink: 0;
-      transition: background var(--mc-transition-fast);
-    }
-    .mc-misemana-toggle-completadas__track::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--mc-color-surface);
-      transition: transform var(--mc-transition-fast);
-    }
-    .mc-misemana-toggle-completadas__input:checked + .mc-misemana-toggle-completadas__track {
-      background: var(--mc-color-accent);
-    }
-    .mc-misemana-toggle-completadas__input:checked + .mc-misemana-toggle-completadas__track::after {
-      transform: translateX(14px);
     }
     .mc-misemana-grilla-host {
       display: flex;
@@ -3491,12 +3619,29 @@
       align-items: baseline;
       gap: var(--mc-space-1);
     }
+    .mc-misemana-stats--compact {
+      gap: var(--mc-space-3);
+    }
+    .mc-misemana-stats--compact .mc-misemana-stats__value {
+      font-size: var(--mc-text-sm);
+      font-weight: 600;
+    }
+    .mc-misemana-stats--compact .mc-misemana-stats__label {
+      font-size: 11px;
+      color: var(--mc-color-text-secondary);
+    }
+    .mc-misemana-stats--compact .mc-misemana-stats__btn {
+      gap: var(--mc-space-1);
+    }
 
     /* ── Objetivos V4.1 ──────────────────────────────────────────────── */
     .mc-objetivos-page {
       flex: 1;
       min-height: 0;
       gap: var(--mc-space-3);
+    }
+    .mc-objetivos-table-grid {
+      grid-template-columns: minmax(0, 1fr) 100px 88px 140px 88px;
     }
     .mc-objetivo-row {
       width: 100%;
@@ -3532,14 +3677,51 @@
       font-size: 10px;
       color: var(--mc-color-text-secondary);
     }
+    .mc-objetivo-row__progreso-meta--critico {
+      color: var(--mc-state-atrasada-meta);
+    }
+    .mc-objetivo-row__progreso-meta--moderado {
+      color: var(--mc-state-precaucion-border);
+    }
+    .mc-objetivo-row__progreso-meta--aceptable {
+      color: var(--mc-state-completada-fg);
+    }
     .mc-objetivo-barra__track {
       width: 100%;
       border-radius: 999px;
       overflow: hidden;
     }
+    .mc-objetivo-barra__track--sin_fecha {
+      background: var(--mc-color-border);
+    }
+    .mc-objetivo-barra__track--critico {
+      background: var(--mc-state-atrasada-bar-soft);
+    }
+    .mc-objetivo-barra__track--moderado {
+      background: var(--mc-state-precaucion-bar-soft);
+    }
+    .mc-objetivo-barra__track--aceptable,
+    .mc-objetivo-barra__track--en_ritmo {
+      background: var(--mc-state-completada-bar-soft);
+    }
     .mc-objetivo-barra__fill {
       border-radius: 999px;
       transition: width 0.4s ease;
+    }
+    .mc-objetivo-barra__fill--critico {
+      background: var(--mc-state-atrasada-border);
+    }
+    .mc-objetivo-barra__fill--moderado {
+      background: var(--mc-state-precaucion-border);
+    }
+    .mc-objetivo-barra__fill--aceptable {
+      background: var(--mc-state-completada-border);
+    }
+    .mc-objetivo-barra__fill--en_ritmo {
+      background: var(--mc-state-progreso-border);
+    }
+    .mc-objetivo-barra__fill--sin_fecha {
+      background: var(--mc-color-neutral-soft);
     }
     .mc-objetivo-badge-riesgo {
       display: inline-block;
@@ -3550,9 +3732,17 @@
       flex-shrink: 0;
       letter-spacing: 0.02em;
     }
-    .mc-objetivos-leyenda--compact {
-      padding: 0;
-      gap: var(--mc-space-2) var(--mc-space-3);
+    .mc-objetivo-badge-riesgo--critico {
+      background: var(--mc-state-atrasada-bg);
+      color: var(--mc-state-atrasada-meta);
+    }
+    .mc-objetivo-badge-riesgo--moderado {
+      background: var(--mc-state-precaucion-bg-soft);
+      color: var(--mc-state-precaucion-border);
+    }
+    .mc-objetivo-badge-riesgo--aceptable {
+      background: var(--mc-state-completada-bg);
+      color: var(--mc-state-completada-fg);
     }
     .mc-objetivos-table-head {
       display: grid;
@@ -3617,6 +3807,21 @@
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
+    }
+    .mc-objetivos-leyenda__dot--critico {
+      background: var(--mc-state-atrasada-border);
+    }
+    .mc-objetivos-leyenda__dot--moderado {
+      background: var(--mc-state-precaucion-border);
+    }
+    .mc-objetivos-leyenda__dot--aceptable {
+      background: var(--mc-state-completada-border);
+    }
+    .mc-objetivos-leyenda__dot--en_ritmo {
+      background: var(--mc-state-progreso-border);
+    }
+    .mc-objetivos-leyenda__dot--sin_fecha {
+      background: var(--mc-color-border);
     }
     .mc-drawer-panel--objetivo {
       width: min(420px, 100vw - 40px);
@@ -3809,6 +4014,10 @@
     .mc-chip--prioridad-baja {
       background: color-mix(in srgb, var(--mc-color-neutral) 12%, transparent);
       color: var(--mc-color-neutral);
+    }
+    .mc-chip--area {
+      background: color-mix(in srgb, var(--mc-color-neutral) 10%, var(--mc-color-surface));
+      color: var(--mc-color-text-secondary);
     }
 
     .mc-semana-task-card--compact {
@@ -4050,3 +4259,50 @@
     }
 
   }
+
+/* ── Typography R2 — tracking negativo en titulares ─────────────────── */
+/* Fuera del layer para tener prioridad superior sin aumentar especificidad. */
+
+/* Título de página y detalle */
+.mc-misemana-header__title {
+  letter-spacing: var(--mc-tracking-lg);
+}
+.mc-tarea-detalle__titulo,
+.mc-objetivo-detalle-mobile__title,
+.mc-ot-detalle-mobile__title {
+  letter-spacing: var(--mc-tracking-lg);
+}
+
+/* Hero de métricas — número grande */
+.mc-metricas-hero__value {
+  letter-spacing: var(--mc-tracking-2xl);
+  font-weight: var(--mc-weight-semibold);
+}
+
+/* KPIs */
+.mc-kpi-card-value {
+  letter-spacing: var(--mc-tracking-tight);
+  font-weight: var(--mc-weight-semibold);
+}
+.mc-kpi-card--lg .mc-kpi-card-value {
+  letter-spacing: var(--mc-tracking-xl);
+}
+
+/* Títulos de modal y sección */
+.mc-modal-title,
+.mc-section-header,
+.mc-plan-panel__title,
+.mc-plan-seccion__title,
+.mc-metricas-section-title,
+.mc-drawer-panel-title {
+  letter-spacing: var(--mc-tracking-md);
+}
+
+/* Títulos de tarjeta de tarea */
+.mc-semana-task-card__title,
+.mc-task-item h3,
+.mc-task-card h3,
+.mc-task-kanban h3,
+.mc-metricas-objetivo-card__titulo {
+  letter-spacing: var(--mc-tracking-base);
+}

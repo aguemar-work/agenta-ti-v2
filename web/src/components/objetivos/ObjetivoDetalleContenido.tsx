@@ -7,7 +7,8 @@ import { fechaLocalYmd } from '@/lib/fecha';
 import { ESTADO_OT_BADGE, ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { breakdownPuntosObjetivo, etiquetaPuntosPrioridad } from '@/lib/objetivoProgreso';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
+import { claseProgresoMetaNivel } from '@/components/objetivos/ObjetivoProgreso';
+import { nivelRiesgoObjetivo } from '@/lib/tareaUrgencia';
 import type { ObjetivoConProgreso } from '@/api/objetivosMetricas';
 import type { EstadoObjetivo, Tarea } from '@/types';
 
@@ -56,7 +57,6 @@ export function ObjetivoDetalleContenido({
   BadgeRiesgo,
 }: Props) {
   const nivel = nivelRiesgoObjetivo(objetivo.pct, objetivo.fecha_limite, objetivo.total_tareas);
-  const config = RIESGO_CONFIG[nivel];
   const breakdown = breakdownPuntosObjetivo(tareasVinc);
 
   return (
@@ -78,7 +78,14 @@ export function ObjetivoDetalleContenido({
           <span className="text-xs text-[var(--mc-color-text-secondary)]">Progreso ponderado</span>
           <div className="flex items-center gap-2">
             <BadgeRiesgo pct={objetivo.pct} fechaLimite={objetivo.fecha_limite} totalTareas={objetivo.total_tareas} />
-            <span className="text-sm font-semibold tabular-nums" style={{ color: config.textColor }}>
+            <span
+              className={[
+                'text-sm font-semibold tabular-nums',
+                claseProgresoMetaNivel(nivel),
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               {breakdown.pct}%
             </span>
           </div>

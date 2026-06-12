@@ -4,6 +4,7 @@ import { JustificacionField } from '@/components/ui/JustificacionField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PlanificacionPanel } from '@/components/planificacion/PlanificacionPanel';
 import { MIN_JUSTIFICACION_CHARS } from '@/lib/constants';
+import { labelLogJustificacion } from '@/lib/logAccionLabels';
 import { inicialesNombre } from '@/lib/metricasHelpers';
 import type { LogAccion } from '@/types';
 
@@ -20,16 +21,6 @@ type Props = {
   onAceptar: (logId: string) => void;
   onDevolver: (logId: string, notaJefe: string) => void;
 };
-
-function labelTipo(tipo: string): string {
-  const m: Record<string, string> = {
-    bloqueada: 'Bloqueo',
-    cancelada: 'Cancelación',
-    reprogramada: 'Reprogramación',
-    eliminada: 'Eliminación',
-  };
-  return m[tipo] ?? tipo;
-}
 
 /** Título de tarea: mapa vivo, join o snapshot en valor_anterior (logs huérfanos pre-034). */
 function tituloTareaDesdeLog(
@@ -124,7 +115,7 @@ export function PlanificacionJustificaciones({
                     </span>
                     <div className="mc-plan-revision-card__meta">
                       <div className="mc-plan-revision-card__row">
-                        <span className="mc-badge mc-badge-secondary">{labelTipo(log.tipo_accion)}</span>
+                        <span className="mc-badge mc-badge-secondary">{labelLogJustificacion(log.tipo_accion)}</span>
                         <span className="mc-plan-revision-card__autor">{nombre}</span>
                         <time className="mc-plan-revision-card__hora" dateTime={log.created_at}>
                           {new Date(log.created_at).toLocaleString('es', {

@@ -14,7 +14,7 @@ const SIZE_CLASS: Record<Size, string> = {
   md: 'mc-avatar mc-avatar--md',
 };
 
-/** Iniciales circulares — Meta Canvas. */
+/** Iniciales circulares — Materen Canvas. */
 export function Avatar({ nombre, size = 'sm', className = '', title }: Props) {
   const label = title ?? nombre;
   return (

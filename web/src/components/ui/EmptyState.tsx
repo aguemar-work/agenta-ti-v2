@@ -34,7 +34,7 @@ export function EmptyState({
       {!compact && Icon ? (
         <Icon size={32} className="mc-empty-icon" aria-hidden />
       ) : null}
-      <p className="mc-empty-title">{title}</p>
+      <h2 className="mc-empty-title">{title}</h2>
       {desc ? <p className="mc-empty-desc">{desc}</p> : null}
       {cta ? <div className="mc-empty-cta">{cta}</div> : null}
     </div>

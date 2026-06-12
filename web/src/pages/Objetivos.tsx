@@ -3,12 +3,15 @@ import { ObjetivoDetallePanel } from '@/components/objetivos/ObjetivoDetallePane
 import { ObjetivoDetalleSidebar } from '@/components/objetivos/ObjetivoDetalleSidebar';
 import { ObjetivosHeader } from '@/components/objetivos/ObjetivosHeader';
 import { ObjetivosToolbar } from '@/components/objetivos/ObjetivosToolbar';
-import { OBJETIVO_TABLA_GRID_COLS, ObjetivoTablaFila } from '@/components/objetivos/ObjetivoTablaFila';
+import { ObjetivoTablaFila } from '@/components/objetivos/ObjetivoTablaFila';
+import { ObjetivosLeyendaRiesgos } from '@/components/objetivos/ObjetivosLeyendaRiesgos';
+import { ObjetivosProgresoInfo } from '@/components/objetivos/ObjetivosProgresoInfo';
 import { Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useObjetivosPage } from '@/hooks/useObjetivosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { nivelRiesgoObjetivo } from '@/lib/tareaUrgencia';
@@ -75,7 +78,7 @@ export function Objetivos() {
   } = useObjetivosPage();
 
   const [pagina, setPagina] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [filtro, setFiltro] = useState<FiltroObjetivo | null>(null);
 
   const nombreResponsablePorId = useMemo(() => {
@@ -84,14 +87,6 @@ export function Objetivos() {
     if (usuario) m.set(usuario.id, usuario.nombre);
     return m;
   }, [usuariosActivos, usuario]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const fn = () => setIsMobile(mq.matches);
-    fn();
-    mq.addEventListener('change', fn);
-    return () => mq.removeEventListener('change', fn);
-  }, []);
 
   useEffect(() => {
     if (!seleccionId) return;
@@ -213,11 +208,13 @@ export function Objetivos() {
         <div className="mc-ot-layout__main">
           <div className="mc-card !p-0 overflow-hidden">
             {!isMobile && (
-              <div className="mc-objetivos-table-head" style={{ gridTemplateColumns: OBJETIVO_TABLA_GRID_COLS }}>
+              <div className="mc-objetivos-table-head mc-objetivos-table-grid">
                 <span className="mc-objetivos-table-head__cell">Objetivo</span>
                 <span className="mc-objetivos-table-head__cell">Responsable</span>
                 <span className="mc-objetivos-table-head__cell">Estado</span>
-                <span className="mc-objetivos-table-head__cell">Progreso</span>
+                <span className="mc-objetivos-table-head__cell">
+                  <ObjetivosProgresoInfo />
+                </span>
                 <span className="mc-objetivos-table-head__cell">Límite</span>
               </div>
             )}
@@ -233,6 +230,13 @@ export function Objetivos() {
                     : esJefe
                       ? 'Crea el primer objetivo estratégico del equipo.'
                       : 'Tu jefe aún no ha creado objetivos para el equipo.'
+                }
+                cta={
+                  !filtro && esJefe ? (
+                    <Button variant="primary" size="sm" onClick={abrirModalNuevo}>
+                      Crear objetivo
+                    </Button>
+                  ) : undefined
                 }
               />
             ) : (
@@ -279,6 +283,8 @@ export function Objetivos() {
         {showSidebar && detalleProps && <ObjetivoDetalleSidebar {...detalleProps} />}
       </div>
 
+      <ObjetivosLeyendaRiesgos />
+
       {isMobile && detalleProps && <ObjetivoDetallePanel open={Boolean(objetivoSel)} {...detalleProps} />}
 
       <Modal
@@ -292,14 +298,15 @@ export function Objetivos() {
         footerClassName="mc-modal-footer--stack"
         footer={
           <>
-            <button
-              type="button"
-              className="mc-btn-modal-primary"
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
               onClick={() => void submitNuevoObjetivo()}
               disabled={!canSubmitNuevo || creandoObj}
             >
               {creandoObj ? 'Guardando…' : 'Crear objetivo'}
-            </button>
+            </Button>
             <CancelButton onClick={cerrarModalNuevoObjetivo} disabled={creandoObj} />
           </>
         }
@@ -373,7 +380,7 @@ export function Objetivos() {
         footer={
           <>
             <Button variant="primary" size="lg" fullWidth onClick={() => void confirmarCompletar()} disabled={completandoObj}>
-              {completandoObj ? 'Guardando…' : esJefe ? 'Cerrar objetivo' : 'Confirmar'}
+              {completandoObj ? 'Guardando…' : esJefe ? 'Cerrar objetivo' : 'Completar objetivo'}
             </Button>
             <CancelButton onClick={cerrarCompletar} disabled={completandoObj} />
           </>

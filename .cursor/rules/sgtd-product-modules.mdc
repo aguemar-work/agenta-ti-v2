@@ -15,7 +15,7 @@ Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejec
 
 ### Mi Semana (`/semana`) — index de la app
 - Grilla Lun–Sáb (6 columnas). Sin panel "Ahora" (eliminado en V4).
-- DnD entre días con @dnd-kit.
+- Mover tareas entre días vía API (sin @dnd-kit en V4).
 - Columna del día actual incluye bloque **Incidencias** (`ZonaIncidencias`).
 - **Panel lateral de notas** (`PanelNotas`): visible en `xl+`, nota rápida + notas recientes.
 - Hooks: `useMiSemanaPage`, `useMiSemana`, `useSemanaDnD`, `useSemanaModales`, `useSemanaNavegacion`, `useHoyColumnas`
@@ -45,6 +45,12 @@ Sistema de Gestión de Tareas Departamental (SGTD): planificación semanal, ejec
 - KPIs por usuario: activas, completadas 7d, objetivos activos, atrasadas.
 - Comparativa entre miembros. Métricas ponderadas por prioridad.
 - Hooks: `useMetricas`, `useObjetivosMetricas` · API: `objetivosMetricas.ts`
+
+### Panel del dueño (`/panel`, `/panel/usuarios`) — Solo plataforma_owner
+- Vista por encima de las organizaciones (`modoContexto='panel'`); separada del modo operativo.
+- `/panel`: listar organizaciones, crear org, entrar a operar, gestionar módulos por org.
+- `/panel/usuarios`: listar usuarios de plataforma y asignar jefe/miembro a una org.
+- Guard: `PanelRoute` · API: `plataforma.ts` · Hooks: `useUsuariosPlataforma`, `useModulosOrg`
 
 ---
 
@@ -87,8 +93,12 @@ Nunca llamar al SDK directamente desde un componente.
 | `/ordenes-trabajo` | `OrdenesTrabajo` | `ProtectedRoute` |
 | `/planificacion` | `Planificacion` | `JefeRoute` |
 | `/metricas` | `Metricas` | `JefeRoute` |
+| `/panel` | `PanelPrincipal` | `PanelRoute` (solo `plataforma_owner`) |
+| `/panel/usuarios` | `PanelUsuarios` | `PanelRoute` (solo `plataforma_owner`) |
 
 Catch-all → redirige a `/semana`.
+
+> **Panel del dueño:** solo visible para usuarios en `plataforma_owner`. Modo panel (`modoContexto='panel'`) oculta nav operativo; el dueño opera una org a la vez vía header `x-workspace-id`.
 
 ---
 

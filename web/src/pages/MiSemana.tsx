@@ -9,6 +9,7 @@ import {
   navegarSemanaSiguiente,
 } from '@/components/semana/MiSemanaHeader';
 import { MiSemanaToolbar } from '@/components/semana/MiSemanaToolbar';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSwipeDiaSemana } from '@/hooks/useSwipeDiaSemana';
 import {
   ModalDetalleTareaSemana,
@@ -18,6 +19,7 @@ import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { ModalConvertirNota } from '@/components/semana/ModalConvertirNota';
 import { NotasDrawer } from '@/components/semana/NotasDrawer';
 import { Modal } from '@/components/ui/Modal';
+import { SkeletonSemanaGrilla } from '@/components/ui/Skeletons';
 import { ESTADO_OT_LABEL } from '@/lib/otConfig';
 import { ModalCompletarTarea } from '@/components/tareas/ModalCompletarTarea';
 import { ModalReprogramar } from '@/components/tareas/ModalReprogramar';
@@ -37,11 +39,11 @@ const MiSemanaGrilla = lazy(() =>
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const CONTEO_CONFIG = [
-  { key: 'pendiente', label: 'Pendientes' },
-  { key: 'en_progreso', label: 'En progreso' },
-  { key: 'atrasada', label: 'Atrasadas' },
-  { key: 'reprogramada', label: 'Reprogramadas' },
-  { key: 'completada', label: 'Completadas' },
+  { key: 'pendiente', label: 'pendientes' },
+  { key: 'en_progreso', label: 'en progreso' },
+  { key: 'atrasada', label: 'atrasadas' },
+  { key: 'reprogramada', label: 'reprogramadas' },
+  { key: 'completada', label: 'completadas' },
 ] as const;
 
 type FiltroEstado = (typeof CONTEO_CONFIG)[number]['key'];
@@ -67,8 +69,6 @@ export function MiSemana() {
     notasHoy,
     ordenesPorTarea,
     nombresPorId,
-    ocultarCompletadas,
-    toggleOcultarCompletadas,
     modalInc,
     setModalInc,
     notaRapida,
@@ -81,6 +81,13 @@ export function MiSemana() {
     confirmarConvertirNotaEvento,
     objetivosActivos,
     usuariosAsignables,
+    clientesCatalogo,
+    proyectosActivos,
+    areasCatalogo,
+    areasPorId,
+    moduloClientes,
+    moduloProyectos,
+    moduloAreas,
     tareaDetalle,
     tareaCompletar,
     modal,
@@ -102,6 +109,8 @@ export function MiSemana() {
     iniciarDesdeDetalle,
     generarOtDesdeTarea,
     incidenciasSemana,
+    completarPendingId,
+    iniciarPendingId,
   } = useMiSemanaPage();
 
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado | null>(null);
@@ -122,6 +131,7 @@ export function MiSemana() {
   const diasYmd = useMemo(() => diasSemana.map((d) => fechaLocalYmd(d)), [diasSemana]);
 
   useSwipeDiaSemana(diasYmd, diaMobileYmd, setDiaMobileYmd);
+  const isMobile = useIsMobile();
 
   function toggleFiltro(key: FiltroEstado) {
     setFiltroEstado((prev) => (prev === key ? null : key));
@@ -131,17 +141,18 @@ export function MiSemana() {
     () =>
       CONTEO_CONFIG.map(({ key, label }) => {
         const n = conteos[key] ?? 0;
-        const disabled = n === 0 && filtroEstado !== key;
         const active = filtroEstado === key;
+        const visible = n > 0 || active;
+        if (!visible) return null;
         return {
           key,
           label,
           value: n,
           active,
-          disabled,
-          onClick: disabled ? undefined : () => toggleFiltro(key),
+          disabled: false,
+          onClick: () => toggleFiltro(key),
         };
-      }),
+      }).filter((item): item is NonNullable<typeof item> => item !== null),
     [conteos, filtroEstado],
   );
 
@@ -154,76 +165,61 @@ export function MiSemana() {
 
   return (
     <div className={`${APP_PAGE_CLASS} mc-misemana-page`}>
-      {/* Móvil: cabecera compacta + pills de día */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-3">
         <MiSemanaHeader
           lunes={lunes}
           sabado={sabado}
           onSemanaAnterior={() => setLunes((d) => navegarSemanaAnterior(d))}
           onSemanaSiguiente={() => setLunes((d) => navegarSemanaSiguiente(d))}
           onIrHoy={() => setLunes(lunesSemanaActual())}
-          onNuevaTarea={() => setModal({ fecha: diaMobileYmd })}
-          nuevaTareaLabel="+ Tarea"
+          onNuevaTarea={() => setModal({ fecha: isMobile ? diaMobileYmd : hoyYmd })}
+          nuevaTareaLabel={isMobile ? '+ Tarea' : '+ Nueva tarea'}
           onNotas={() => setNotasDrawerOpen(true)}
           notasOpen={notasDrawerOpen}
+          esJefe={esJefe}
+          uid={uid}
+          usuariosJefe={usuariosJefe ?? []}
+          onSeleccionarUsuario={setSeleccionId}
         />
-        <div
-          className="flex touch-pan-x gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          role="group"
-          aria-label="Elegir día de la semana"
-        >
-          {diasSemana.map((d, i) => {
-            const ymd = fechaLocalYmd(d);
-            const esHoy = ymd === hoyYmd;
-            const esActivo = ymd === diaMobileYmd;
-            return (
-              <button
-                key={ymd}
-                type="button"
-                aria-pressed={esActivo}
-                onClick={() => setDiaMobileYmd(ymd)}
-                className={[
-                  'shrink-0 rounded-[var(--mc-radius-md)] px-3 py-1.5 text-xs font-medium transition-colors',
-                  esActivo
-                    ? 'bg-[var(--mc-color-accent)] text-white'
-                    : 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]',
-                  esHoy && !esActivo
-                    ? 'ring-1 ring-[var(--mc-color-accent)] ring-offset-1 ring-offset-[var(--mc-color-bg)]'
-                    : '',
-                ].join(' ')}
-              >
-                {DIAS_CORTO[i]}
-                {esHoy ? <span className="ml-1 text-[9px] opacity-80">· hoy</span> : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Desktop: cabecera en dos columnas */}
-      <div className="hidden md:block">
-        <MiSemanaHeader
-          lunes={lunes}
-          sabado={sabado}
-          onSemanaAnterior={() => setLunes((d) => navegarSemanaAnterior(d))}
-          onSemanaSiguiente={() => setLunes((d) => navegarSemanaSiguiente(d))}
-          onIrHoy={() => setLunes(lunesSemanaActual())}
-          onNuevaTarea={() => setModal({ fecha: hoyYmd })}
-          onNotas={() => setNotasDrawerOpen(true)}
-          notasOpen={notasDrawerOpen}
-        />
+        {isMobile && (
+          <div
+            className="flex touch-pan-x gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Elegir día de la semana"
+          >
+            {diasSemana.map((d, i) => {
+              const ymd = fechaLocalYmd(d);
+              const esHoy = ymd === hoyYmd;
+              const esActivo = ymd === diaMobileYmd;
+              return (
+                <button
+                  key={ymd}
+                  type="button"
+                  aria-pressed={esActivo}
+                  onClick={() => setDiaMobileYmd(ymd)}
+                  className={[
+                    'shrink-0 rounded-[var(--mc-radius-md)] px-3 py-1.5 text-xs font-medium transition-colors',
+                    esActivo
+                      ? 'bg-[var(--mc-color-accent)] text-white'
+                      : 'bg-[var(--mc-color-bg-secondary)] text-[var(--mc-color-text-secondary)]',
+                    esHoy && !esActivo
+                      ? 'ring-1 ring-[var(--mc-color-accent)] ring-offset-1 ring-offset-[var(--mc-color-bg)]'
+                      : '',
+                  ].join(' ')}
+                >
+                  {DIAS_CORTO[i]}
+                  {esHoy ? <span className="ml-1 text-[9px] opacity-80">· hoy</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <MiSemanaToolbar
         statsItems={statsItems}
-        ocultarCompletadas={ocultarCompletadas}
-        onToggleCompletadas={toggleOcultarCompletadas}
         filtroActivoLabel={filtroActivoLabel}
         onLimpiarFiltro={() => setFiltroEstado(null)}
-        esJefe={esJefe}
-        uid={uid}
-        usuariosJefe={usuariosJefe ?? []}
-        onSeleccionarUsuario={setSeleccionId}
       />
 
       {esBannerViernes && (
@@ -248,11 +244,7 @@ export function MiSemana() {
       )}
 
       <Suspense
-        fallback={
-          <div className="mc-page-loading min-h-[220px] flex-1" role="status">
-            Cargando agenda…
-          </div>
-        }
+        fallback={<SkeletonSemanaGrilla />}
       >
         <MiSemanaGrilla
           diasSemana={diasSemana}
@@ -264,7 +256,7 @@ export function MiSemana() {
           incidenciasSemana={incidenciasSemana}
           ordenesPorTarea={ordenesPorTarea}
           nombresPorId={nombresPorId}
-          ocultarCompletadas={ocultarCompletadas}
+          areasPorId={areasPorId}
           puedeGestionar={puedeGestionar}
           onAbrirModalDia={(fecha) => setModal({ fecha })}
           onAbrirDetalle={setDetalleTareaId}
@@ -273,6 +265,8 @@ export function MiSemana() {
             setModalInc(true);
           }}
           onOtClick={setOtViendo}
+          completarPendingId={completarPendingId}
+          iniciarPendingId={iniciarPendingId}
           onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
           onCompletarTarea={(t) => setCompletarTareaId(t.id)}
           onReprogramarTarea={(t) => setReprDetalleTarea(t)}
@@ -316,6 +310,12 @@ export function MiSemana() {
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
         asignadoPorDefectoId={uid}
+        clientes={clientesCatalogo}
+        proyectos={proyectosActivos}
+        areas={areasCatalogo}
+        moduloClientes={moduloClientes}
+        moduloProyectos={moduloProyectos}
+        moduloAreas={moduloAreas}
         onClose={() => setModal(null)}
         onCrearTarea={crearTareaDesdeModal}
         onCrearEvento={crearEventoDesdeModal}
@@ -373,6 +373,12 @@ export function MiSemana() {
         tarea={tareaDetalle}
         objetivos={objetivosActivos}
         usuariosAsignables={usuariosAsignables}
+        clientes={clientesCatalogo}
+        proyectos={proyectosActivos}
+        areas={areasCatalogo}
+        moduloClientes={moduloClientes}
+        moduloProyectos={moduloProyectos}
+        moduloAreas={moduloAreas}
         ot={tareaDetalle ? ordenesPorTarea.get(tareaDetalle.id) ?? null : null}
         readOnly={Boolean(tareaDetalle && !esJefe && tareaDetalle.asignado_a !== usuario.id)}
         {...(detalleVistaInicial ? { vistaInicial: detalleVistaInicial } : {})}

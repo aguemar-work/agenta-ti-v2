@@ -3,14 +3,23 @@
 
 <head>
   <meta charset="UTF-8" />
+  <!-- ── Tema — anti-flash: aplica .dark ANTES del primer render ───────── -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('mc-theme');
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- ── Identidad ────────────────────────────────────────────────────── -->
-  <title>Nexora — Agenda TI</title>
+  <title>Materen — Agenda TI</title>
   <meta name="description" content="Sistema de gestión de agenda y tareas para el equipo de TI." />
-  <meta name="application-name" content="Nexora" />
-  <!-- Coincide con --mc-color-accent (Meta Canvas) -->
-  <meta name="theme-color" content="#0064E0" />
+  <meta name="application-name" content="Materen" />
+  <!-- Coincide con --mc-color-accent (teal Materen) -->
+  <meta name="theme-color" content="#1488A6" />
 
   <!-- ── Favicon ──────────────────────────────────────────────────────── -->
   <!--
@@ -27,7 +36,7 @@
 
   <!-- ── Open Graph (compartir en Slack, Teams, etc.) ─────────────────── -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Nexora — Agenda TI" />
+  <meta property="og:title" content="Materen — Agenda TI" />
   <meta property="og:description" content="Sistema de gestión de agenda y tareas para el equipo de TI." />
   <!-- Slack/Teams requieren URL absoluta: sustituye el host por tu dominio (p. ej. *.vercel.app). -->
   <meta property="og:image" content="https://nexora.tudominio.com/og-image.png" />

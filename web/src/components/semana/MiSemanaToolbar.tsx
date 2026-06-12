@@ -1,4 +1,3 @@
-import { MiSemanaMenuSecundario } from '@/components/semana/MiSemanaMenuSecundario';
 import { MiSemanaStatsInline } from '@/components/semana/MiSemanaStatsInline';
 
 type StatItem = {
@@ -12,31 +11,15 @@ type StatItem = {
 
 type Props = {
   statsItems: StatItem[];
-  ocultarCompletadas: boolean;
-  onToggleCompletadas: () => void;
   filtroActivoLabel: string | null;
   onLimpiarFiltro: () => void;
-  esJefe: boolean;
-  uid: string;
-  usuariosJefe: { id: string; nombre: string }[];
-  onSeleccionarUsuario: (id: string) => void;
 };
 
-export function MiSemanaToolbar({
-  statsItems,
-  ocultarCompletadas,
-  onToggleCompletadas,
-  filtroActivoLabel,
-  onLimpiarFiltro,
-  esJefe,
-  uid,
-  usuariosJefe,
-  onSeleccionarUsuario,
-}: Props) {
+export function MiSemanaToolbar({ statsItems, filtroActivoLabel, onLimpiarFiltro }: Props) {
   return (
     <div className="mc-misemana-toolbar">
       <div className="mc-misemana-toolbar__left">
-        <MiSemanaStatsInline items={statsItems} />
+        <MiSemanaStatsInline items={statsItems} compact />
         {filtroActivoLabel && (
           <div className="mc-misemana-toolbar__filtro" role="status" aria-live="polite">
             <span className="text-xs text-[var(--mc-color-text-secondary)]">
@@ -46,27 +29,6 @@ export function MiSemanaToolbar({
               Limpiar
             </button>
           </div>
-        )}
-      </div>
-
-      <div className="mc-misemana-toolbar__right">
-        <label className="mc-misemana-toggle-completadas">
-          <input
-            type="checkbox"
-            className="mc-misemana-toggle-completadas__input"
-            checked={!ocultarCompletadas}
-            onChange={onToggleCompletadas}
-          />
-          <span className="mc-misemana-toggle-completadas__track" aria-hidden />
-          <span className="mc-misemana-toggle-completadas__label">Mostrar completadas</span>
-        </label>
-        {esJefe && (
-          <MiSemanaMenuSecundario
-            esJefe={esJefe}
-            uid={uid}
-            usuariosJefe={usuariosJefe}
-            onSeleccionarUsuario={onSeleccionarUsuario}
-          />
         )}
       </div>
     </div>

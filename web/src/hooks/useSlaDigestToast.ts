@@ -17,6 +17,7 @@ import {
 import { markSlaDigestShownToday, wasSlaDigestShownToday } from '@/lib/slaDigest';
 import { planificacionSlaPath } from '@/lib/slaNavigation';
 import { useAuthStore } from '@/store/authStore';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
 function mensajeResumenSla(atrasadas: number): string {
   if (atrasadas <= 0) return '';
@@ -26,14 +27,15 @@ function mensajeResumenSla(atrasadas: number): string {
 export function useSlaDigestToast(prefs: NotificationPrefs | null) {
   const navigate = useNavigate();
   const usuario  = useAuthStore((s) => s.usuario);
+  const esJefe   = useWorkspaceStore((s) => s.esJefe());
   const shownRef = useRef(false);
 
   const { data, isSuccess } = useResumenSlaJefe({
-    enabled: Boolean(usuario?.id && usuario.rol === 'jefe' && prefs),
+    enabled: Boolean(usuario?.id && esJefe && prefs),
   });
 
   useEffect(() => {
-    if (!usuario?.id || usuario.rol !== 'jefe' || !prefs || !isSuccess || !data) return;
+    if (!usuario?.id || !esJefe || !prefs || !isSuccess || !data) return;
     if (shownRef.current) return;
     if (!isNotificationEnabled(prefs, 'resumen_sla_diario')) return;
     if (wasSlaDigestShownToday(usuario.id)) return;
@@ -56,5 +58,5 @@ export function useSlaDigestToast(prefs: NotificationPrefs | null) {
       },
     });
     announcePolitely(msg);
-  }, [data, isSuccess, navigate, prefs, usuario?.id, usuario?.rol]);
+  }, [data, esJefe, isSuccess, navigate, prefs, usuario?.id]);
 }

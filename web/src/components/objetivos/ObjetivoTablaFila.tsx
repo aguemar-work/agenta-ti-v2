@@ -1,10 +1,12 @@
 import type { ObjetivoConProgreso } from '@/api/objetivosMetricas';
-import { ObjetivoBadgeRiesgo, ObjetivoBarraProgreso } from '@/components/objetivos/ObjetivoProgreso';
+import {
+  ObjetivoBadgeRiesgo,
+  ObjetivoBarraProgreso,
+  claseProgresoMetaNivel,
+} from '@/components/objetivos/ObjetivoProgreso';
 import { OBJETIVO_BADGE, OBJETIVO_LABEL } from '@/lib/estadoConfig';
-import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
+import { nivelRiesgoObjetivo } from '@/lib/tareaUrgencia';
 import type { EstadoObjetivo } from '@/types';
-
-export const OBJETIVO_TABLA_GRID_COLS = 'minmax(0, 1fr) 100px 88px 140px 88px';
 
 type Props = {
   objetivo: ObjetivoConProgreso;
@@ -15,7 +17,6 @@ type Props = {
 
 export function ObjetivoTablaFila({ objetivo: o, responsableNombre, selected, onSelect }: Props) {
   const nivel = nivelRiesgoObjetivo(o.pct, o.fecha_limite, o.total_tareas);
-  const config = RIESGO_CONFIG[nivel];
   const esCrit = nivel === 'critico';
   const vencido =
     Boolean(o.fecha_limite) &&
@@ -26,13 +27,12 @@ export function ObjetivoTablaFila({ objetivo: o, responsableNombre, selected, on
     <button
       type="button"
       className={[
-        'mc-list-row mc-objetivo-row',
+        'mc-list-row mc-objetivo-row mc-objetivos-table-grid',
         selected ? 'mc-list-row--selected' : '',
         !selected && esCrit ? 'mc-list-row--atrasada' : '',
       ]
         .filter(Boolean)
         .join(' ')}
-      style={{ gridTemplateColumns: OBJETIVO_TABLA_GRID_COLS }}
       onClick={onSelect}
     >
       <div className="mc-objetivo-row__titulo min-w-0 text-left">
@@ -54,13 +54,12 @@ export function ObjetivoTablaFila({ objetivo: o, responsableNombre, selected, on
       <div className="mc-objetivo-row__progreso">
         <ObjetivoBarraProgreso pct={o.pct} fechaLimite={o.fecha_limite} totalTareas={o.total_tareas} />
         <span
-          className="mc-objetivo-row__progreso-meta"
-          style={{
-            color:
-              config.textColor !== 'var(--mc-color-text-secondary)'
-                ? config.textColor
-                : undefined,
-          }}
+          className={[
+            'mc-objetivo-row__progreso-meta',
+            claseProgresoMetaNivel(nivel),
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           {o.completadas}/{o.total_tareas} · {o.pct}%
         </span>

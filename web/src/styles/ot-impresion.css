@@ -73,7 +73,7 @@
 
 .ot-area {
   font-size: 8pt;
-  font-weight: 700;
+  font-weight: var(--mc-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--mc-color-text-secondary);
@@ -81,7 +81,7 @@
 
 .ot-title {
   font-size: 15pt;
-  font-weight: 700;
+  font-weight: var(--mc-weight-semibold);
 }
 
 .ot-numero {
@@ -101,7 +101,7 @@
   border: 1.5px solid var(--mc-color-text);
   border-radius: 4px;
   font-size: 8.5pt;
-  font-weight: 700;
+  font-weight: var(--mc-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -161,7 +161,7 @@
 
 .ot-section {
   font-size: 7.5pt;
-  font-weight: 700;
+  font-weight: var(--mc-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--mc-color-text-secondary);
@@ -188,7 +188,7 @@
 
 .ot-firma-role {
   font-size: 7.5pt;
-  font-weight: 700;
+  font-weight: var(--mc-weight-semibold);
   color: var(--mc-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;

@@ -1,4 +1,6 @@
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { fechaLocalDdMmYyyy } from '@/lib/fecha';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { Tarea } from '@/types';
@@ -17,7 +19,13 @@ export function PlanificacionCeldaSidebar({ nombre, fecha, tareas, loading, hoyY
     <aside className="mc-ot-sidebar" role="complementary" aria-label="Tareas del día">
       <header className="mc-ot-sidebar__header">
         <div className="min-w-0 flex-1">
-          <p className="mc-ot-sidebar__numero">{fecha}</p>
+          <Breadcrumb
+            items={[
+              { label: 'Planificación' },
+              { label: nombre },
+              { label: fechaLocalDdMmYyyy(new Date(fecha + 'T12:00:00')), current: true },
+            ]}
+          />
           <p className="mc-ot-sidebar__titulo">{nombre}</p>
         </div>
         <button type="button" className="mc-modal-close" onClick={onClose} aria-label="Cerrar panel">

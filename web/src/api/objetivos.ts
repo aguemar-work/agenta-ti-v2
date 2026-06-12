@@ -88,24 +88,13 @@ export async function eliminarObjetivo(input: {
   usuarioId: string;
   motivo: string;
 }): Promise<void> {
-  const insforge = getInsforge();
   const motivo = input.motivo.trim();
   if (motivo.length < MIN_JUSTIFICACION_CHARS) throw new Error(MSG_JUSTIFICACION_CORTA);
 
-  const { error: eLog } = await insforge.database.from('log_accion').insert([{
-    tarea_id: null,
-    usuario_id: input.usuarioId,
-    tipo_accion: 'eliminada',
-    valor_anterior: { objetivo_id: input.objetivoId },
-    valor_nuevo: null,
-    justificacion: motivo,
-    leido_por_jefe: false,
-  }]);
-  if (eLog) throw eLog;
-
-  const { error } = await insforge.database
-    .from('objetivo')
-    .delete()
-    .eq('id', input.objetivoId);
+  const { error } = await getInsforge().database.rpc('sgtd_eliminar_objetivo', {
+    p_objetivo_id: input.objetivoId,
+    p_usuario_id: input.usuarioId,
+    p_motivo: motivo,
+  });
   if (error) throw error;
 }

@@ -1,5 +1,5 @@
-import iconUrl from '@/assets/icon-nexora-png.png';
-import logoUrl from '@/assets/logo-nexora.png';
+import iconUrl from '@/assets/icon_materen.png';
+import logoUrl from '@/assets/logo_materen.png';
 
 type LogoProps = {
   /** Altura en px; el ancho escala con aspect ratio. */
@@ -7,15 +7,20 @@ type LogoProps = {
   className?: string;
 };
 
-/** Logo Nexora para cabeceras y pantallas de auth. */
+/** Proporción aproximada del logo Materen (evita CLS al cargar). */
+const LOGO_ASPECT = 280 / 52;
+
+/** Logo Materen para cabeceras y pantallas de auth. */
 export function AppLogo({ height = 32, className }: LogoProps) {
+  const width = Math.round(height * LOGO_ASPECT);
   return (
     <img
       src={logoUrl}
-      alt="Nexora"
+      alt="Materen"
+      width={width}
       height={height}
       className={className}
-      style={{ height, width: 'auto', maxWidth: '100%', objectFit: 'contain' }}
+      style={{ height, width, maxWidth: '100%', objectFit: 'contain' }}
       decoding="async"
     />
   );

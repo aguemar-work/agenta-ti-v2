@@ -14,29 +14,35 @@ import {
   moverTareaEntreDias,
 } from '@/api/semana';
 import { Q_KPIS, Q_OBJ_PROG } from '@/hooks/useObjetivosMetricas';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import type { CrearEventoUsuarioInput, CrearTareaPlanificadaInput } from '@/api/semana';
+import { qkWsId } from '@/lib/queryKeys';
+import { getWorkspaceId } from '@/store/workspaceStore';
 import type { Tarea } from '@/types';
 
 const Q = {
-  plan: (uid: string, sem: string) => ['semana', 'plan', uid, sem] as const,
-ev: (uid: string, sem: string) => ['semana', 'eventos', uid, sem] as const,
+  plan: (wsId: string | null, uid: string, sem: string) =>
+    qkWsId(wsId, 'semana', 'plan', uid, sem),
+  ev: (wsId: string | null, uid: string, sem: string) =>
+    qkWsId(wsId, 'semana', 'eventos', uid, sem),
 };
 
 export function useMiSemanaData(usuarioId: string | undefined, semanaISO: string, lunes: Date) {
+  const workspaceId = useWorkspaceId();
   const qPlan = useQuery({
-    queryKey: usuarioId ? Q.plan(usuarioId, semanaISO) : ['semana', 'plan', 'noop'],
-    enabled: Boolean(usuarioId),
+    queryKey: usuarioId ? Q.plan(workspaceId, usuarioId, semanaISO) : ['semana', 'plan', 'noop'],
+    enabled: Boolean(usuarioId) && Boolean(workspaceId),
     queryFn: () => getTareasSemana(usuarioId!, semanaISO),
   });
   const qEv = useQuery({
-    queryKey: usuarioId ? Q.ev(usuarioId, semanaISO) : ['semana', 'eventos', 'noop'],
-    enabled: Boolean(usuarioId),
+    queryKey: usuarioId ? Q.ev(workspaceId, usuarioId, semanaISO) : ['semana', 'eventos', 'noop'],
+    enabled: Boolean(usuarioId) && Boolean(workspaceId),
     queryFn: () => getEventosSemana(usuarioId!, lunes),
   });
 
   return {
     tareasPlan: qPlan.data ?? [],
-eventos: qEv.data ?? [],
+    eventos: qEv.data ?? [],
     isLoading: qPlan.isLoading || qEv.isLoading,
     isError: qPlan.isError || qEv.isError,
   };
@@ -46,19 +52,18 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
   const qc = useQueryClient();
 
   const invalidate = async () => {
-    if (!usuarioId) return;
+    const wsId = getWorkspaceId();
+    if (!usuarioId || !wsId) return;
     await Promise.all([
-      // exact:false invalida TODAS las queries que empiecen con ['semana', 'plan', usuarioId]
-      // — incluye tareas de semanas anteriores que llegaron por situacion.eq.atrasada
-      qc.invalidateQueries({ queryKey: ['semana', 'plan', usuarioId], exact: false }),
-      qc.invalidateQueries({ queryKey: ['semana', 'eventos', usuarioId], exact: false }),
-      qc.invalidateQueries({ queryKey: ['tareas-hoy', usuarioId], exact: false }),
-      qc.invalidateQueries({ queryKey: ['tablero'], exact: false }),
-      qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
-      qc.invalidateQueries({ queryKey: [Q_OBJ_PROG], exact: false }),
-      qc.invalidateQueries({ queryKey: [Q_KPIS], exact: false }),
-      qc.invalidateQueries({ queryKey: ['ordenes-trabajo'], exact: false }),
-      qc.invalidateQueries({ queryKey: ['semana', 'ot-por-tarea'], exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana', 'plan', usuarioId), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana', 'eventos', usuarioId), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tareas-hoy', usuarioId), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tablero'), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'planificacion'), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_OBJ_PROG), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_KPIS), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'ordenes-trabajo'), exact: false }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana', 'ot-por-tarea'), exact: false }),
     ]);
   };
 
@@ -145,5 +150,9 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       mCompletar.isPending ||
       mIniciar.isPending ||
       mCrearEvento.isPending,
+    completarPendingId: mCompletar.isPending ? (mCompletar.variables?.tareaId ?? null) : null,
+    iniciarPendingId:   mIniciar.isPending   ? (mIniciar.variables?.tareaId   ?? null) : null,
+    eliminarPendingId:  mEliminar.isPending  ? (mEliminar.variables?.tareaId  ?? null) : null,
+    cancelarPendingId:  mCancelar.isPending  ? (mCancelar.variables?.tareaId  ?? null) : null,
   };
 }

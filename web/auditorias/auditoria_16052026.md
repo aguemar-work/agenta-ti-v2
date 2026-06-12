@@ -28,7 +28,7 @@
 
 ## DIAGNÓSTICO GENERAL
 
-Agenda TI es una plataforma de gestión de tareas para equipos de TI con roles jefe/miembro. Técnicamente madura para su escala: design system propio (Meta Canvas), sistema de permisos frontend, DnD funcional, real-time vía socket, separación clara hooks/api/lib.
+Agenda TI es una plataforma de gestión de tareas para equipos de TI con roles jefe/miembro. Técnicamente madura para su escala: design system propio (Materen Canvas), sistema de permisos frontend, DnD funcional, real-time vía socket, separación clara hooks/api/lib.
 
 **Estado general: 7.1/10** *(mejorado desde 6.8 tras Fase 0)*
 

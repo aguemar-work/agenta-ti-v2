@@ -229,6 +229,7 @@ CREATE INDEX IF NOT EXISTS idx_orden_trabajo_creado_por  ON public.orden_trabajo
 CREATE INDEX IF NOT EXISTS idx_orden_trabajo_estado      ON public.orden_trabajo (estado);
 CREATE INDEX IF NOT EXISTS idx_orden_trabajo_prioridad   ON public.orden_trabajo (prioridad);
 CREATE INDEX IF NOT EXISTS idx_orden_trabajo_objetivo_id ON public.orden_trabajo (objetivo_id);
+CREATE INDEX IF NOT EXISTS idx_orden_trabajo_tarea_id   ON public.orden_trabajo (tarea_id) WHERE tarea_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_log_ot_ot_id              ON public.log_ot (ot_id);
 CREATE INDEX IF NOT EXISTS idx_log_ot_usuario_id         ON public.log_ot (usuario_id);
 

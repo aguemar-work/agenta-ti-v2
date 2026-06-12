@@ -151,6 +151,9 @@ export type CrearIncidenciaInput = {
   /** true = ya fue resuelta (completada) / false = pendiente de atender */
   ya_resuelta:      boolean;
   objetivo_id?:     string | null;
+  cliente_id?:      string | null;
+  proyecto_id?:     string | null;
+  area_id?:         string | null;
 };
 
 /**
@@ -172,6 +175,9 @@ export async function crearIncidencia(input: CrearIncidenciaInput): Promise<Tare
     p_ya_resuelta: input.ya_resuelta,
     p_asignado_a:  input.asignado_a ?? null,
     p_objetivo_id: input.objetivo_id ?? null,
+    p_cliente_id:  input.cliente_id ?? null,
+    p_proyecto_id: input.proyecto_id ?? null,
+    p_area_id:     input.area_id ?? null,
   });
 
   if (error) throw error;

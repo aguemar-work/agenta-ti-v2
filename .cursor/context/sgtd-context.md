@@ -65,7 +65,7 @@ Fuente: 'sgtd-business-rules.mdc'
 Fuente completa: 'sgtd-auth-session.mdc'
 
 ## 8. UI/Design System
-Sistema visual: Meta Canvas
+Sistema visual: Materen Canvas
 - uso obligatorio de tokens
 - componentes '.mc-*'
 - layout definido

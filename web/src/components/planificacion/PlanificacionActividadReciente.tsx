@@ -1,20 +1,10 @@
 import type { LogActividadItem } from '@/api/audit';
 import { PlanificacionPanel } from '@/components/planificacion/PlanificacionPanel';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { labelLogActividadFeed } from '@/lib/logAccionLabels';
 import { inicialesNombre } from '@/lib/metricasHelpers';
 
 const MAX_VISIBLE = 7;
-
-function labelActividad(tipo: string): string {
-  const m: Record<string, string> = {
-    completada: 'Completó tarea',
-    bloqueada: 'Bloqueó tarea',
-    reprogramada: 'Reprogramó tarea',
-    cancelada: 'Canceló tarea',
-    desbloqueada: 'Desbloqueó tarea',
-  };
-  return m[tipo] ?? 'Actividad';
-}
 
 type Props = {
   actividad: LogActividadItem[];
@@ -49,7 +39,7 @@ export function PlanificacionActividadReciente({ actividad, loading, onVerToda }
                   </time>
                 </div>
                 <p className="mc-plan-row__texto">
-                  {labelActividad(item.tipo_accion)}
+                  {labelLogActividadFeed(item.tipo_accion)}
                   {item.tarea_titulo ? `: ${item.tarea_titulo}` : ''}
                 </p>
               </div>

@@ -12,7 +12,14 @@ import type { Usuario } from '@/types';
 // ---------------------------------------------------------------------------
 const ALLOWED_DOMAINS: string[] | null = (() => {
   const raw = (import.meta.env.VITE_ALLOWED_EMAIL_DOMAINS as string | undefined)?.trim();
-  if (!raw) return null;
+  if (!raw) {
+    if (import.meta.env.PROD) {
+      throw new Error(
+        'VITE_ALLOWED_EMAIL_DOMAINS no está configurado. Define los dominios permitidos en Vercel.',
+      );
+    }
+    return null;
+  }
   return raw.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
 })();
 

@@ -39,6 +39,7 @@ export function selectRol(s: AuthState): RolUsuario | null {
   return s.usuario?.rol ?? null;
 }
 
+/** @deprecated V5: usar `useWorkspaceStore((s) => s.esJefe())` o `useWorkspaceStore.getState().esJefe()`. */
 export function selectEsJefe(s: AuthState): boolean {
   return s.usuario?.rol === 'jefe';
 }

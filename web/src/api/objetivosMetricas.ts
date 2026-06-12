@@ -91,32 +91,18 @@ export type KpisComparativaMiembro = {
 };
 
 export async function getObjetivosConProgreso(): Promise<ObjetivoConProgreso[]> {
-  const insforge = getInsforge();
-  const { data: objs, error: e1 } = await insforge.database.from('objetivo').select('*').order('fecha_limite', { ascending: true });
-  if (e1) throw e1;
-  const objetivos = (objs ?? []).map((r) => parseObjetivo(r as Record<string, unknown>));
+  const { data, error } = await getInsforge().database.rpc('sgtd_objetivos_con_progreso');
+  if (error) throw error;
 
-  const { data: trows, error: e2 } = await insforge.database
-    .from(TAREA_ACTIVA)
-    .select('id,objetivo_id,estado')
-    .not('objetivo_id', 'is', null);
-  if (e2) throw e2;
-  const tareas = (trows ?? []) as Pick<Tarea, 'id' | 'objetivo_id' | 'estado'>[];
-
-  const byObj = new Map<string, { total: number; done: number }>();
-  for (const t of tareas) {
-    if (!t.objetivo_id) continue;
-    if (t.estado === 'cancelada') continue;
-    const cur = byObj.get(t.objetivo_id) ?? { total: 0, done: 0 };
-    cur.total += 1;
-    if (t.estado === 'completada') cur.done += 1;
-    byObj.set(t.objetivo_id, cur);
-  }
-
-  return objetivos.map((o) => {
-    const { total, done } = byObj.get(o.id) ?? { total: 0, done: 0 };
-    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-    return { ...o, total_tareas: total, completadas: done, pct };
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const r = row;
+    const base = parseObjetivo(r);
+    return {
+      ...base,
+      total_tareas: Number(r.total_tareas ?? 0),
+      completadas: Number(r.completadas ?? 0),
+      pct: Number(r.pct ?? 0),
+    };
   });
 }
 

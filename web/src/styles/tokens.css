@@ -1,53 +1,68 @@
 /**
- * tokens.css — Fuente de verdad Meta Canvas (--mc-*)
+ * tokens.css — Fuente de verdad Materen Canvas (--mc-*)
  */
 :root {
+  /* ── Marca Materen (rediseño índigo) ─────────────────────────────── */
+  --mc-brand-carbon:    #11181c;
+  --mc-brand-indigo:    #5b5bd6;
+  --mc-brand-indigo-2:  #3e63dd;   /* azul-índigo para links */
+  --mc-brand-purple:    #8e4ec6;   /* reprogramada / marca pasiva */
+  --mc-brand-ui-gray:   #60646c;
+  --mc-brand-bg:        #fcfcfd;
+
   /* ── Superficies ────────────────────────────────────────────────── */
-  --mc-color-bg:               #f5f6f7;
-  --mc-color-bg-secondary:     #eef0f3;
+  --mc-color-bg:               var(--mc-brand-bg);
+  --mc-color-bg-secondary:     #f1f1f3;
   --mc-color-surface:          #ffffff;
-  --mc-color-surface-elevated: #f8f9fb;
-  --mc-color-surface-hover:    #f2f4f7;
-  --mc-color-surface-active:   #e8eaef;
+  --mc-color-surface-elevated: #ffffff;
+  --mc-color-surface-hover:    #f4f4f6;
+  --mc-color-surface-active:   #ebebef;
 
   /* ── Bordes ─────────────────────────────────────────────────────── */
-  --mc-color-border:           #e4e6eb;
-  --mc-color-border-strong:    #ced2d9;
-  --mc-color-border-hover:     #b0b5bf;
+  --mc-color-border:           #e4e4e8;
+  --mc-color-border-strong:    #d0d0d6;
+  --mc-color-border-hover:     #b9b9c2;
 
   /* ── Texto ──────────────────────────────────────────────────────── */
-  --mc-color-text:             #050505;
-  --mc-color-text-secondary:   #65676b;
-  --mc-color-text-placeholder: #8d949e;
-  --mc-color-text-tertiary:    #8a8f98;
-  --mc-color-text-disabled:    #bcc0c7;
-  --mc-color-neutral:          #65676b;
+  --mc-color-text:             var(--mc-brand-carbon);
+  --mc-color-text-secondary:   var(--mc-brand-ui-gray);
+  --mc-color-text-placeholder: #80838d;
+  --mc-color-text-tertiary:    #80838d;
+  --mc-color-text-disabled:    #c1c1c8;
+  --mc-color-neutral:          var(--mc-brand-ui-gray);
 
-  /* Brand morado (shell nav activo, CTAs de formulario unificado) */
-  --mc-brand-violet:       #534ab7;
-  --mc-brand-violet-soft: #eeedfe;
+  /* Aliases legacy — componentes los referencian directamente */
+  --mc-brand-violet:       var(--mc-brand-purple);
+  --mc-brand-violet-soft:  #f4eefb;
 
-  /* ── Acento / Brand ─────────────────────────────────────────────── */
+  /* ── Acento interactivo (índigo Materen) ────────────────────────── */
+  /*
+   * REGLA DE ACENTO (ver DESIGN-SYSTEM.md §1.4):
+   *   --mc-color-accent (índigo) → acciones e interacción: botones primarios, links,
+   *                                chips clicables, foco, nav activo, KPIs activos.
+   *   --mc-brand-violet          → identidad de marca pasiva + estado `reprogramada`.
+   *                                NUNCA usar violeta en elementos de acción.
+   */
   --mc-color-on-accent:        #ffffff;
-  --mc-color-accent:           #0064e0;
-  --mc-color-accent-hover:     #0057c2;
-  --mc-color-accent-active:    #004ba3;
-  --mc-color-accent-soft:      rgba(0, 100, 224, 0.08);
+  --mc-color-accent:           var(--mc-brand-indigo);
+  --mc-color-accent-hover:     #5151cd;
+  --mc-color-accent-active:    #4747c2;
+  --mc-color-accent-soft:      #eef0fc;
   --mc-color-accent-border:    color-mix(in srgb, var(--mc-color-accent) 38%, var(--mc-color-border));
 
   /* ── Semánticos ─────────────────────────────────────────────────── */
-  --mc-color-success:          #31a24c;
-  --mc-color-success-soft:     rgba(49, 162, 76, 0.10);
+  --mc-color-success:          #30a46c;
+  --mc-color-success-soft:     #e6f6ed;
 
-  --mc-color-warning:          #f7b928;
-  --mc-color-warning-soft:     rgba(247, 185, 40, 0.10);
+  --mc-color-warning:          #ffb224;
+  --mc-color-warning-soft:     #fff4d5;
 
-  --mc-color-danger:           #fa3e3e;
-  --mc-color-danger-hover:     #e02424;
-  --mc-color-danger-soft:      rgba(250, 62, 62, 0.10);
+  --mc-color-danger:           #e5484d;
+  --mc-color-danger-hover:     #dc3d43;
+  --mc-color-danger-soft:      #fce9ea;
 
-  --mc-color-info:             #0288d1;
-  --mc-color-info-soft:        rgba(2, 136, 209, 0.10);
+  --mc-color-info:             #0091ff;
+  --mc-color-info-soft:        #e1f0ff;
 
   /* ── Layout ─────────────────────────────────────────────────────── */
   --mc-sidebar-w-collapsed: 52px;
@@ -92,6 +107,21 @@
   /* Legacy — main.tsx y otros */
   --mc-font: var(--mc-font-sans);
 
+  /* ── Letter-spacing (tracking) — look moderno ───────────────────── */
+  /* Negativo agresivo en displays, neutro en body. */
+  --mc-tracking-2xl:  -0.03em;   /* 28px — hero métricas, números grandes */
+  --mc-tracking-xl:   -0.022em;  /* 22px — título de página */
+  --mc-tracking-lg:   -0.018em;  /* 18px — título de sección */
+  --mc-tracking-md:   -0.011em;  /* 16px — subtítulo / card heading */
+  --mc-tracking-base: -0.006em;  /* 14px — leve, casi neutro */
+  --mc-tracking-sm:    0;        /* 13px body — neutro */
+  --mc-tracking-tight: -0.01em;  /* utilitario para títulos sueltos */
+
+  /* ── Pesos — techo en 600, nunca 700+ ───────────────────────────── */
+  --mc-weight-normal:   400;
+  --mc-weight-medium:   500;
+  --mc-weight-semibold: 600;
+
   /* ── Iconos ─────────────────────────────────────────────────────── */
   --mc-icon-xs: 14px;
   --mc-icon-sm: 16px;
@@ -109,12 +139,12 @@
   /* Alias legacy — mantener para no romper usos existentes */
   --mc-transition-layout: 0.2s ease;
 
-  /* ── Sombras ────────────────────────────────────────────────────── */
-  --mc-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.04);
-  --mc-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --mc-shadow-md:   0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --mc-shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
-  --mc-shadow-xl:   0 16px 48px rgba(0, 0, 0, 0.16), 0 8px 16px rgba(0, 0, 0, 0.08);
+  /* ── Sombras (estilo apilado Linear/Vercel) ─────────────────────── */
+  --mc-shadow-xs:   0 1px 1px rgba(17, 24, 28, 0.04);
+  --mc-shadow-sm:   0 1px 1px rgba(17, 24, 28, 0.04), 0 2px 4px rgba(17, 24, 28, 0.04);
+  --mc-shadow-md:   0 2px 4px rgba(17, 24, 28, 0.05), 0 6px 12px -2px rgba(17, 24, 28, 0.06);
+  --mc-shadow-lg:   0 4px 8px rgba(17, 24, 28, 0.06), 0 16px 32px -8px rgba(17, 24, 28, 0.10);
+  --mc-shadow-xl:   0 8px 16px rgba(17, 24, 28, 0.08), 0 24px 48px -12px rgba(17, 24, 28, 0.14);
   /* Aliases semánticos */
   --mc-card-shadow:      var(--mc-shadow-sm);
   --mc-modal-shadow:     var(--mc-shadow-lg);
@@ -130,10 +160,10 @@
    */
 
   /* atrasada */
-  --mc-state-atrasada-bg:        #FCEBEB;
-  --mc-state-atrasada-fg:        #791F1F;
-  --mc-state-atrasada-border:    #E24B4A;
-  --mc-state-atrasada-meta:      #A32D2D;
+  --mc-state-atrasada-bg:        #fce9ea;
+  --mc-state-atrasada-fg:        #aa2429;
+  --mc-state-atrasada-border:    #e5484d;
+  --mc-state-atrasada-meta:      #c62a30;
 
   /* OT */
   --mc-ot-urgente-bg:     color-mix(in srgb, var(--mc-color-warning) 8%, transparent);
@@ -143,55 +173,55 @@
   --mc-ot-rechazo-bg:     color-mix(in srgb, var(--mc-color-danger) 6%, transparent);
 
   /* Urgencia horaria — tokens adicionales (auditoría) */
-  --mc-urgencia-vencida-hoy-bg:     #FFF0F0;
-  --mc-urgencia-vencida-hoy-fg:     #C00;
-  --mc-urgencia-vencida-hoy-border: #E24B4A;
-  --mc-urgencia-urgente-bg:        #FFFBF0;
-  --mc-urgencia-urgente-fg:        #7A4F00;
-  --mc-urgencia-urgente-border:    var(--mc-color-warning);
-  --mc-urgencia-precaucion-border: var(--mc-color-warning);
+  --mc-urgencia-vencida-hoy-bg:     #fce9ea;
+  --mc-urgencia-vencida-hoy-fg:     #c62a30;
+  --mc-urgencia-vencida-hoy-border: #e5484d;
+  --mc-urgencia-urgente-bg:         #fff4d5;
+  --mc-urgencia-urgente-fg:         #95620a;
+  --mc-urgencia-urgente-border:     var(--mc-color-warning);
+  --mc-urgencia-precaucion-border:  var(--mc-color-warning);
 
   /* urgencia horaria: urgente (5–6pm) — usado por URGENCIA_TOKENS */
-  --mc-state-urgente-bg:         #FCEBEB;
-  --mc-state-urgente-fg:         #791F1F;
-  --mc-state-urgente-border:     #E24B4A;
-  --mc-state-urgente-badge-bg:   #F7C1C1;
-  --mc-state-urgente-badge-fg:   #791F1F;
+  --mc-state-urgente-bg:         #fce9ea;
+  --mc-state-urgente-fg:         #aa2429;
+  --mc-state-urgente-border:     #e5484d;
+  --mc-state-urgente-badge-bg:   #f7caca;
+  --mc-state-urgente-badge-fg:   #aa2429;
 
   /* urgencia horaria: precaución (4–5pm) */
-  --mc-state-precaucion-bg:      transparent;
-  --mc-state-precaucion-fg:      var(--mc-color-text);
-  --mc-state-precaucion-border:  #EF9F27;
-  --mc-state-precaucion-badge-bg:  #FAC775;
-  --mc-state-precaucion-badge-fg:  #633806;
+  --mc-state-precaucion-bg:        transparent;
+  --mc-state-precaucion-fg:        var(--mc-color-text);
+  --mc-state-precaucion-border:    #ffb224;
+  --mc-state-precaucion-badge-bg:  #ffe3a2;
+  --mc-state-precaucion-badge-fg:  #95620a;
 
   /* urgencia horaria: vencida hoy (≥6pm) */
-  --mc-state-vencida-bg:         #E24B4A;
+  --mc-state-vencida-bg:         #e5484d;
   --mc-state-vencida-fg:         #ffffff;
-  --mc-state-vencida-border:     #A32D2D;
-  --mc-state-vencida-badge-bg:   rgba(255,255,255,0.25);
+  --mc-state-vencida-border:     #c62a30;
+  --mc-state-vencida-badge-bg:   rgba(255, 255, 255, 0.25);
   --mc-state-vencida-badge-fg:   #ffffff;
 
-  /* en_progreso */
-  --mc-state-progreso-bg:        #E6F1FB;
-  --mc-state-progreso-fg:        #0B3F6E;
-  --mc-state-progreso-border:    #185FA5;
+  /* en_progreso (índigo/azul info) */
+  --mc-state-progreso-bg:        #e1f0ff;
+  --mc-state-progreso-fg:        #006adc;
+  --mc-state-progreso-border:    #0091ff;
 
   /* completada */
-  --mc-state-completada-bg:      #EAF3DE;
-  --mc-state-completada-fg:      #27500A;
-  --mc-state-completada-border:  #4FA64A;
+  --mc-state-completada-bg:      #e6f6ed;
+  --mc-state-completada-fg:      #18794e;
+  --mc-state-completada-border:  #30a46c;
 
-  /* reprogramada */
-  --mc-state-reprogramada-bg:    #EEEDFE;
-  --mc-state-reprogramada-fg:    #3C3489;
-  --mc-state-reprogramada-border:#7F77DD;
+  /* reprogramada (púrpura) */
+  --mc-state-reprogramada-bg:    #f4eefb;
+  --mc-state-reprogramada-fg:    #6e3aa0;
+  --mc-state-reprogramada-border: #8e4ec6;
 
-  /* pendiente / cancelada (pills compactos en Planificación) */
-  --mc-state-pendiente-bg:       #F1EFE8;
-  --mc-state-pendiente-fg:       #5F5E5A;
-  --mc-state-cancelada-bg:       #F1F1F1;
-  --mc-state-cancelada-fg:       #6B6B6B;
+  /* pendiente / cancelada */
+  --mc-state-pendiente-bg:       #f1f1f3;
+  --mc-state-pendiente-fg:       #60646c;
+  --mc-state-cancelada-bg:       #f1f1f3;
+  --mc-state-cancelada-fg:       #80838d;
 
   /* ── Incidencias ─ registro neutral (NO advertencia) ────────────── */
   --mc-state-incidencia-bg:      color-mix(in srgb, var(--mc-color-info) 8%, transparent);
@@ -199,9 +229,9 @@
   --mc-state-incidencia-fg:      var(--mc-color-info);
 
   /* ── Soft backgrounds para filas/tablas ─────────────────────────── */
-  --mc-state-completada-bg-soft: #EAF3DE;
-  --mc-state-atrasada-bg-soft:   #FCEBEB;
-  --mc-state-precaucion-bg-soft: #FAEEDA;
+  --mc-state-completada-bg-soft: #e6f6ed;
+  --mc-state-atrasada-bg-soft:   #fce9ea;
+  --mc-state-precaucion-bg-soft: #fff4d5;
 
   /* Fondo muy suave para filas con alerta leve (ej. "bajo rendimiento") */
   --mc-state-row-danger-soft:    color-mix(in srgb, var(--mc-color-danger) 3%, transparent);
@@ -212,7 +242,7 @@
   --mc-state-precaucion-bar-soft: color-mix(in srgb, var(--mc-color-warning) 38%, var(--mc-color-surface));
 
   /* Color neutro de "pendientes" usado en gráficos (gris desaturado) */
-  --mc-color-neutral-soft:       #B4B2A9;
+  --mc-color-neutral-soft:       #c1c1c8;
 
   /* ── Capas (modales > drawer > shell) ───────────────────────────── */
   --mc-z-bottom-nav:   40;
@@ -221,4 +251,113 @@
   --mc-z-modal-stack:  80;
   --mc-z-modal-top:    90;
   --mc-z-popover:      65;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MODO OSCURO — sobre-escribe los mismos tokens --mc-* bajo html.dark
+   ════════════════════════════════════════════════════════════════════ */
+html.dark {
+  /* ── Marca ──────────────────────────────────────────────────────── */
+  --mc-brand-carbon:    #ededef;
+  --mc-brand-indigo:    #6e6ade;   /* índigo aclarado para fondo oscuro */
+  --mc-brand-indigo-2:  #5b7cfa;
+  --mc-brand-purple:    #bf7af0;
+  --mc-brand-ui-gray:   #7c7c85;
+  --mc-brand-bg:        #111113;
+
+  /* ── Superficies ────────────────────────────────────────────────── */
+  --mc-color-bg:               #111113;
+  --mc-color-bg-secondary:     #26262b;
+  --mc-color-surface:          #1a1a1e;
+  --mc-color-surface-elevated: #26262b;
+  --mc-color-surface-hover:    #26262b;
+  --mc-color-surface-active:   #2f2f36;
+
+  /* ── Bordes ─────────────────────────────────────────────────────── */
+  --mc-color-border:           #2a2a30;
+  --mc-color-border-strong:    #3a3a42;
+  --mc-color-border-hover:     #4a4a54;
+
+  /* ── Texto ──────────────────────────────────────────────────────── */
+  --mc-color-text:             #ededef;
+  --mc-color-text-secondary:   #a0a0a8;
+  --mc-color-text-placeholder: #6c6c75;
+  --mc-color-text-tertiary:    #6c6c75;
+  --mc-color-text-disabled:    #44444c;
+  --mc-color-neutral:          #a0a0a8;
+
+  --mc-brand-violet:       var(--mc-brand-purple);
+  --mc-brand-violet-soft:  #2b2235;
+
+  /* ── Acento ─────────────────────────────────────────────────────── */
+  --mc-color-on-accent:        #ffffff;
+  --mc-color-accent:           var(--mc-brand-indigo);
+  --mc-color-accent-hover:     #7d79e6;
+  --mc-color-accent-active:    #8b87ec;
+  --mc-color-accent-soft:      #262342;
+
+  /* ── Semánticos (versión oscura, más luminosa) ──────────────────── */
+  --mc-color-success:          #3dd68c;
+  --mc-color-success-soft:     #18301f;
+  --mc-color-warning:          #ffc53d;
+  --mc-color-warning-soft:     #2e2410;
+  --mc-color-danger:           #ff6369;
+  --mc-color-danger-hover:     #ff7a7f;
+  --mc-color-danger-soft:      #341518;
+  --mc-color-info:             #52a9ff;
+  --mc-color-info-soft:        #11253b;
+
+  /* ── Estados de tarea ───────────────────────────────────────────── */
+  --mc-state-atrasada-bg:        #341518;
+  --mc-state-atrasada-fg:        #ff9592;
+  --mc-state-atrasada-border:    #ff6369;
+  --mc-state-atrasada-meta:      #ff8589;
+
+  --mc-state-progreso-bg:        #11253b;
+  --mc-state-progreso-fg:        #7cc4ff;
+  --mc-state-progreso-border:    #52a9ff;
+
+  --mc-state-completada-bg:      #18301f;
+  --mc-state-completada-fg:      #6cdca0;
+  --mc-state-completada-border:  #3dd68c;
+
+  --mc-state-reprogramada-bg:    #2b2235;
+  --mc-state-reprogramada-fg:    #d09cf0;
+  --mc-state-reprogramada-border: #bf7af0;
+
+  --mc-state-pendiente-bg:       #26262b;
+  --mc-state-pendiente-fg:       #a0a0a8;
+  --mc-state-cancelada-bg:       #26262b;
+  --mc-state-cancelada-fg:       #6c6c75;
+
+  /* Urgencia horaria */
+  --mc-urgencia-vencida-hoy-bg:     #341518;
+  --mc-urgencia-vencida-hoy-fg:     #ff8589;
+  --mc-urgencia-vencida-hoy-border: #ff6369;
+  --mc-urgencia-urgente-bg:         #2e2410;
+  --mc-urgencia-urgente-fg:         #ffd166;
+  --mc-state-urgente-bg:            #341518;
+  --mc-state-urgente-fg:            #ff9592;
+  --mc-state-urgente-border:        #ff6369;
+  --mc-state-urgente-badge-bg:      #4a1d20;
+  --mc-state-urgente-badge-fg:      #ff9592;
+  --mc-state-precaucion-border:     #ffc53d;
+  --mc-state-precaucion-badge-bg:   #3d2f12;
+  --mc-state-precaucion-badge-fg:   #ffd166;
+  --mc-state-vencida-bg:            #ff6369;
+  --mc-state-vencida-fg:            #111113;
+  --mc-state-vencida-border:        #ff8589;
+
+  /* Soft backgrounds para filas/barras */
+  --mc-state-completada-bg-soft: #18301f;
+  --mc-state-atrasada-bg-soft:   #341518;
+  --mc-state-precaucion-bg-soft: #2e2410;
+  --mc-color-neutral-soft:       #44444c;
+
+  /* ── Sombras (más profundas en oscuro) ──────────────────────────── */
+  --mc-shadow-xs:   0 1px 1px rgba(0, 0, 0, 0.30);
+  --mc-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --mc-shadow-md:   0 2px 6px rgba(0, 0, 0, 0.40), 0 8px 16px -4px rgba(0, 0, 0, 0.45);
+  --mc-shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.50), 0 16px 40px -8px rgba(0, 0, 0, 0.55);
+  --mc-shadow-xl:   0 12px 32px rgba(0, 0, 0, 0.55), 0 24px 56px -12px rgba(0, 0, 0, 0.60);
 }

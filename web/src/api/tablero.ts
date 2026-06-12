@@ -7,12 +7,14 @@ import { semanaIsoDesdeFecha } from '@/lib/semanas';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { EstadoTarea, Tarea } from '@/types';
 
+/** @deprecated Módulo Tablero Kanban eliminado en V4 — solo tests. */
 export type FiltrosTablero = {
   usuarioId: string | 'todos';
   objetivoId: string | 'todos';
   mostrarCompletadas: boolean;
 };
 
+/** @deprecated Módulo Tablero Kanban eliminado en V4 — solo tests. */
 export async function getTareasTablero(filtros: FiltrosTablero): Promise<Tarea[]> {
   const insforge = getInsforge();
   let q = insforge.database.from(TAREA_ACTIVA).select('*');
@@ -50,9 +52,10 @@ export async function getTareasTablero(filtros: FiltrosTablero): Promise<Tarea[]
   return list;
 }
 
-/** Columnas kanban legacy: pendiente agrupa atrasada/reprogramada (situación). */
+/** @deprecated Módulo Tablero Kanban eliminado en V4 — solo tests. */
 export type ColumnaTableroId = 'pendiente' | 'en_progreso' | 'completada';
 
+/** @deprecated Módulo Tablero Kanban eliminado en V4 — solo tests. */
 export function agruparTareasTablero(tareas: Tarea[], hoyYmd: string): Record<ColumnaTableroId, Tarea[]> {
   const cols: Record<ColumnaTableroId, Tarea[]> = {
     pendiente: [],
@@ -68,7 +71,7 @@ export function agruparTareasTablero(tareas: Tarea[], hoyYmd: string): Record<Co
   return cols;
 }
 
-/** Reanuda una tarea planificada vencida en el día actual (columna Por hacer). */
+/** @deprecated Módulo Tablero Kanban eliminado en V4 — solo tests. */
 export async function snapTareaFechaAlPorHacer(tareaId: string, hoyYmd: string): Promise<void> {
   const insforge = getInsforge();
   const semana = semanaIsoDesdeFecha(new Date(`${hoyYmd}T12:00:00`));

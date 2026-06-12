@@ -208,3 +208,95 @@ export const PRIORIDAD_LABEL: Record<PrioridadTarea, string> = {
   media:   'Media',
   baja:    'Baja',
 };
+
+// ---------------------------------------------------------------------------
+// Helper unificado de estilos visuales para tarjeta de tarea
+// ---------------------------------------------------------------------------
+
+export interface EstadoStyles {
+  /** Clase CSS para el contenedor (animación task-precaucion, etc.) */
+  containerClass: string;
+  /** Color de fondo inline, o null si no aplica */
+  bg: string | null;
+  /** Color de texto inline, o null si usa el del token de estado */
+  fg: string | null;
+  /** Color del borde izquierdo de alerta, o null si no hay alerta */
+  borderAlerta: string | null;
+  /** Tokens para el badge de urgencia horaria */
+  badgeBg: string;
+  badgeFg: string;
+}
+
+/**
+ * Punto de entrada único para estilos visuales de una tarjeta de tarea.
+ *
+ * Prioridad aplicada:
+ *   1. estado === 'atrasada'   → usa STATE_TOKENS.atrasada
+ *   2. urgencia === 'vencida_hoy' | 'urgente' | 'precaucion' → usa URGENCIA_TOKENS[urgencia]
+ *   3. resto → sin alerta visual
+ *
+ * Reemplaza el par borderColorAlerta() + urgenciaStyles() en TaskItem.tsx.
+ */
+export function getEstadoStyles(
+  estadoVisual: ClaveVisualTarea,
+  urgencia: UrgenciaHoraria,
+): EstadoStyles {
+  // 1. Estado atrasada tiene prioridad absoluta
+  if (estadoVisual === 'atrasada') {
+    const t = STATE_TOKENS.atrasada;
+    return {
+      containerClass: '',
+      bg:             t.bg,
+      fg:             t.fg,
+      borderAlerta:   t.border,
+      badgeBg:        'transparent',
+      badgeFg:        'transparent',
+    };
+  }
+
+  // 2. Urgencia horaria
+  switch (urgencia) {
+    case 'vencida_hoy': {
+      const u = URGENCIA_TOKENS.vencida_hoy;
+      return {
+        containerClass: 'task-urgente-hoy',
+        bg:             u.bg,
+        fg:             u.fg,
+        borderAlerta:   u.border,
+        badgeBg:        u.badgeBg,
+        badgeFg:        u.badgeFg,
+      };
+    }
+    case 'urgente': {
+      const u = URGENCIA_TOKENS.urgente;
+      return {
+        containerClass: 'task-urgente',
+        bg:             u.bg,
+        fg:             u.fg,
+        borderAlerta:   u.border,
+        badgeBg:        u.badgeBg,
+        badgeFg:        u.badgeFg,
+      };
+    }
+    case 'precaucion': {
+      const u = URGENCIA_TOKENS.precaucion;
+      return {
+        containerClass: 'task-precaucion',
+        bg:             null,
+        fg:             null,
+        borderAlerta:   u.border,
+        badgeBg:        u.badgeBg,
+        badgeFg:        u.badgeFg,
+      };
+    }
+    default:
+      return {
+        containerClass: '',
+        bg:             null,
+        fg:             null,
+        borderAlerta:   null,
+        badgeBg:        'transparent',
+        badgeFg:        'transparent',
+      };
+  }
+}

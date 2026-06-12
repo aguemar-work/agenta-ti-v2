@@ -4,26 +4,10 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { LogActividadItem } from '@/api/audit';
 import type { FiltrosHistorialLog } from '@/api/audit';
-import type { LogAccion, Tarea, TipoAccionLog } from '@/types';
+import { labelLogAccion } from '@/lib/logAccionLabels';
+import type { LogAccion, Tarea } from '@/types';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
-
-function labelTipoLog(t: TipoAccionLog): string {
-  const m: Record<TipoAccionLog, string> = {
-    creada: 'Creada',
-    iniciada: 'Iniciada',
-    reprogramada: 'Reprogramada',
-    eliminada: 'Eliminada',
-    estado_cambiado: 'Cambio de estado',
-    prioridad_cambiada: 'Prioridad',
-    editada: 'Editada',
-    cancelada: 'Cancelación',
-    bloqueada: 'Bloqueada',
-    desbloqueada: 'Desbloqueada',
-    completada: 'Completada',
-  };
-  return m[t] ?? t;
-}
 
 type Props = {
   open: boolean;
@@ -230,7 +214,7 @@ export function PlanificacionActividadDrawer({
                           <span className="text-[10px] text-[var(--mc-color-text-secondary)]">
                             {new Date(log.created_at).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}
                             {' · '}
-                            {labelTipoLog(log.tipo_accion)}
+                            {labelLogAccion(log.tipo_accion)}
                           </span>
                           <p className="m-0 text-xs text-[var(--mc-color-text)]">{log.justificacion ?? '—'}</p>
                           <Button variant="secondary" size="xs" disabled={mutLeerLogPending} onClick={() => onMarcarLeido(log.id)}>

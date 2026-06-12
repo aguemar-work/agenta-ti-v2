@@ -4,7 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useAuthStore } from '@/store/authStore';
 import { useVistaStore } from '@/store/vistaStore';
-import { makeUsuario, makeJefe } from '@/test/helpers';
+import { makeUsuario, makeJefe, setRolActivoTest } from '@/test/helpers';
 
 // ---------------------------------------------------------------------------
 // Mocks de dependencias externas al hook
@@ -34,6 +34,7 @@ vi.mock('@/api/objetivos', () => ({
 
 function setupAuth(usuario = makeUsuario()) {
   useAuthStore.setState({ usuario, isLoading: false, authUser: null });
+  setRolActivoTest(usuario.rol);
 }
 
 beforeEach(() => {

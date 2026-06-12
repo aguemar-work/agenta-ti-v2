@@ -18,7 +18,7 @@ Tras la auditoría técnica (Fase 0 de tokens + mejoras de accesibilidad, build 
 |-----------|------------------|------------|
 | Arquitectura y stack | **8.0 / 10** | Build explícito, lazy routes, vendor chunks, strict TS ampliado |
 | Seguridad y permisos | **8.5 / 10** | RLS + paridad documentada; frontend solo UX |
-| UX / Meta Canvas | **7.8 / 10** | Lote 2 reduce fricción en Mi Semana y OT |
+| UX / Materen Canvas | **7.8 / 10** | Lote 2 reduce fricción en Mi Semana y OT |
 | Reglas de negocio (coherencia UI↔BD) | **8.0 / 10** | Tras B-03 y P2-02; depende de migración 027 en prod |
 | Operación diaria (jefe/miembro) | **7.5 / 10** | Flujos críticos corregidos; P2-08 y M-07–M-09 abiertos |
 | **Global estimado** | **7.8 / 10** | Subida desde ~6.8–7.1 pre-Fase 0 |

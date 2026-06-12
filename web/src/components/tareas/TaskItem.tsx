@@ -1,12 +1,12 @@
-import { Clock, Flame, MoreHorizontal } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { CalendarClock, Clock, Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 
-import { useMenuPosition } from '@/hooks/useMenuPosition';
-import { URGENCIA_LABEL, STATE_TOKENS, URGENCIA_TOKENS } from '@/lib/estadoConfig';
+import { PopoverMenu, type PopoverMenuItem } from '@/components/ui/PopoverMenu';
+import { URGENCIA_LABEL, getEstadoStyles } from '@/lib/estadoConfig';
 import { TareaEstadoIndicator } from '@/components/tareas/TareaEstadoIndicator';
 import { urgenciaHoraria } from '@/lib/tareaUrgencia';
-import type { ClaveVisualTarea, Tarea, UrgenciaHoraria } from '@/types';
+import type { ClaveVisualTarea, Tarea } from '@/types';
 
 export type TaskItemVariant = 'card' | 'week' | 'kanban';
 
@@ -27,48 +27,9 @@ export type TaskItemProps = {
   onReprogramar?:       (t: Tarea) => void;
   onCompletar?:         (t: Tarea) => void;
   onIniciar?:           (t: Tarea) => void;
+  completandoEsta?:     boolean;
+  iniciandoEsta?:       boolean;
 };
-
-// ---------------------------------------------------------------------------
-// Helpers de estilo por urgencia
-// ---------------------------------------------------------------------------
-
-/**
- * Devuelve el color del borde izquierdo de alerta, o null si no hay alerta.
- * Usado de forma uniforme en las tres variantes.
- */
-function borderColorAlerta(urgencia: UrgenciaHoraria, est: ClaveVisualTarea): string | null {
-  if (est === 'atrasada')          return STATE_TOKENS.atrasada.border;
-  if (urgencia === 'vencida_hoy')  return URGENCIA_TOKENS.vencida_hoy.border;
-  if (urgencia === 'urgente')      return URGENCIA_TOKENS.urgente.border;
-  if (urgencia === 'precaucion')   return URGENCIA_TOKENS.precaucion.border;
-  return null;
-}
-
-function urgenciaStyles(urgencia: UrgenciaHoraria, est: ClaveVisualTarea): {
-  containerClass: string;
-  bgColor:        string | null;
-  textColor:      string;
-} {
-  if (est === 'atrasada') {
-    const t = STATE_TOKENS.atrasada;
-    return { containerClass: '', bgColor: t.bg, textColor: t.fg };
-  }
-  switch (urgencia) {
-    case 'vencida_hoy': {
-      const u = URGENCIA_TOKENS.vencida_hoy;
-      return { containerClass: 'task-urgente-hoy', bgColor: u.bg, textColor: u.fg };
-    }
-    case 'urgente': {
-      const u = URGENCIA_TOKENS.urgente;
-      return { containerClass: 'task-urgente', bgColor: u.bg, textColor: u.fg };
-    }
-    case 'precaucion':
-      return { containerClass: 'task-precaucion', bgColor: null, textColor: '' };
-    default:
-      return { containerClass: '', bgColor: null, textColor: '' };
-  }
-}
 
 // ---------------------------------------------------------------------------
 // TaskItem
@@ -80,26 +41,12 @@ export function TaskItem({
   dragHandle,
   onOpenDetalle, onEditar, onEliminar,
   onReprogramar, onCompletar, onIniciar,
+  completandoEsta = false,
+  iniciandoEsta   = false,
 }: TaskItemProps) {
-  const [menuAbierto, setMenuAbierto] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const { triggerRef, menuStyle, calcularPosicion } = useMenuPosition();
-
-  useEffect(() => {
-    if (!menuAbierto) return;
-    function onPointerDown(ev: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(ev.target as Node)) {
-        setMenuAbierto(false);
-      }
-    }
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [menuAbierto]);
-
   const est      = estadoVisual ?? tarea.estado;
   const urgencia = urgenciaHoraria(est);
-  const styles   = urgenciaStyles(urgencia, est);
-  const borde    = borderColorAlerta(urgencia, est);
+  const estilos  = getEstadoStyles(est, urgencia);
 
   const incidenciaEstatica = tarea.es_imprevisto && tarea.tipo === 'no_planificada';
   const sinQuick           = sinAccionesRapidas || incidenciaEstatica;
@@ -125,8 +72,8 @@ export function TaskItem({
         fontWeight:    600,
         padding:       '1px 6px',
         borderRadius:  10,
-        background:    URGENCIA_TOKENS[urgencia].badgeBg,
-        color:          URGENCIA_TOKENS[urgencia].badgeFg,
+        background:    estilos.badgeBg,
+        color:          estilos.badgeFg,
         letterSpacing: '.02em',
       }}
     >
@@ -136,8 +83,8 @@ export function TaskItem({
   ) : null;
 
   // ── Meta row ──────────────────────────────────────────────────────────────
-  const textColorStyle = styles.textColor
-    ? { color: styles.textColor }
+  const textColorStyle = estilos.fg
+    ? { color: estilos.fg }
     : { color: 'var(--mc-color-text-secondary)' };
 
   const meta = (
@@ -154,12 +101,12 @@ export function TaskItem({
   const ctaPrincipal = !sinQuick && !readOnly && !estaCompletada ? (
     <>
       {(est === 'pendiente' || est === 'atrasada' || est === 'reprogramada') && onIniciar && (
-        <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); onIniciar(tarea); }}>
+        <Button variant="primary" size="sm" loading={iniciandoEsta} onClick={(e) => { e.stopPropagation(); onIniciar(tarea); }}>
           Iniciar
         </Button>
       )}
       {est === 'en_progreso' && onCompletar && (
-        <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); onCompletar(tarea); }}>
+        <Button variant="primary" size="sm" loading={completandoEsta} onClick={(e) => { e.stopPropagation(); onCompletar(tarea); }}>
           Completar
         </Button>
       )}
@@ -167,72 +114,21 @@ export function TaskItem({
   ) : null;
 
   // ── Menú de opciones ──────────────────────────────────────────────────────
-  const tieneMenu = !readOnly && !estaCompletada &&
-    (onReprogramar || onEliminar || onEditar);
-
-  const menuOpciones = tieneMenu ? (
-    <div
-      ref={(el) => {
-        menuRef.current = el;
-        (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-      }}
-      className="relative"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <Button
-        variant="ghost"
-        size="xs"
-        aria-label="Más opciones"
-        aria-expanded={menuAbierto}
-        aria-haspopup="menu"
-        onClick={() => { calcularPosicion(); setMenuAbierto((v) => !v); }}
-        style={{ color: styles.textColor || 'var(--mc-color-text-secondary)' }}
-      >
-        <MoreHorizontal size={16} />
-      </Button>
-      {menuAbierto && (
-        <div
-          style={{ ...menuStyle, minWidth: 160 }}
-          className="rounded-lg border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] py-1 shadow-sm"
-          role="menu"
-        >
-          {onReprogramar && (
-            <Button
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal text-[var(--mc-color-text)]"
-              onClick={() => { setMenuAbierto(false); onReprogramar(tarea); }}
-            >
-              Reprogramar
-            </Button>
-          )}
-          {onEditar && (
-            <Button
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal text-[var(--mc-color-accent)]"
-              onClick={() => { setMenuAbierto(false); onEditar(tarea); }}
-            >
-              Editar
-            </Button>
-          )}
-          {onEliminar && (
-            <Button
-              variant="ghost"
-              size="xs"
-              role="menuitem"
-              className="!h-auto w-full justify-start rounded-none px-3 py-2 text-xs font-normal text-[var(--mc-color-danger)]"
-              onClick={() => { setMenuAbierto(false); onEliminar(tarea); }}
-            >
-              Eliminar
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  ) : null;
+  const menuItems = useMemo((): PopoverMenuItem[] => {
+    const items: PopoverMenuItem[] = [];
+    if (!readOnly && !estaCompletada) {
+      if (onReprogramar) {
+        items.push({ id: 'reprogramar', label: 'Reprogramar', icon: CalendarClock, onClick: () => onReprogramar(tarea) });
+      }
+      if (onEditar) {
+        items.push({ id: 'editar', label: 'Editar', icon: Pencil, onClick: () => onEditar(tarea) });
+      }
+      if (onEliminar) {
+        items.push({ id: 'eliminar', label: 'Eliminar', icon: Trash2, danger: true, onClick: () => onEliminar(tarea) });
+      }
+    }
+    return items;
+  }, [readOnly, estaCompletada, onReprogramar, onEditar, onEliminar, tarea]);
 
   // ── Variante KANBAN ───────────────────────────────────────────────────────
   // Usa borderLeft inline directo — igual que week y card.
@@ -241,11 +137,11 @@ export function TaskItem({
   if (variant === 'kanban') {
     return (
       <article
-        className={`mc-task-kanban ${readOnly ? 'opacity-70' : ''} ${styles.containerClass}`}
+        className={`mc-task-kanban ${readOnly ? 'opacity-70' : ''} ${estilos.containerClass}`}
         style={{
-          borderLeft:  borde ? `3px solid ${borde}` : undefined,
-          paddingLeft: borde ? 17 : undefined,     // 20px token - 3px del borde
-          background:  styles.bgColor ?? undefined,
+          borderLeft:  estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
+          paddingLeft: estilos.borderAlerta ? 17 : undefined,     // 20px token - 3px del borde
+          background:  estilos.bg ?? undefined,
           cursor:      readOnly ? 'not-allowed' : undefined,
           transition:  'background 0.2s, border-color 0.2s',
         }}
@@ -261,7 +157,7 @@ export function TaskItem({
             <div className="flex items-start gap-2">
               <h3
                 className={`text-sm font-medium ${lineThrough}`}
-                style={{ color: styles.textColor || 'var(--mc-color-text)' }}
+                style={{ color: estilos.fg || 'var(--mc-color-text)' }}
               >
                 {tarea.titulo}
               </h3>
@@ -290,11 +186,11 @@ export function TaskItem({
   if (variant === 'week') {
     return (
       <article
-        className={`mc-task-item ${readOnly ? 'opacity-70' : ''} ${styles.containerClass}`}
+        className={`mc-task-item ${readOnly ? 'opacity-70' : ''} ${estilos.containerClass}`}
         style={{
-          borderLeft:   borde ? `3px solid ${borde}` : undefined,
-          paddingLeft:  borde ? 17 : undefined,
-          background:   styles.bgColor ?? undefined,
+          borderLeft:   estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
+          paddingLeft:  estilos.borderAlerta ? 17 : undefined,
+          background:   estilos.bg ?? undefined,
           borderRadius: 'var(--mc-radius-md)',
           transition:   'background 0.2s, border-color 0.2s',
         }}
@@ -315,7 +211,7 @@ export function TaskItem({
               <div className={`flex items-start gap-1.5 ${lineThrough}`}>
                 <h3
                   className="text-sm font-medium leading-snug"
-                  style={{ color: styles.textColor || 'var(--mc-color-text)' }}
+                  style={{ color: estilos.fg || 'var(--mc-color-text)' }}
                 >
                   {tarea.titulo}
                 </h3>
@@ -326,7 +222,21 @@ export function TaskItem({
               {metaWeek}
             </div>
             {!estaCompletada && (
-              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>{menuOpciones}</div>
+              <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                <PopoverMenu
+                  items={menuItems}
+                  trigger={
+                    <button
+                      type="button"
+                      className="mc-semana-task-card__menu-trigger"
+                      aria-label="Más opciones"
+                      style={{ color: estilos.fg || 'var(--mc-color-text-secondary)' }}
+                    >
+                      <MoreHorizontal size={16} aria-hidden />
+                    </button>
+                  }
+                />
+              </div>
             )}
           </div>
           {!estaCompletada && (
@@ -340,11 +250,11 @@ export function TaskItem({
   // ── Variante CARD (default) ───────────────────────────────────────────────
   return (
     <article
-      className={`mc-task-card ${styles.containerClass}`}
+      className={`mc-task-card ${estilos.containerClass}`}
       style={{
-        borderLeft:  borde ? `3px solid ${borde}` : undefined,
-        paddingLeft: borde ? 17 : undefined,       // 20px token - 3px del borde
-        background:  styles.bgColor ?? undefined,
+        borderLeft:  estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
+        paddingLeft: estilos.borderAlerta ? 17 : undefined,       // 20px token - 3px del borde
+        background:  estilos.bg ?? undefined,
         transition:  'background 0.2s, border-color 0.2s',
       }}
     >
@@ -358,7 +268,7 @@ export function TaskItem({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3
             className={`text-sm font-medium ${lineThrough}`}
-            style={{ color: styles.textColor || 'var(--mc-color-text)' }}
+            style={{ color: estilos.fg || 'var(--mc-color-text)' }}
           >
             {tarea.titulo}
           </h3>

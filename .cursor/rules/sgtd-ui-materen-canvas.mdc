@@ -1,10 +1,10 @@
 ---
-description: UI Nexora — Meta Canvas; tokens, clases .mc-*, semántica de color
+description: UI Materen — Materen Canvas; tokens, clases .mc-*, semántica de color
 globs: "**/*.{tsx,css}"
 alwaysApply: true
 ---
 
-# UI — Meta Canvas (Nexora V4)
+# UI — Materen Canvas (Materen V4)
 
 ## Fuente de verdad
 
@@ -14,7 +14,7 @@ alwaysApply: true
 
 ## Principios innegociables
 
-Meta Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
+Materen Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
 - **Silencioso:** sin decoración. Un solo acento.
 - **Denso:** listas antes que cards. Información antes que aire.
 - **Predecible:** 1 forma de hacer cada cosa. Sin variantes creativas.
@@ -30,7 +30,7 @@ Meta Canvas es una herramienta, no una experiencia. Como Excel, no Instagram.
 | `--mc-color-warning` (#F7B928) | **SOLO** urgencia / tareas atrasadas / alertas sin atender |
 | `--mc-color-danger` (#FA3E3E) | Acciones destructivas, errores críticos |
 | `--mc-color-success` (#31A24C) | Completado, éxito |
-| `--mc-color-accent` (#0064E0) | Acción primaria, enlaces, activo |
+| `--mc-color-accent` (#1488A6) | Acción primaria, enlaces, activo (teal Materen) |
 | `--mc-state-incidencia-*` | Incidencias — apunta a `--mc-color-info` (cyan #0288d1), NO a warning |
 
 **Incidencias resueltas son registros neutrales, no alertas.** No usar amarillo para ellas.

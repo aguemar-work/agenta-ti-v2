@@ -1,4 +1,5 @@
 import { getInsforge, getInsforgeEnv } from '@/lib/insforge';
+import { getWorkspaceId } from '@/store/workspaceStore';
 
 let installed = false;
 
@@ -175,6 +176,13 @@ export function installInsforgeFetchInterceptor(): void {
 
     if (!url.startsWith('http') || !isDatabasePath(url)) {
       return native(input, init);
+    }
+
+    const wsId = getWorkspaceId();
+    if (wsId) {
+      const headers = new Headers(init?.headers);
+      headers.set('x-workspace-id', wsId);
+      init = { ...init, headers };
     }
 
     const res = await fetchDatabaseResilient(native, input, init);

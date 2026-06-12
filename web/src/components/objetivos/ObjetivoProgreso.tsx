@@ -1,4 +1,5 @@
 import { nivelRiesgoObjetivo, RIESGO_CONFIG } from '@/lib/tareaUrgencia';
+import type { NivelRiesgoObjetivo } from '@/types';
 
 type BarraProps = {
   pct: number;
@@ -7,17 +8,13 @@ type BarraProps = {
   totalTareas?: number;
 };
 
+function claseNivel(nivel: NivelRiesgoObjetivo, base: string): string {
+  return `${base} ${base}--${nivel}`;
+}
+
 export function ObjetivoBarraProgreso({ pct, fechaLimite, size = 'sm', totalTareas }: BarraProps) {
   const nivel = nivelRiesgoObjetivo(pct, fechaLimite, totalTareas);
   const h = size === 'md' ? 8 : 5;
-  const bgTrack =
-    nivel === 'sin_fecha'
-      ? 'var(--mc-color-border)'
-      : nivel === 'critico'
-        ? 'var(--mc-state-atrasada-bar-soft)'
-        : nivel === 'moderado'
-          ? 'var(--mc-state-precaucion-bar-soft)'
-          : 'var(--mc-state-completada-bar-soft)';
 
   return (
     <div
@@ -27,14 +24,13 @@ export function ObjetivoBarraProgreso({ pct, fechaLimite, size = 'sm', totalTare
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <div className="mc-objetivo-barra__track" style={{ height: h, background: bgTrack }}>
+      <div
+        className={claseNivel(nivel, 'mc-objetivo-barra__track')}
+        style={{ height: h }}
+      >
         <div
-          className="mc-objetivo-barra__fill"
-          style={{
-            width: `${Math.min(pct, 100)}%`,
-            height: h,
-            background: RIESGO_CONFIG[nivel].barColor,
-          }}
+          className={claseNivel(nivel, 'mc-objetivo-barra__fill')}
+          style={{ width: `${Math.min(pct, 100)}%`, height: h }}
         />
       </div>
     </div>
@@ -47,11 +43,16 @@ export function ObjetivoBadgeRiesgo({ pct, fechaLimite, totalTareas }: BarraProp
   if (nivel === 'sin_fecha' || nivel === 'en_ritmo') return null;
 
   return (
-    <span
-      className="mc-objetivo-badge-riesgo"
-      style={{ background: config.bgColor, color: config.textColor }}
-    >
+    <span className={claseNivel(nivel, 'mc-objetivo-badge-riesgo')}>
       {config.label}
     </span>
   );
+}
+
+/** Clase de color para meta de progreso (p. ej. fila de tabla o detalle). */
+export function claseProgresoMetaNivel(nivel: NivelRiesgoObjetivo): string {
+  if (nivel === 'critico' || nivel === 'moderado' || nivel === 'aceptable') {
+    return `mc-objetivo-row__progreso-meta--${nivel}`;
+  }
+  return '';
 }

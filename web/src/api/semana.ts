@@ -60,6 +60,9 @@ export type CrearTareaPlanificadaInput = {
   objetivo_id?:       string | null;
   /** UUID de la nota de bitácora que originó esta tarea (opcional). */
   nota_origen_id?:    string | null;
+  cliente_id?:        string | null;
+  proyecto_id?:       string | null;
+  area_id?:           string | null;
 };
 
 /** Punto de escritura canónico para tareas planificadas (Mi Semana, Planificación, conversión de notas). */
@@ -79,6 +82,9 @@ export async function crearTareaPlanificada(data: CrearTareaPlanificadaInput): P
       p_objetivo_id:        data.objetivo_id ?? null,
       p_nota_origen_id:     data.nota_origen_id ?? null,
       p_es_imprevisto:      false,
+      p_cliente_id:         data.cliente_id ?? null,
+      p_proyecto_id:        data.proyecto_id ?? null,
+      p_area_id:            data.area_id ?? null,
     });
   if (error) throw error;
   const inserted = Array.isArray(rows) ? rows[0] : rows;
@@ -107,6 +113,9 @@ export type ActualizarTareaInput = {
   descripcion?:   string | null;
   objetivo_id?:   string | null;
   asignado_a?:    string | null;
+  cliente_id?:    string | null;
+  proyecto_id?:   string | null;
+  area_id?:       string | null;
 };
 
 export async function actualizarTarea(input: ActualizarTareaInput): Promise<void> {
@@ -118,6 +127,9 @@ export async function actualizarTarea(input: ActualizarTareaInput): Promise<void
     p_descripcion: input.descripcion ?? null,
     p_objetivo_id: input.objetivo_id ?? null,
     p_asignado_a:  input.asignado_a ?? null,
+    p_cliente_id:  input.cliente_id ?? null,
+    p_proyecto_id: input.proyecto_id ?? null,
+    p_area_id:     input.area_id ?? null,
   });
   if (error) throw error;
 }
@@ -254,4 +266,31 @@ export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promis
     .single();
   if (error) throw error;
   return parseEvento(inserted as Record<string, unknown>);
+}
+
+const prioridadOrden: Record<Tarea['prioridad'], number> = {
+  critica: 0,
+  alta: 1,
+  media: 2,
+  baja: 3,
+};
+
+/** Tareas planificadas del día + atrasadas (columna HOY / selector). */
+export async function getTareasHoyUsuario(asignadoA: string, hoyYmd: string): Promise<Tarea[]> {
+  const { data, error } = await getInsforge().database
+    .from(TAREA_ACTIVA)
+    .select('*')
+    .eq('asignado_a', asignadoA)
+    .eq('tipo', 'planificada')
+    .or(`fecha_planificada.eq.${hoyYmd},situacion.eq.atrasada`);
+  if (error) throw error;
+  const list = (data ?? []).map((r) => parseTarea(r as Record<string, unknown>));
+  list.sort((a, b) => prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad]);
+  return list;
+}
+
+/** Backfill masivo de situación atrasada (throttle en hook). */
+export async function marcarAtrasadasEquipo(): Promise<void> {
+  const { error } = await getInsforge().database.rpc('sgtd_marcar_atrasadas_equipo');
+  if (error) throw error;
 }

@@ -26,7 +26,7 @@ export function initSentry(): boolean {
   Sentry.init({
     dsn,
     environment,
-    sendDefaultPii: true,
+    sendDefaultPii: false,
     tracesSampleRate: isProd ? 0.2 : 1,
     integrations: [Sentry.browserTracingIntegration()],
   });
@@ -41,12 +41,9 @@ export type SentryUserIdentity = {
   role?: string | null;
 };
 
-export function identifySentryUser({ id, email, role }: SentryUserIdentity): void {
+export function identifySentryUser({ id, role }: SentryUserIdentity): void {
   if (!initialized) return;
-  const user: Sentry.User = { id };
-  if (email) user.email = email;
-  if (role) user.role = role;
-  Sentry.setUser(user);
+  Sentry.setUser({ id });
   if (role) Sentry.setTag('role', role);
 }
 

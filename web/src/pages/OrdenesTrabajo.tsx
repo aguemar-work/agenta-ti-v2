@@ -22,6 +22,7 @@ import { OTListaMobileItem } from '@/components/ot/OTListaMobileItem';
 const OTImpresion = lazy(() =>
   import('@/components/ot/OTImpresion').then((m) => ({ default: m.OTImpresion })),
 );
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useOrdenesTrabajoPage } from '@/hooks/useOrdenesTrabajoPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -69,7 +70,7 @@ const STAT_TO_FILTRO: Record<StatFiltroKey, FiltroEstadoOT> = {
 
 export function OrdenesTrabajo() {
   const [modalTiposOpen, setModalTiposOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
 
   const {
     usuario,
@@ -127,14 +128,6 @@ export function OrdenesTrabajo() {
     mutCrearTipo,
     mutToggleTipo,
   } = useOrdenesTrabajoPage();
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const fn = () => setIsMobile(mq.matches);
-    fn();
-    mq.addEventListener('change', fn);
-    return () => mq.removeEventListener('change', fn);
-  }, []);
 
   useEffect(() => {
     if (!viendoOT) return;

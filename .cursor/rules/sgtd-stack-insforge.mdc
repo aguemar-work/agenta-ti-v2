@@ -18,7 +18,7 @@ alwaysApply: true
 | Estilos | Tailwind | **3.4.x** — NO usar v4 (incompatibilidad InsForge MCP) |
 | Toasts | Sonner | — |
 | Iconos | lucide-react | siempre con `aria-hidden` |
-| Drag & Drop | @dnd-kit/core | Mi Semana (días) — NO en Tablero (eliminado en V4) |
+| Mover tareas entre días | API `semana.ts` | Sin @dnd-kit en V4 |
 | Backend (BaaS) | InsForge SDK | 1.2 — Postgres + Auth + RLS + Realtime |
 | Errores | @sentry/react | activo solo si `VITE_SENTRY_DSN` tiene valor |
 | Deploy | Vercel (SPA estática) | — |
@@ -31,7 +31,7 @@ alwaysApply: true
 - **Tailwind 3.4:** No actualizar a v4. PostCSS + `tailwind.config.js`.
 - **React Router 7:** hooks de navegación de la v7 — no mezclar con patrones de v6.
 - **Zod 4:** `safeParse` en todos los parsers del API layer — nunca romper la UI por error de parse.
-- **@dnd-kit:** solo en Mi Semana para mover tareas entre días. El Tablero fue eliminado en V4.
+- **Mover tareas entre días:** vía API/RPC en Mi Semana (sin @dnd-kit en V4). Tablero eliminado.
 
 ## Fetch interceptor
 

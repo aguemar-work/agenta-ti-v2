@@ -1,5 +1,5 @@
 # Agenda TI — Reglas Obligatorias del Design System
-**Meta Canvas Design System · Post-Fase 0 · Mayo 2026**
+**Materen Canvas Design System · Post-Fase 0 · Mayo 2026**
 
 > Este documento es la fuente única de verdad para todos los desarrolladores y agentes.  
 > Cada regla es una **norma de code review, no una sugerencia**.
@@ -42,6 +42,39 @@ background: #0064e0;
 /* ❌ INCORRECTO — prefijo eliminado */
 color: var(--ds-color-text);
 ```
+
+### 1.3 Helper unificado: `getEstadoStyles`
+
+Para obtener los estilos visuales completos de una tarjeta de tarea (fondo, texto, borde
+de alerta, badge de urgencia) usa siempre el helper unificado:
+
+```ts
+import { getEstadoStyles } from '@/lib/estadoConfig';
+
+const estilos = getEstadoStyles(claveVisual, urgenciaHoraria);
+// estilos.bg, estilos.fg, estilos.borderAlerta, estilos.badgeBg, estilos.badgeFg
+```
+
+Prioridad interna: `atrasada` > `vencida_hoy` > `urgente` > `precaucion` > normal.
+
+**No** construir esta lógica inline en componentes nuevos.
+`STATE_TOKENS` y `URGENCIA_TOKENS` siguen exportados para usos de tarjeta con
+`STATE_TOKENS[tarea.estado]` (borde izquierdo de color de estado, no de urgencia).
+
+### 1.4 Regla de acento: teal vs violeta
+
+El sistema tiene dos colores de marca con roles distintos. La distinción es **acción vs
+identidad**, y debe respetarse siempre:
+
+| Color | Token | Cuándo usarlo |
+|---|---|---|
+| Teal | `--mc-color-accent` (y `-hover`, `-active`, `-soft`) | Todo lo interactivo: botón primario, link, chip clicable, anillo de foco, nav activo del sidebar, KPI activo, barra de progreso en ritmo. |
+| Violeta | `--mc-brand-violet` (y `-soft`) | Identidad de marca pasiva y el estado de tarea `reprogramada`. **Nunca** en un elemento sobre el que se hace clic. |
+
+**Regla de una línea para code review:** si el usuario puede hacer clic en ello, es teal.
+Si solo lo está mirando (estado, marca), puede ser violeta.
+
+El nav activo del sidebar usa **teal** deliberadamente — navegar es una acción, no un estado.
 
 ### 1.2 Tokens de estado de tarea (solo leer vía `STATE_TOKENS`)
 
@@ -408,6 +441,56 @@ Drawer: `.mc-drawer-panel--planificacion`. Resumen día: `.mc-plan-resumen-dia`.
 
 ---
 
+## 8b. RESPONSIVE — Un solo paradigma para código nuevo
+
+El proyecto tiene CSS `@media` legacy (congelado) y Tailwind. Para evitar mezcla indefinida:
+
+### Regla
+
+| Situación | Qué usar |
+|---|---|
+| Responsive de layout en código **nuevo** (grids, columnas, show/hide) | Tailwind: `md:`, `lg:`, `xl:` |
+| Breakpoints | Estándar Tailwind: `sm` 640 · `md` 768 · `lg` 1024 · `xl` 1280 |
+| Media query que depende de un token CSS (`calc()` con `--mc-*`) | CSS `@media` (Tailwind no lo puede expresar) |
+| `@media` legacy existente | Congelado — no migrar, no ampliar |
+
+### Al tocar un componente con `@media` legacy
+
+- Si necesitas responsive nuevo, escríbelo en Tailwind aunque el archivo tenga `@media` viejos.
+- **NO** conviertas los `@media` existentes "de paso". Migrar legacy es un PR aparte y deliberado.
+
+### Excepción permanente (se quedan en CSS)
+
+Las media queries que sobreescriben valores calculados con tokens de layout — p. ej. si en algún
+breakpoint hubiera que recalcular `--mc-semana-dia-col-max-height`
+(`calc(100dvh - var(--mc-topbar-h) - var(--mc-bottom-nav-h) - ...)`).
+Tailwind no puede expresar cálculos con CSS custom properties dinámicas; esos casos permanecen en CSS indefinidamente.
+
+### Inventario de statu quo (foto congelada — junio 2026)
+
+**CSS `@media` legacy — 16 responsivos en 3 archivos:**
+
+| Archivo | Breakpoints usados |
+|---|---|
+| `components.css` | 767, 768, 768–1199, 1023, 1024, 1200 px (13 bloques) |
+| `shell.css` | 767, 768 px (2 bloques) |
+| `animations.css` | 767 px (1 bloque) |
+
+No responsivos (no migrar): `@media print` / `@media screen` en `ot-impresion.css`; `@media (prefers-reduced-motion)` en `animations.css`.
+
+**Tailwind responsive — usos actuales:**
+
+| Prefijo | Usos | Archivos |
+|---|---|---|
+| `sm:` | 2 | `PanelUsuarios.tsx` |
+| `md:` | 10 | `OTFormModal.tsx`, `MiSemanaGrilla.tsx`, `Skeletons.tsx` |
+| `lg:` | 0 | — |
+| `xl:` | 0 | — |
+
+Los `@media` con `--mc-space-*` dentro de sus reglas son legacy normal (spacing, no cálculo de layout). El caso `max(env(safe-area-inset-bottom), var(--mc-space-2))` en `components.css` es iOS safe-area y permanece en CSS.
+
+---
+
 ## 9. ICONOS, SOMBRAS Y ANIMACIONES
 
 **Iconos:** Lucide React principal. Tabler Icons solo si el ícono no existe en Lucide. Color siempre `currentColor`. Tamaños: 14 / 16 / 20 / 24px.
@@ -492,6 +575,38 @@ En dev: `[analytics]` en consola. En prod: `sendBeacon` a `VITE_ANALYTICS_ENDPOI
 
 ---
 
+## 10d. MENÚS CONTEXTUALES
+
+### Menús contextuales
+
+Todo menú de acciones (⋯) usa `<PopoverMenu>` de `components/ui/PopoverMenu`.
+No construir menús manuales con estado `open` propio, listeners de click-fuera ni
+posicionamiento ad hoc — `PopoverMenu` lo gestiona todo por portal.
+
+```tsx
+import { PopoverMenu, type PopoverMenuItem } from '@/components/ui/PopoverMenu';
+
+const menuItems = useMemo((): PopoverMenuItem[] => [
+  { id: 'editar',    label: 'Editar',    icon: Pencil,       onClick: () => onEditar(item) },
+  { id: 'eliminar',  label: 'Eliminar',  icon: Trash2,       danger: true, onClick: () => onEliminar(item) },
+], [onEditar, onEliminar, item]);
+
+<PopoverMenu
+  items={menuItems}
+  trigger={
+    <button type="button" className="mc-semana-task-card__menu-trigger" aria-label="Más opciones">
+      <MoreHorizontal size={16} aria-hidden />
+    </button>
+  }
+/>
+```
+
+- `PopoverMenu` retorna `null` si `items.length === 0` — no hace falta condicionar externamente.
+- El trigger recibe `aria-expanded`, `aria-haspopup` y `onClick` inyectados automáticamente.
+- Items con `danger: true` se renderizan en rojo (`mc-dropdown-item--danger`).
+
+---
+
 ## 11. CHECKLIST DE CODE REVIEW
 
 - [ ] ¿Solo `--mc-*`? ¿Cero hex sueltos en componentes nuevos?
@@ -509,3 +624,9 @@ En dev: `[analytics]` en consola. En prod: `sendBeacon` a `VITE_ANALYTICS_ENDPOI
 - [ ] ¿Notificaciones realtime llaman `announcePolitely()` además del toast?
 - [ ] ¿Modales destructivos tienen `description` o `descriptionElementId`?
 - [ ] ¿Modales de creación/flujo crítico tienen `analyticsId` y `markModalCompleted()`?
+- [ ] ¿Estilos visuales de tarjeta de tarea usan `getEstadoStyles(est, urgencia)` en lugar
+      de combinar `STATE_TOKENS` + `URGENCIA_TOKENS` manualmente?
+- [ ] ¿El color de marca respeta la regla teal=acción / violeta=identidad? (ver §1.4)
+- [ ] ¿Menús de acciones (⋯) usan `<PopoverMenu>` y no un dropdown manual con estado propio?
+- [ ] ¿Responsive NUEVO usa Tailwind (`md:`/`lg:`) y no un `@media` manual nuevo?
+      (Excepción: media queries con `calc()` sobre tokens `--mc-*`.) Ver §8b.

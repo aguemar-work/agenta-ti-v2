@@ -11,7 +11,7 @@ Objetivo principal: Eficiencia operativa del equipo IT. Gestionar planificación
 
 Flujo crítico de negocio: Planificación semanal continua, ejecución sin pérdida de estado y reporte veraz del esfuerzo de IT.
 
-Stack tecnológico: React 19, Vite 8, TanStack Query 5, Zustand, Zod 4. Backend: InsForge (Postgres, RLS). UI: Meta Canvas.
+Stack tecnológico: React 19, Vite 8, TanStack Query 5, Zustand, Zod 4. Backend: InsForge (Postgres, RLS). UI: Materen Canvas.
 
 Competidores referentes: Asana, Jira Service Management, Monday.com.
 

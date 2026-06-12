@@ -6,6 +6,11 @@ export function fechaLocalYmd(fecha: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Parsea `YYYY-MM-DD` como fecha local (mediodía, evita desfase UTC). */
+export function parseYmdLocal(ymd: string): Date {
+  return new Date(`${ymd}T12:00:00`);
+}
+
 /** Fecha local `dd/MM/yyyy` (formato corto para UI). */
 export function fechaLocalDdMmYyyy(fecha: Date): string {
   const d = String(fecha.getDate()).padStart(2, '0');

@@ -5,6 +5,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 
+import { TareaCatalogoSelects } from '@/components/semana/TareaCatalogoSelects';
+import type { Area } from '@/api/areas';
+import type { Cliente } from '@/api/clientes';
+import type { Proyecto } from '@/api/proyectos';
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
@@ -25,6 +29,9 @@ type EditarTareaDraft = {
   descripcion: string;
   objetivoId: string;
   asignadoId: string;
+  clienteId: string;
+  proyectoId: string;
+  areaId: string;
 };
 
 const EDITAR_IDLE: EditarTareaDraft = {
@@ -33,6 +40,9 @@ const EDITAR_IDLE: EditarTareaDraft = {
   descripcion: '',
   objetivoId: '',
   asignadoId: '',
+  clienteId: '',
+  proyectoId: '',
+  areaId: '',
 };
 
 type Vista = 'detalle' | 'editar' | 'eliminar' | 'cancelar';
@@ -54,6 +64,12 @@ type Props = {
   tarea: Tarea | null;
   objetivos: Pick<Objetivo, 'id' | 'titulo'>[];
   usuariosAsignables?: Pick<Usuario, 'id' | 'nombre'>[];
+  clientes?: Pick<Cliente, 'id' | 'nombre'>[];
+  proyectos?: Pick<Proyecto, 'id' | 'nombre' | 'cliente_id'>[];
+  areas?: Pick<Area, 'id' | 'nombre'>[];
+  moduloClientes?: boolean;
+  moduloProyectos?: boolean;
+  moduloAreas?: boolean;
   readOnly?: boolean;
   onClose: () => void;
   onGuardar: (input: {
@@ -63,6 +79,9 @@ type Props = {
     descripcion: string;
     objetivo_id?: string | null;
     asignado_a?: string | null;
+    cliente_id?: string | null;
+    proyecto_id?: string | null;
+    area_id?: string | null;
   }) => Promise<void>;
   onEliminar: (input: { tareaId: string; motivo: string }) => Promise<void>;
   onCancelar?: (input: { tareaId: string; motivo: string }) => Promise<void>;
@@ -80,6 +99,12 @@ export function ModalDetalleTareaSemana({
   tarea,
   objetivos,
   usuariosAsignables = [],
+  clientes = [],
+  proyectos = [],
+  areas = [],
+  moduloClientes = false,
+  moduloProyectos = false,
+  moduloAreas = false,
   readOnly = false,
   onClose,
   onGuardar,
@@ -110,6 +135,9 @@ export function ModalDetalleTareaSemana({
       descripcion: tarea.descripcion ?? '',
       objetivoId: tarea.objetivo_id ?? '',
       asignadoId: tarea.asignado_a ?? '',
+      clienteId:  tarea.cliente_id ?? '',
+      proyectoId: tarea.proyecto_id ?? '',
+      areaId:     tarea.area_id ?? '',
     };
   }, [tarea]);
 
@@ -143,6 +171,8 @@ export function ModalDetalleTareaSemana({
     if (readOnly || !tarea || !editarForm.titulo.trim()) return;
     setBusy(true);
     try {
+      // TODO: sgtd_actualizar_tarea usa COALESCE en catálogos — no permite "limpiar"
+      // (elegir "Sin X" no persiste). Requiere migración que distinga null-no-tocar vs null-limpiar.
       await onGuardar({
         tareaId: tarea.id,
         titulo: editarForm.titulo.trim(),
@@ -150,6 +180,9 @@ export function ModalDetalleTareaSemana({
         descripcion: editarForm.descripcion.trim(),
         objetivo_id: editarForm.objetivoId || null,
         asignado_a: editarForm.asignadoId || null,
+        cliente_id:  editarForm.clienteId || null,
+        proyecto_id: editarForm.proyectoId || null,
+        area_id:     editarForm.areaId || null,
       });
       clearEditarDraft();
       setVista('detalle');
@@ -507,6 +540,22 @@ export function ModalDetalleTareaSemana({
                 </select>
               </div>
             )}
+            <TareaCatalogoSelects
+              idPrefix="edit"
+              values={{
+                clienteId:  editarForm.clienteId,
+                proyectoId: editarForm.proyectoId,
+                areaId:     editarForm.areaId,
+              }}
+              onChange={(patch) => setEditarForm((p) => ({ ...p, ...patch }))}
+              clientes={clientes}
+              proyectos={proyectos}
+              areas={areas}
+              moduloClientes={moduloClientes}
+              moduloProyectos={moduloProyectos}
+              moduloAreas={moduloAreas}
+              allowClear={false}
+            />
           </div>
         );
 

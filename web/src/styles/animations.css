@@ -101,6 +101,13 @@
 
 /* ── prefers-reduced-motion ────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --mc-transition: 0ms;
+    --mc-transition-fast: 0ms;
+    --mc-transition-slow: 0ms;
+    --mc-transition-layout: 0ms;
+  }
+
   .mc-skeleton,
   .task-precaucion,
   .task-urgente {

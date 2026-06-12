@@ -31,8 +31,9 @@ import { toast } from 'sonner';
 import { announcePolitely } from '@/components/a11y/LiveRegion';
 
 import { Q_INC_HOY } from '@/hooks/useHoyColumnas';
-import { Q_SLA_RESUMEN } from '@/hooks/useResumenSlaJefe';
+import { Q_SLA_RESUMEN_ROOT } from '@/hooks/useResumenSlaJefe';
 import { getInsforge } from '@/lib/insforge';
+import { qkWsId } from '@/lib/queryKeys';
 import { planificacionSlaPath } from '@/lib/slaNavigation';
 import {
   getDefaultNotificationPrefs,
@@ -41,6 +42,7 @@ import {
   type NotificationPrefs,
 } from '@/lib/notificationPrefs';
 import { useAuthStore } from '@/store/authStore';
+import { getWorkspaceId, useWorkspaceStore } from '@/store/workspaceStore';
 
 type EventPayload = Record<string, unknown>;
 
@@ -57,15 +59,17 @@ function notifyIfEnabled(
 }
 
 function invalidatePlanificacionYsla(qc: ReturnType<typeof useQueryClient>) {
+  const wsId = getWorkspaceId();
   void Promise.all([
-    qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
-    qc.invalidateQueries({ queryKey: [...Q_SLA_RESUMEN], exact: false }),
-    qc.invalidateQueries({ queryKey: ['semana'], exact: false }),
+    qc.invalidateQueries({ queryKey: qkWsId(wsId, 'planificacion'), exact: false }),
+    qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_SLA_RESUMEN_ROOT, 'resumen-jefe'), exact: false }),
+    qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana'), exact: false }),
   ]);
 }
 
 export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultNotificationPrefs()) {
   const usuario = useAuthStore((s) => s.usuario);
+  const esJefe  = useWorkspaceStore((s) => s.esJefe());
   const qc      = useQueryClient();
   const navigate = useNavigate();
 
@@ -82,7 +86,6 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
     retryCountRef.current = 0;
 
     const rt          = getInsforge().realtime;
-    const esJefe      = usuario.rol === 'jefe';
     const canalUser   = `usuario:${usuario.id}`;
     const canalEquipo = `equipo:${usuario.id}`;
 
@@ -102,7 +105,8 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
 
         rt.on('tarea_asignada', (payload: EventPayload) => {
           if (cancelledRef.current) return;
-          void qc.invalidateQueries({ queryKey: ['semana'], exact: false });
+          const wsId = getWorkspaceId();
+          void qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana'), exact: false });
           notifyIfEnabled(prefs, 'tarea_asignada', () => {
             const quien = payload.asignadoPor ? ` (${payload.asignadoPor})` : '';
             const msg = `Nueva tarea asignada${quien}: ${payload.titulo ?? ''}`;
@@ -135,11 +139,12 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
 
           rt.on('tarea_completada', (payload: EventPayload) => {
             if (cancelledRef.current) return;
+            const wsId = getWorkspaceId();
             void Promise.all([
-              qc.invalidateQueries({ queryKey: ['tablero'],      exact: false }),
-              qc.invalidateQueries({ queryKey: ['semana'],       exact: false }),
-              qc.invalidateQueries({ queryKey: ['tareas-hoy'],   exact: false }),
-              qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tablero'), exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana'), exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tareas-hoy'), exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'planificacion'), exact: false }),
             ]);
             notifyIfEnabled(prefs, 'tarea_completada', () => {
               const msg = `${payload.usuarioNombre ?? 'Miembro'} completó "${payload.titulo ?? ''}"`;
@@ -163,10 +168,11 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
 
           rt.on('incidencia_registrada', (payload: EventPayload) => {
             if (cancelledRef.current) return;
+            const wsId = getWorkspaceId();
             void Promise.all([
-              qc.invalidateQueries({ queryKey: [Q_INC_HOY],      exact: false }),
-              qc.invalidateQueries({ queryKey: ['tablero'],       exact: false }),
-              qc.invalidateQueries({ queryKey: ['planificacion'], exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_INC_HOY), exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tablero'), exact: false }),
+              qc.invalidateQueries({ queryKey: qkWsId(wsId, 'planificacion'), exact: false }),
             ]);
             notifyIfEnabled(prefs, 'incidencia_registrada', () => {
               const msg = `Incidencia registrada: ${payload.titulo ?? ''}, por ${payload.usuarioNombre ?? ''}`;
@@ -257,7 +263,7 @@ export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultN
         // ignorar errores de cleanup
       }
     };
-  }, [navigate, qc, usuario?.id, usuario?.rol, prefs]);
+  }, [esJefe, navigate, qc, usuario?.id, prefs]);
 
   return { conectado };
 }

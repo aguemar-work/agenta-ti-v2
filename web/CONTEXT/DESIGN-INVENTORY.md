@@ -1,7 +1,7 @@
 # DESIGN-INVENTORY — Nexora / SGTD v4
 
 **Generado:** 2026-06-05  
-**Alcance:** frontend en `web/` (SPA React + Meta Canvas). Solo inventario; sin cambios de código.
+**Alcance:** frontend en `web/` (SPA React + Materen Canvas). Solo inventario; sin cambios de código.
 
 ---
 
@@ -21,7 +21,7 @@
 ### Sistema de estilos
 
 - **Tailwind CSS 3.4.17** (`@tailwind base/components/utilities` en `index.css`).
-- **Design system propio Meta Canvas:** clases `mc-*` y tokens `--mc-*` en CSS plano.
+- **Design system propio Materen Canvas:** clases `mc-*` y tokens `--mc-*` en CSS plano.
 - Archivos de estilo: `tokens.css`, `shell.css`, `components.css`, `forms.css`, `layout.css`, `tasks.css`, `animations.css`, `ot-impresion.css`.
 - **No** CSS Modules, **no** styled-components, **no** Tailwind v4.
 - `tailwind.config.js` tiene `theme.extend` vacío: casi todo el diseño vive en CSS `mc-*`, no en utilidades Tailwind extendidas.
@@ -120,7 +120,7 @@ export default {
 
 ```css
 /**
- * tokens.css — Fuente de verdad Meta Canvas (--mc-*)
+ * tokens.css — Fuente de verdad Materen Canvas (--mc-*)
  */
 :root {
   /* ── Superficies ────────────────────────────────────────────────── */

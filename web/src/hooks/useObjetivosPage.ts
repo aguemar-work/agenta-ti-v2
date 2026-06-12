@@ -12,9 +12,12 @@ import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { crearTareaPlanificada } from '@/api/semana';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { Q_KPIS, Q_OBJ_PROG, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import { markModalCompleted } from '@/lib/analytics';
+import { qkWsId } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
+import { getWorkspaceId, useWorkspaceStore } from '@/store/workspaceStore';
 import type { Tarea } from '@/types';
 
 type NuevoObjetivoDraft = {
@@ -36,8 +39,9 @@ export const Q_OTS_OBJ    = 'objetivo-ots';
 
 export function useObjetivosPage() {
   const qc      = useQueryClient();
+  const workspaceId = useWorkspaceId();
   const usuario = useAuthStore((s) => s.usuario);
-  const esJefe  = usuario?.rol === 'jefe';
+  const esJefe  = useWorkspaceStore((s) => s.esJefe());
 
   const { data: objetivos = [], isLoading: loadO, isError } = useObjetivosProgreso();
   const { data: usuariosActivos = [] } = useUsuariosActivos({ enabled: Boolean(usuario) });
@@ -46,14 +50,14 @@ export function useObjetivosPage() {
   const objetivoSel = objetivos.find((o) => o.id === seleccionId) ?? null;
 
   const { data: tareasVinc = [], isLoading: loadTareas } = useQuery({
-    queryKey: [Q_TAREAS_OBJ, seleccionId],
-    enabled:  Boolean(seleccionId),
+    queryKey: qkWsId(workspaceId, Q_TAREAS_OBJ, seleccionId),
+    enabled:  Boolean(seleccionId) && Boolean(workspaceId),
     queryFn:  () => getTareasPorObjetivo(seleccionId!),
   });
 
   const { data: otsVinc = [], isLoading: loadOTs } = useQuery({
-    queryKey: [Q_OTS_OBJ, seleccionId],
-    enabled:  Boolean(seleccionId),
+    queryKey: qkWsId(workspaceId, Q_OTS_OBJ, seleccionId),
+    enabled:  Boolean(seleccionId) && Boolean(workspaceId),
     queryFn:  () => getOTsPorObjetivo(seleccionId!),
   });
 
@@ -107,10 +111,11 @@ export function useObjetivosPage() {
   const motivoOk = motivoEliminar.trim().length >= MIN_JUSTIFICACION_CHARS;
 
   const invalidarObjetivos = async () => {
+    const wsId = getWorkspaceId();
     await Promise.all([
-      qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-      qc.invalidateQueries({ queryKey: [Q_KPIS] }),
-      qc.invalidateQueries({ queryKey: [Q_KPIS, usuario?.id] }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_OBJ_PROG) }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_KPIS) }),
+      qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_KPIS, usuario?.id) }),
     ]);
   };
 
@@ -158,10 +163,11 @@ export function useObjetivosPage() {
   const mutAddTarea = useMutation({
     mutationFn: crearTareaPlanificada,
     onSuccess: async (_, vars) => {
+      const wsId = getWorkspaceId();
       await Promise.all([
-        qc.invalidateQueries({ queryKey: [Q_TAREAS_OBJ, vars.objetivo_id] }),
-        qc.invalidateQueries({ queryKey: [Q_OBJ_PROG] }),
-        qc.invalidateQueries({ queryKey: ['semana'] }),
+        qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_TAREAS_OBJ, vars.objetivo_id) }),
+        qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_OBJ_PROG) }),
+        qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana'), exact: false }),
       ]);
       clearTareaObjetivoDraft();
       setModalTarea(false);

@@ -58,6 +58,8 @@ type FilterSelectProps = {
   options: SelectOption[];
   disabled?: boolean;
   minWidth?: number;
+  /** Oculta el label visual; mantiene accesibilidad vía aria-label en el select. */
+  hideLabel?: boolean;
 };
 
 FilterBar.Select = function FilterSelect({
@@ -68,18 +70,20 @@ FilterBar.Select = function FilterSelect({
   options,
   disabled = false,
   minWidth = 150,
+  hideLabel = false,
 }: FilterSelectProps) {
   const widthClass =
     minWidth <= 120 ? 'mc-filter-select--w120' : minWidth >= 180 ? 'mc-filter-select--w180' : 'mc-filter-select--w150';
   return (
-    <label className="mc-filter-item" htmlFor={id}>
-      <span className="mc-filter-label">{label}</span>
+    <label className={['mc-filter-item', hideLabel ? 'mc-filter-item--no-label' : ''].filter(Boolean).join(' ')} htmlFor={id}>
+      {hideLabel ? null : <span className="mc-filter-label">{label}</span>}
       <select
         id={id}
         className={['mc-filter-select', widthClass].join(' ')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        aria-label={hideLabel ? label : undefined}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -99,11 +103,13 @@ type FilterPillsProps = {
   value: string;
   onChange: (value: string) => void;
   options: PillOption[];
+  /** Etiqueta accesible del grupo (p. ej. «Filtrar por estado»). */
+  groupLabel?: string;
 };
 
-FilterBar.Pills = function FilterPills({ value, onChange, options }: FilterPillsProps) {
+FilterBar.Pills = function FilterPills({ value, onChange, options, groupLabel = 'Filtrar' }: FilterPillsProps) {
   return (
-    <div className="mc-filter-pills" role="group">
+    <div className="mc-filter-pills" role="group" aria-label={groupLabel}>
       {options.map((o) => (
         <button
           key={o.value}

@@ -9,6 +9,7 @@
  * componente, pertenece aquí — nunca confiar solo en el cliente.
  */
 
+import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { Tarea, Usuario } from '@/types';
 
 /**
@@ -21,9 +22,9 @@ import type { Tarea, Usuario } from '@/types';
  */
 export function puedeGestionarTarea(
   tarea: Tarea,
-  usuario: Pick<Usuario, 'id' | 'rol'> | null | undefined,
+  usuario: Pick<Usuario, 'id'> | null | undefined,
 ): boolean {
   if (!usuario) return false;
-  if (usuario.rol === 'jefe') return true;
+  if (useWorkspaceStore.getState().esJefe()) return true;
   return tarea.asignado_a === usuario.id;
 }

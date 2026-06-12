@@ -1,4 +1,4 @@
-import { ClipboardList, FileText, Target } from 'lucide-react';
+import { CalendarDays, ClipboardList, FileText, Target } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ type Step = {
 function stepsForRol(rol: RolUsuario): Step[] {
   const objetivos: Step = {
     title: 'Objetivos estratégicos',
-    body: 'Vincula tareas y OTs a metas del equipo. Nexora conecta el trabajo diario con resultados medibles — el diferenciador frente a tableros genéricos.',
+    body: 'Vincula tareas y OTs a metas del equipo. Materen conecta el trabajo diario con resultados medibles — el diferenciador frente a tableros genéricos.',
     icon: Target,
     cta: { label: 'Ir a Objetivos', to: '/objetivos', feature: 'objetivos' },
   };
@@ -40,8 +40,15 @@ function stepsForRol(rol: RolUsuario): Step[] {
     cta: { label: 'Abrir planificación', to: '/planificacion', feature: 'planificacion' },
   };
 
-  if (rol === 'jefe') return [objetivos, planificacion, ot];
-  return [objetivos, ot];
+  const miSemana: Step = {
+    title: 'Mi semana',
+    body: 'Planifica Lun–Sáb, registra incidencias del día y lleva el control de tus tareas en una grilla semanal.',
+    icon: CalendarDays,
+    cta: { label: 'Ir a Mi semana', to: '/semana', feature: 'mi_semana' },
+  };
+
+  if (rol === 'jefe') return [miSemana, objetivos, planificacion, ot];
+  return [miSemana, objetivos, ot];
 }
 
 export function OnboardingWelcome({ userId, rol }: Props) {
@@ -81,9 +88,10 @@ export function OnboardingWelcome({ userId, rol }: Props) {
     <Modal
       open={open}
       onClose={() => finish(true)}
-      title="Bienvenido a Nexora"
+      title="Bienvenido a Materen"
       size="md"
       analyticsId="onboarding-welcome"
+      footerClassName="mc-modal-footer--stack"
       footer={(
         <>
           <CancelButton type="button" onClick={() => finish(true)}>

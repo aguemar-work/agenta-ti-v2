@@ -1,16 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { contarAlertasSla, getResumenSlaJefe, type ResumenSlaJefe } from '@/api/sla';
-import { selectEsJefe, useAuthStore } from '@/store/authStore';
+import { useWorkspaceId } from '@/hooks/useWorkspaceId';
+import { qkWsId } from '@/lib/queryKeys';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 
-export const Q_SLA_RESUMEN = ['sla', 'resumen-jefe'] as const;
+export const Q_SLA_RESUMEN_ROOT = 'sla';
 
 export function useResumenSlaJefe(options?: { enabled?: boolean }) {
-  const esJefe = useAuthStore(selectEsJefe);
-  const enabled = (options?.enabled ?? true) && esJefe;
+  const esJefe = useWorkspaceStore((s) => s.esJefe());
+  const workspaceId = useWorkspaceId();
+  const enabled = (options?.enabled ?? true) && esJefe && Boolean(workspaceId);
 
   return useQuery({
-    queryKey: Q_SLA_RESUMEN,
+    queryKey: qkWsId(workspaceId, Q_SLA_RESUMEN_ROOT, 'resumen-jefe'),
     queryFn:  () => getResumenSlaJefe(),
     enabled,
     staleTime: 2 * 60 * 1000,
