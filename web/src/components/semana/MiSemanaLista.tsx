@@ -107,7 +107,7 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
         {tareas.map((t) => {
           const ymd        = t.fecha_planificada;
           const esHoy      = ymd === hoyYmd;
-          const meta       = ymdMeta.get(ymd);
+          const meta       = ymd != null ? ymdMeta.get(ymd) : undefined;
           const dateLabel  = meta
             ? `${DIAS_CORTO[meta.idx]} ${meta.d.getDate()}`
             : ymd;

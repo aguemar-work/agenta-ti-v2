@@ -11,7 +11,7 @@ type Props = {
   hoyYmd: string;
   objetivos: Pick<Objetivo, 'id' | 'titulo'>[];
   usuariosAsignables: Pick<Usuario, 'id' | 'nombre'>[];
-  ot?: OrdenTrabajo | null;
+  ot?: OrdenTrabajo | null | undefined;
   onOtClick?: (ot: OrdenTrabajo) => void;
 };
 
