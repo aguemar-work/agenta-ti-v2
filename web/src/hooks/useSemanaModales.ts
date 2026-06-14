@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { reprogramarTareaConLog } from '@/api/semana';
+import { cambiarEstadoTarea, reprogramarTareaConLog } from '@/api/semana';
 import { useMiSemanaMutations } from '@/hooks/useMiSemana';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { useWorkspaceStore } from '@/store/workspaceStore';
@@ -178,13 +178,38 @@ export function useSemanaModales({
 
   async function iniciarDesdeDetalle(t: Tarea) {
     if (!usuario) return;
+    const estadoPrevio = t.estado;
+    const uid = usuario.id;
     try {
-      await mut.iniciarTarea({ tareaId: t.id, usuarioId: usuario.id });
-      toast.success('Tarea en progreso');
+      await mut.iniciarTarea({ tareaId: t.id, usuarioId: uid });
       setDetalleTareaId(null);
+      toast.success('Tarea en progreso', {
+        duration: 6000,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            try {
+              await cambiarEstadoTarea({ tareaId: t.id, nuevoEstado: estadoPrevio });
+              await invalidateRelatedQueries(qc, ['semana', 'tareas-hoy', 'planificacion']);
+              toast.success('Revertido');
+            } catch {
+              toast.error('No se pudo revertir.');
+            }
+          },
+        },
+      });
     } catch (err) {
       console.error('[iniciarDesdeDetalle]', err);
       toast.error('No se pudo iniciar la tarea.');
+    }
+  }
+
+  async function moverTareaADia(tareaId: string, nuevaFecha: string) {
+    try {
+      await mut.moverEntre({ tareaId, nuevaFecha });
+    } catch (err) {
+      console.error('[moverTareaADia]', err);
+      toast.error('No se pudo mover la tarea.');
     }
   }
 
@@ -204,5 +229,6 @@ export function useSemanaModales({
     eliminarDesdeDetalle,
     cancelarDesdeDetalle,
     iniciarDesdeDetalle,
+    moverTareaADia,
   };
 }

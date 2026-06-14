@@ -12,6 +12,6 @@ export function useMetricasOT(desde: string, hasta: string, enabled = true) {
     queryKey: qkWsId(workspaceId, 'metricas-ot', desde, hasta),
     enabled: enabled && Boolean(desde && hasta) && Boolean(workspaceId),
     queryFn: () => getOtEstadoCounts(desde, hasta),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }

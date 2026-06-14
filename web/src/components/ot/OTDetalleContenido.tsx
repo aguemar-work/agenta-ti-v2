@@ -121,7 +121,7 @@ export function OTDetalleContenido({ ot, hoy, acciones }: Props) {
 
       <div className="mc-ot-detalle-acciones flex flex-col gap-2 border-t border-[var(--mc-color-border)] pt-3">
         {acciones.puedeAprobar && (
-          <Button variant="primary" size="sm" fullWidth onClick={acciones.onAprobar} disabled={acciones.aprobarPending}>
+          <Button variant="primary" size="sm" fullWidth loading={acciones.aprobarPending} onClick={acciones.onAprobar}>
             Aprobar
           </Button>
         )}

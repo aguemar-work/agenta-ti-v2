@@ -268,12 +268,15 @@ MODERATE — ws 8.0.0–8.20.0 (engine.io-client / realtime)
 |----|--------|-------|
 | AUDIT-001 | ✅ | Redirect `/semana` |
 | AUDIT-002 | ✅ | Filtro OT `pendiente`/`en_progreso` |
-| AUDIT-003 | 📋 | Split parcial OT; resto en deuda |
+| AUDIT-003 | ✅ | `useOTTiposTrabajo` + `useOTAcciones` extraídos 2026-06-13 |
 | AUDIT-004 | ✅ | Hooks → `api/metricas`, `ordenTrabajo`, `planificacion`, `semana`, `usuarios` |
 | AUDIT-005 | ✅ | `useMetricasPage` |
 | AUDIT-006 | ✅ | `logAccionLabels.ts` |
 | AUDIT-007 | ✅ | `useIsMobile` |
-| AUDIT-008–011 | 📋 | Deuda post-auditoría |
+| AUDIT-008 | ✅ | `TareaDetalleVista`, `TareaEditarVista`, `TareaJustificacionVista` 2026-06-13 |
+| AUDIT-009 | ✅ | Solo `moverTareaColumna` exportado; legacy kanban removido |
+| AUDIT-010 | ✅ | `toastOk`/`toastErr` en `src/lib/toast.ts` |
+| AUDIT-011 | ✅ | `bloqueada`/`desbloqueada` marcados legacy histórico en tipos y labels |
 | AUDIT-012–014 | ✅ | Fortalezas / métricas alineadas |
 | AUDIT-015, 023b | ✅ | `npm audit fix` |
 | AUDIT-016 | ✅ | RPC `sgtd_eliminar_objetivo` |
@@ -284,7 +287,8 @@ MODERATE — ws 8.0.0–8.20.0 (engine.io-client / realtime)
 | AUDIT-022 | 📋 | Staging/Prod manual §12 |
 | AUDIT-024–026 | ✅ | Fortalezas |
 | AUDIT-027–031 | ✅ | CI, runbook, migr. 041/042, docs schema |
-| AUDIT-032–035, 033 | 📋 | Deuda post-auditoría |
+| AUDIT-032–035 | 📋 | Deuda post-auditoría |
+| AUDIT-033 | ✅ | `getKpisRangoYSemana` (1 fetch → kpis + porSemana); `staleTime: 5min` |
 | AUDIT-034 | ✅ | Permissions-Policy en `vercel.json` |
 | AUDIT-036 | ✅ | Sin N+1 |
 | AUDIT-037 | 🟡 | Plantilla + `/privacidad` + login; Legal pendiente |

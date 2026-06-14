@@ -4,6 +4,7 @@
  */
 
 import { getInsforge } from '@/lib/insforge';
+import { getWorkspaceId } from '@/store/workspaceStore';
 import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { parseEvento, parseTarea } from '@/lib/schemas';
@@ -251,6 +252,9 @@ function toIsoLocal(fechaDia: string, hora: string): string {
 }
 
 export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promise<Evento> {
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) throw new Error('Sin workspace activo');
+
   const insforge = getInsforge();
   const { data: inserted, error } = await insforge.database
     .from('evento')
@@ -261,6 +265,7 @@ export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promis
       fecha_fin:     toIsoLocal(input.fecha_dia, input.hora_fin),
       usuario_id:    input.usuario_id,
       es_recurrente: input.es_recurrente,
+      workspace_id:  workspaceId,
     }])
     .select('*')
     .single();

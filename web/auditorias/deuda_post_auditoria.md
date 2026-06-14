@@ -7,13 +7,13 @@
 
 ## Código y arquitectura
 
-| ID | Hallazgo | Motivo diferido |
-|----|----------|-----------------|
-| AUDIT-003 | God-hook `useOrdenesTrabajoPage` (borrador/autoguardado) | Split parcial hecho (`useOrdenesTrabajoQueries`); resto es refactor grande sin bug |
-| AUDIT-008 | `ModalDetalleTareaSemana` monolítico | Mantenibilidad / tests |
-| AUDIT-009 | Kanban legacy en `api/tablero.ts` | Marcado `@deprecated`; tests lo usan |
-| AUDIT-011 | `TipoAccionLog` con `bloqueada`/`desbloqueada` | Solo lectura histórica en logs |
-| AUDIT-033 | 4 queries paralelas en Métricas | Rendimiento; sin SLA roto en volumen actual |
+| ID | Hallazgo | Estado |
+|----|----------|--------|
+| ~~AUDIT-003~~ | ~~God-hook `useOrdenesTrabajoPage`~~ | ✅ Resuelto 2026-06-13 — `useOTTiposTrabajo` + `useOTAcciones` |
+| ~~AUDIT-008~~ | ~~`ModalDetalleTareaSemana` monolítico~~ | ✅ Resuelto 2026-06-13 — `TareaDetalleVista`, `TareaEditarVista`, `TareaJustificacionVista` |
+| ~~AUDIT-009~~ | ~~Kanban legacy en `api/tablero.ts`~~ | ✅ Resuelto — solo `moverTareaColumna` exportado |
+| ~~AUDIT-011~~ | ~~`TipoAccionLog` con `bloqueada`/`desbloqueada`~~ | ✅ Resuelto 2026-06-13 — marcados como legacy histórico |
+| ~~AUDIT-033~~ | ~~4 queries paralelas en Métricas~~ | ✅ Resuelto 2026-06-13 — `getKpisRangoYSemana` unifica 2 fetches; `staleTime: 5min` en todos |
 
 ## Seguridad
 

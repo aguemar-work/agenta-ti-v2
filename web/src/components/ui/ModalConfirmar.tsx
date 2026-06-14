@@ -74,10 +74,10 @@ export function ModalConfirmar({
           </Button>
           <Button
             variant={variantConfirmar}
+            loading={cargando}
             onClick={onConfirmar}
-            disabled={cargando}
           >
-            {cargando ? 'Cargando…' : labelConfirmar}
+            {labelConfirmar}
           </Button>
         </>
       }

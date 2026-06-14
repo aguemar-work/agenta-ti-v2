@@ -157,26 +157,44 @@ export function SkeletonRow({ cols = 4 }: { cols?: number }) {
 // ---------------------------------------------------------------------------
 // SkeletonSemanaGrilla — columnas de Mi Semana (1 móvil / 6 desktop)
 // ---------------------------------------------------------------------------
+const SKEL_COUNTS = [3, 2, 4, 1, 3, 2];
+
 export function SkeletonSemanaGrilla() {
   return (
     <div
-      className="grid min-h-[220px] flex-1 grid-cols-1 gap-3 md:grid-cols-6"
+      className="flex min-h-[320px] flex-1 overflow-hidden rounded-[var(--mc-radius-lg)] border border-[var(--mc-color-border)] bg-[var(--mc-color-surface)]"
       aria-busy="true"
       aria-label="Cargando agenda"
     >
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className={[
-            'flex flex-col gap-2 rounded-[var(--mc-radius-lg)] border border-[var(--mc-color-border)] p-3',
-            i === 0 ? 'flex' : 'hidden md:flex',
-          ].join(' ')}
-          aria-hidden={i > 0}
-        >
-          <Bone w="50%" h={12} />
-          <SkeletonTareaList count={2} />
-        </div>
-      ))}
+      <div className="grid flex-1 grid-cols-1 md:grid-cols-6" style={{ width: '100%' }}>
+        {SKEL_COUNTS.map((count, i) => (
+          <div
+            key={i}
+            className={[
+              'flex flex-col border-[var(--mc-color-border)]',
+              i === 0 ? 'flex' : 'hidden md:flex',
+              'md:border-r md:last:border-r-0',
+            ].join(' ')}
+            aria-hidden={i > 0}
+          >
+            {/* Header día */}
+            <div className="flex items-center gap-2 border-b border-[var(--mc-color-border)] px-2 py-[7px]">
+              <Bone w={22} h={10} radius={4} />
+              <Bone w={14} h={14} radius={7} />
+            </div>
+            {/* Botón add */}
+            <div className="border-b border-[var(--mc-color-border)] px-4 py-[9px]">
+              <Bone w="55%" h={9} radius={4} />
+            </div>
+            {/* Cards */}
+            <div className="flex flex-col gap-2 p-2">
+              {Array.from({ length: count }).map((_, j) => (
+                <SkeletonTarea key={j} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

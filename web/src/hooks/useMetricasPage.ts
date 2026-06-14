@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { useKpisComparativa, useKpisPorSemana, useKpisRango, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
+import { useKpisComparativa, useKpisRangoYSemana, useObjetivosProgreso } from '@/hooks/useObjetivosMetricas';
 import { useMetricasOT } from '@/hooks/useMetricasOT';
 import { useUsuariosActivos } from '@/hooks/useUsuarios';
 import { fechaLocalYmd } from '@/lib/fecha';
@@ -37,8 +37,11 @@ export function useMetricasPage() {
   );
   const uid = esJefe ? miembroFiltro : usuario?.id;
 
-  const { data: kpis, isLoading: loadK } = useKpisRango(desde, hasta, uid);
-  const { data: porSemana = [], isLoading: loadS } = useKpisPorSemana(desde, hasta, uid);
+  const { data: metricasCompletas, isLoading: loadKS } = useKpisRangoYSemana(desde, hasta, uid);
+  const kpis = metricasCompletas?.kpis;
+  const porSemana = metricasCompletas?.porSemana ?? [];
+  const loadK = loadKS;
+  const loadS = loadKS;
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(desde, hasta, esJefe);
   const { data: objetivos = [], isLoading: loadObj } = useObjetivosProgreso();
   const { data: otCounts, isLoading: loadOT } = useMetricasOT(desde, hasta, esJefe);

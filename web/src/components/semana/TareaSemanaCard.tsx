@@ -1,4 +1,4 @@
-import { Ban, CalendarClock, Check, Circle, Flame, MoreVertical, Play, Trash2 } from 'lucide-react';
+import { Ban, CalendarClock, Check, ChevronsUp, Equal, Flame, MoreVertical, Play, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
@@ -12,11 +12,16 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { PRIORIDAD_LABEL } from '@/lib/estadoConfig';
 import { claveVisualTarea } from '@/lib/tableroEstado';
 import {
-  claseBarraPrioridad,
-  muestraChipPrioridad,
   senalSituacionCard,
 } from '@/lib/tareaCardSemana';
-import type { ClaveVisualTarea, EstadoTarea, Tarea } from '@/types';
+import type { ClaveVisualTarea, EstadoTarea, PrioridadTarea, Tarea } from '@/types';
+
+const PRIORIDAD_CHIP: Record<PrioridadTarea, { icon: typeof Flame; clase: string; label: string } | null> = {
+  critica: { icon: Flame,      clase: 'mc-chip--prioridad-critica', label: 'Crítica' },
+  alta:    { icon: ChevronsUp, clase: 'mc-chip--prioridad-alta',    label: 'Alta'    },
+  media:   { icon: Equal,      clase: 'mc-chip--prioridad-media',   label: 'Media'   },
+  baja:    null,
+};
 
 type Props = {
   tarea: Tarea;
@@ -116,6 +121,7 @@ export function TareaSemanaCard({
     return (
       <div
         className="mc-semana-task-card mc-semana-task-card--v2 mc-semana-task-card--completada"
+        draggable={false}
         onClick={() => onOpenDetalle?.(tarea)}
         role="button"
         tabIndex={0}
@@ -135,6 +141,7 @@ export function TareaSemanaCard({
     return (
       <div
         className="mc-semana-task-card mc-semana-task-card--v2 mc-semana-task-card--cancelada"
+        draggable={false}
         onClick={() => onOpenDetalle?.(tarea)}
         role="button"
         tabIndex={0}
@@ -148,27 +155,24 @@ export function TareaSemanaCard({
     );
   }
 
+  const estadoCardClass = clave === 'atrasada'    ? 'mc-semana-task-card--atrasada'
+                        : clave === 'en_progreso' ? 'mc-semana-task-card--en-progreso'
+                        : clave === 'reprogramada' ? 'mc-semana-task-card--reprogramada'
+                        : '';
+
   return (
     <>
-      <div
-        className={[
-          'mc-semana-task-card',
-          'mc-semana-task-card--v2',
-          senalSit === 'atrasada' ? 'mc-semana-task-card--atrasada' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        <span
-          className={['mc-semana-task-card__prio', claseBarraPrioridad(tarea.prioridad)].join(' ')}
+      <div className={['mc-semana-task-card mc-semana-task-card--v2', estadoCardClass].filter(Boolean).join(' ')}>
+        <div
+          className={`mc-semana-task-card__prio mc-semana-task-card__prio--${tarea.prioridad}`}
           aria-hidden
         />
-
         <div className="mc-semana-task-card__main">
           <div
             className="mc-semana-task-card__click"
             role="button"
             tabIndex={0}
+            draggable={false}
             onClick={() => onOpenDetalle?.(tarea)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea);
@@ -176,28 +180,30 @@ export function TareaSemanaCard({
           >
             <div className="mc-semana-task-card__row-top">
               <p className="mc-semana-task-card__title">{tarea.titulo}</p>
-              {muestraChipPrioridad(tarea.prioridad) && (
-                <span className="mc-chip mc-chip--prioridad-critica mc-semana-task-card__prio-chip">
-                  <Flame size={11} aria-hidden />
-                  {PRIORIDAD_LABEL.critica}
-                </span>
-              )}
+              {(() => {
+                const chip = PRIORIDAD_CHIP[tarea.prioridad];
+                if (!chip) return null;
+                const { icon: Icon, clase, label } = chip;
+                return (
+                  <span
+                    className={`mc-chip ${clase} mc-semana-task-card__prio-chip`}
+                    aria-label={`Prioridad ${label}`}
+                    title={label}
+                  >
+                    <Icon size={13} aria-hidden />
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="mc-semana-task-card__pills">
-              {senalSitVisible ? (
+              {senalSitVisible && (
                 <TareaEstadoIndicator estado={senalSitVisible} variant="pill" />
-              ) : null}
-              {tarea.estado === 'pendiente' ? (
-                <span className="mc-semana-task-card__estado-pendiente" aria-label="Pendiente">
-                  <Circle size={12} strokeWidth={2} aria-hidden />
-                </span>
-              ) : (
-                <TareaEstadoIndicator estado={estadoEjecucionPill(tarea.estado)} variant="pill" />
               )}
-              {areaNombre ? (
+              <TareaEstadoIndicator estado={estadoEjecucionPill(tarea.estado)} variant="pill" />
+              {areaNombre && (
                 <span className="mc-chip mc-chip--area">{areaNombre}</span>
-              ) : null}
+              )}
             </div>
 
             <div className="mc-semana-task-card__usuario-line">
@@ -212,56 +218,58 @@ export function TareaSemanaCard({
           {hayFilaAcciones && (
             <div
               className={[
-                'mc-semana-task-card__actions',
-                'mc-semana-task-card__actions--split',
-                isMobile ? 'mc-semana-task-card__actions--mobile' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
+                'mc-semana-task-card__actions-collapse',
+                isMobile ? 'mc-semana-task-card__actions-collapse--mobile' : '',
+              ].filter(Boolean).join(' ')}
             >
-              <div className="mc-semana-task-card__action-primary">
-                {puedeIniciar && (
-                  <Button
-                    variant={accionPrimariaVariant}
-                    size="xs"
-                    fullWidth
-                    loading={iniciandoEsta}
-                    onClick={() => onIniciar!(tarea)}
-                  >
-                    <Play size={12} aria-hidden />
-                    Iniciar
-                  </Button>
-                )}
-                {puedeCompletar && (
-                  <Button
-                    variant={accionPrimariaVariant}
-                    size="xs"
-                    fullWidth
-                    loading={completandoEsta}
-                    onClick={() => onCompletar!(tarea)}
-                  >
-                    <Check size={12} aria-hidden />
-                    Completar
-                  </Button>
+              <div
+                className="mc-semana-task-card__actions mc-semana-task-card__actions--split"
+                draggable={false}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <div className="mc-semana-task-card__action-primary">
+                  {puedeIniciar && (
+                    <Button
+                      variant={accionPrimariaVariant}
+                      size="xs"
+                      fullWidth
+                      loading={iniciandoEsta}
+                      onClick={() => onIniciar!(tarea)}
+                    >
+                      <Play size={12} aria-hidden />
+                      Iniciar
+                    </Button>
+                  )}
+                  {puedeCompletar && (
+                    <Button
+                      variant={accionPrimariaVariant}
+                      size="xs"
+                      fullWidth
+                      loading={completandoEsta}
+                      onClick={() => onCompletar!(tarea)}
+                    >
+                      <Check size={12} aria-hidden />
+                      Completar
+                    </Button>
+                  )}
+                </div>
+
+                {hayMenu && (
+                  <PopoverMenu
+                    items={menuItems}
+                    trigger={
+                      <button
+                        type="button"
+                        className="mc-semana-task-card__menu-trigger"
+                        aria-label="Más acciones"
+                      >
+                        <MoreVertical size={16} aria-hidden />
+                      </button>
+                    }
+                  />
                 )}
               </div>
-
-              {hayMenu && (
-                <PopoverMenu
-                  items={menuItems}
-                  trigger={
-                    <button
-                      type="button"
-                      className="mc-semana-task-card__menu-trigger"
-                      aria-label="Más acciones"
-                    >
-                      <MoreVertical size={16} aria-hidden />
-                    </button>
-                  }
-                />
-              )}
             </div>
           )}
         </div>

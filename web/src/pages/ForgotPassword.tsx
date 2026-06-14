@@ -55,8 +55,8 @@ export function ForgotPassword() {
               />
             </div>
 
-            <Button type="submit" variant="primary" fullWidth disabled={busy}>
-              {busy ? 'Enviando…' : 'Enviar código'}
+            <Button type="submit" variant="primary" fullWidth loading={busy}>
+              Enviar código
             </Button>
           </form>
         </div>

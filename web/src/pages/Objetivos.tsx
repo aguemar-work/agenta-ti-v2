@@ -302,10 +302,11 @@ export function Objetivos() {
               variant="primary"
               size="lg"
               fullWidth
+              loading={creandoObj}
+              disabled={!canSubmitNuevo}
               onClick={() => void submitNuevoObjetivo()}
-              disabled={!canSubmitNuevo || creandoObj}
             >
-              {creandoObj ? 'Guardando…' : 'Crear objetivo'}
+              Crear objetivo
             </Button>
             <CancelButton onClick={cerrarModalNuevoObjetivo} disabled={creandoObj} />
           </>
@@ -379,8 +380,8 @@ export function Objetivos() {
         size="sm"
         footer={
           <>
-            <Button variant="primary" size="lg" fullWidth onClick={() => void confirmarCompletar()} disabled={completandoObj}>
-              {completandoObj ? 'Guardando…' : esJefe ? 'Cerrar objetivo' : 'Completar objetivo'}
+            <Button variant="primary" size="lg" fullWidth loading={completandoObj} onClick={() => void confirmarCompletar()}>
+              {esJefe ? 'Cerrar objetivo' : 'Completar objetivo'}
             </Button>
             <CancelButton onClick={cerrarCompletar} disabled={completandoObj} />
           </>

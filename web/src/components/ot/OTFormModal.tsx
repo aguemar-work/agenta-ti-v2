@@ -102,7 +102,7 @@ export function OTFormModal({
             open={open}
             onClose={onClose}
             title={titulo}
-            size="lg"
+            size="xl"
             analyticsId="modal-ot-form"
             hasUnsavedChanges={hasUnsavedChanges}
             bodyClassName="mc-modal-form"

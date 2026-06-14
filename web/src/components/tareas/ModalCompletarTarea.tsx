@@ -55,10 +55,11 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
           </Button>
           <Button
             variant="primary"
+            loading={busy}
             disabled={!canSubmit}
             onClick={() => void submit()}
           >
-            {busy ? 'Guardando…' : 'Marcar como completada'}
+            Marcar como completada
           </Button>
         </>
       ) : null}

@@ -63,10 +63,11 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
           </Button>
           <Button
             variant="primary"
+            loading={busy}
             disabled={!canSubmit}
             onClick={() => void submit()}
           >
-            {busy ? 'Guardando…' : 'Confirmar reprogramación'}
+            Confirmar reprogramación
           </Button>
         </>
       ) : null}

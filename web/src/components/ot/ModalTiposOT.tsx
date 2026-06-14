@@ -64,7 +64,7 @@ export function ModalTiposOT({
             onKeyDown={(e) => { if (e.key === 'Enter' && canCrearTipo) handleCrear(); }}
             maxLength={60}
           />
-          <Button variant="primary" size="sm" disabled={!canCrearTipo || isPendingCrear} onClick={handleCrear}>
+          <Button variant="primary" size="sm" loading={isPendingCrear} disabled={!canCrearTipo} onClick={handleCrear}>
             <Plus size={14} aria-hidden /> Agregar
           </Button>
         </div>

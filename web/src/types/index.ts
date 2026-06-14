@@ -38,9 +38,10 @@ export type TipoAccionLog =
   | 'prioridad_cambiada'
   | 'editada'
   | 'cancelada'
+  | 'completada'
+  // Solo lectura histórica — existentes en log_accion, no generados por código nuevo:
   | 'bloqueada'
-  | 'desbloqueada'
-  | 'completada';
+  | 'desbloqueada';
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 

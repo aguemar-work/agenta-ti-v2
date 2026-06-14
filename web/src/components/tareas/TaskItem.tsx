@@ -139,11 +139,9 @@ export function TaskItem({
       <article
         className={`mc-task-kanban ${readOnly ? 'opacity-70' : ''} ${estilos.containerClass}`}
         style={{
-          borderLeft:  estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
-          paddingLeft: estilos.borderAlerta ? 17 : undefined,     // 20px token - 3px del borde
-          background:  estilos.bg ?? undefined,
-          cursor:      readOnly ? 'not-allowed' : undefined,
-          transition:  'background 0.2s, border-color 0.2s',
+          background: estilos.bg ?? undefined,
+          cursor:     readOnly ? 'not-allowed' : undefined,
+          transition: 'background 0.2s',
         }}
       >
         <div className="flex gap-2">
@@ -188,11 +186,9 @@ export function TaskItem({
       <article
         className={`mc-task-item ${readOnly ? 'opacity-70' : ''} ${estilos.containerClass}`}
         style={{
-          borderLeft:   estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
-          paddingLeft:  estilos.borderAlerta ? 17 : undefined,
           background:   estilos.bg ?? undefined,
           borderRadius: 'var(--mc-radius-md)',
-          transition:   'background 0.2s, border-color 0.2s',
+          transition:   'background 0.2s',
         }}
       >
         {dragHandle && <div className="shrink-0 pt-0.5">{dragHandle}</div>}
@@ -252,10 +248,8 @@ export function TaskItem({
     <article
       className={`mc-task-card ${estilos.containerClass}`}
       style={{
-        borderLeft:  estilos.borderAlerta ? `3px solid ${estilos.borderAlerta}` : undefined,
-        paddingLeft: estilos.borderAlerta ? 17 : undefined,       // 20px token - 3px del borde
-        background:  estilos.bg ?? undefined,
-        transition:  'background 0.2s, border-color 0.2s',
+        background: estilos.bg ?? undefined,
+        transition: 'background 0.2s',
       }}
     >
       <div

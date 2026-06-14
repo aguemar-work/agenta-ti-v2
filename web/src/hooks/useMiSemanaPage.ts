@@ -1,43 +1,30 @@
 /**
  * hooks/useMiSemanaPage.ts
  *
- * Orquestador de la vista Mi Semana V4.
- * Siempre muestra la semana completa (6 días).
- * Las incidencias se registran por día — solo el día actual permite crear nuevas.
- * Las notas viven en el panel lateral derecho.
+ * Orquestador de la vista Mi Semana.
+ * Coordina datos, catálogos, modales y acciones — sin lógica de UI propia.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useMiSemanaData, useMiSemanaMutations } from '@/hooks/useMiSemana';
-import { useIncidenciasDelDia, useNotasBitacoraHoy, Q_INC_HOY, Q_NOTAS_HOY } from '@/hooks/useHoyColumnas';
-import { useJefesNotificacion } from '@/hooks/useUsuarios';
+import { useMiSemanaCatalogos } from '@/hooks/useMiSemanaCatalogos';
+import { useSemanaNotasIncidencias } from '@/hooks/useSemanaNotasIncidencias';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { useSemanaModales } from '@/hooks/useSemanaModales';
 import { useSemanaNavegacion } from '@/hooks/useSemanaNavegacion';
 import { useMarcarAtrasadasAlMontar } from '@/hooks/useTareas';
-import {
-  convertirNotaEnEvento as convertirNotaEnEventoApi,
-  convertirNotaEnTarea as convertirNotaEnTareaApi,
-  crearIncidencia,
-  getIncidenciasRangoUsuario,
-  insertarNotaBitacoraRapida,
-} from '@/api/hoyColumnas';
-import { getAreas, Q_AREAS } from '@/api/areas';
-import { getClientes, Q_CLIENTES } from '@/api/clientes';
-import { getProyectos, Q_PROYECTOS } from '@/api/proyectos';
 import { getOrdenesPorTareaIds, crearOtDesdeTarea, type OrdenTrabajo } from '@/api/ordenTrabajo';
-import { useWorkspaceStore } from '@/store/workspaceStore';
+import { getIncidenciasRangoUsuario } from '@/api/hoyColumnas';
 import { fechaLocalYmd } from '@/lib/fecha';
-import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { invalidateRelatedQueries } from '@/lib/queryHelpers';
 import { qkWsId } from '@/lib/queryKeys';
 import { puedeGestionarTarea } from '@/lib/permisos';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import type { NotaBitacora, Tarea, TipoEvento } from '@/types';
+import type { Tarea } from '@/types';
 
 export function useMiSemanaPage() {
   const navigate = useNavigate();
@@ -50,42 +37,13 @@ export function useMiSemanaPage() {
     esBannerViernes,
   } = nav;
 
-  const qc = useQueryClient();
+  const qc          = useQueryClient();
   const workspaceId = useWorkspaceId();
-  const tieneModulo = useWorkspaceStore((s) => s.tieneModulo);
-  const moduloClientes  = tieneModulo('clientes');
-  const moduloProyectos = tieneModulo('proyectos');
-  const moduloAreas     = tieneModulo('areas');
 
-  const { data: clientesCatalogo = [] } = useQuery({
-    queryKey: qkWsId(workspaceId, Q_CLIENTES),
-    enabled: Boolean(workspaceId) && moduloClientes,
-    queryFn: getClientes,
-  });
+  // ── Catálogos opcionales ──────────────────────────────────────────────────
+  const catalogos = useMiSemanaCatalogos();
 
-  const { data: proyectosCatalogo = [] } = useQuery({
-    queryKey: qkWsId(workspaceId, Q_PROYECTOS),
-    enabled: Boolean(workspaceId) && moduloProyectos,
-    queryFn: getProyectos,
-  });
-
-  const { data: areasCatalogo = [] } = useQuery({
-    queryKey: qkWsId(workspaceId, Q_AREAS),
-    enabled: Boolean(workspaceId) && moduloAreas,
-    queryFn: getAreas,
-  });
-
-  const proyectosActivos = useMemo(
-    () => proyectosCatalogo.filter((p) => p.estado === 'activo'),
-    [proyectosCatalogo],
-  );
-
-  const areasPorId = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const a of areasCatalogo) m.set(a.id, a.nombre);
-    return m;
-  }, [areasCatalogo]);
-
+  // ── Datos de la semana ────────────────────────────────────────────────────
   useMarcarAtrasadasAlMontar(uid);
   const { tareasPlan, eventos, isError } = useMiSemanaData(uid, semanaISO, lunes);
   const mut = useMiSemanaMutations(uid);
@@ -101,7 +59,7 @@ export function useMiSemanaPage() {
 
   const desdeYmd = fechaLocalYmd(lunes);
   const hastaYmd = fechaLocalYmd(sabado);
-  /** Siempre incidencias del usuario de la vista activa (el jefe ve las suyas; otras vías selector). */
+
   const { data: incidenciasSemana = [] } = useQuery({
     queryKey: qkWsId(workspaceId, 'semana', 'incidencias', semanaISO, uid),
     enabled: Boolean(uid) && Boolean(workspaceId),
@@ -134,124 +92,15 @@ export function useMiSemanaPage() {
     return { pendientesHoy, atrasadas };
   }, [tareasPlan, hoyYmd]);
 
-  // ── Incidencias de hoy (registro rápido) y notas ─────────────────────────
-  const { data: incidenciasHoy = [] } = useIncidenciasDelDia(uid, hoyYmd);
-  const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid, esJefe);
+  // ── Notas e incidencias ───────────────────────────────────────────────────
+  const notasInc = useSemanaNotasIncidencias({ uid, esJefe, hoyYmd, usuario });
 
-  const { data: jefesNotificacion = [] } = useJefesNotificacion({
-    enabled: Boolean(usuario && !esJefe),
-  });
-
-  const [modalInc,   setModalInc]   = useState(false);
-  const [notaRapida, setNotaRapida] = useState('');
-  const [notaConvertir, setNotaConvertir] = useState<NotaBitacora | null>(null);
-
-  async function invalidarNotasYSemana() {
-    await invalidateRelatedQueries(qc, ['semana', 'bitacora']);
-    await qc.invalidateQueries({ queryKey: qkWsId(workspaceId, Q_NOTAS_HOY), exact: false });
-  }
-
-  async function crearIncidenciaHoy(input: {
-    titulo:       string;
-    prioridad:    Tarea['prioridad'];
-    descripcion?: string | null;
-    asignado_a?:  string | null;
-    fecha_planificada?: string;
-    ya_resuelta:  boolean;
-  }) {
-    if (!usuario || !uid) return;
-    const fecha = input.fecha_planificada ?? hoyYmd;
-    const incidencia = await crearIncidencia({
-      titulo:            input.titulo,
-      prioridad:         input.prioridad,
-      descripcion:       input.descripcion ?? null,
-      asignado_a:        input.asignado_a ?? uid,
-      fecha_planificada: fecha,
-      ya_resuelta:       input.ya_resuelta,
-    });
-
-    if (!esJefe) {
-      void Promise.all(
-        jefesNotificacion.map((jefe) =>
-          publicarEventoEquipo({
-            tipo:          'incidencia_registrada',
-            jefeId:        jefe.id,
-            titulo:        incidencia.titulo,
-            usuarioNombre: usuario.nombre,
-          }),
-        ),
-      );
-    }
-
-    await invalidateRelatedQueries(qc, ['planificacion', 'semana']);
-    await qc.invalidateQueries({ queryKey: qkWsId(workspaceId, Q_INC_HOY), exact: false });
-    toast.success(input.ya_resuelta ? 'Incidencia registrada' : 'Incidencia agendada');
-    setModalInc(false);
-  }
-
-  async function guardarNotaRapida() {
-    if (!notaRapida.trim() || !uid) return;
-    try {
-      await insertarNotaBitacoraRapida({ usuario_id: uid, contenido: notaRapida.trim() });
-      setNotaRapida('');
-      await invalidarNotasYSemana();
-      toast.success('Nota guardada');
-    } catch (err) {
-      console.error('[guardarNotaRapida]', err);
-      toast.error('No se pudo guardar la nota.');
-    }
-  }
-
-  async function confirmarConvertirNotaTarea(input: {
-    titulo: string;
-    prioridad: Tarea['prioridad'];
-    descripcion: string;
-    fecha_planificada: string;
-    asignado_a: string;
-  }) {
-    if (!usuario || !notaConvertir) return;
-    await convertirNotaEnTareaApi({
-      notaId: notaConvertir.id,
-      titulo: input.titulo,
-      descripcion: input.descripcion,
-      prioridad: input.prioridad,
-      fecha_planificada: input.fecha_planificada,
-      asignado_a: input.asignado_a,
-      creado_por: usuario.id,
-    });
-    setNotaConvertir(null);
-    await invalidarNotasYSemana();
-    toast.success('Nota convertida en tarea');
-  }
-
-  async function confirmarConvertirNotaEvento(input: {
-    titulo: string;
-    tipo: TipoEvento;
-    fecha_dia: string;
-    hora_inicio: string;
-    hora_fin: string;
-  }) {
-    if (!usuario || !notaConvertir) return;
-    await convertirNotaEnEventoApi({
-      notaId: notaConvertir.id,
-      titulo: input.titulo,
-      tipo: input.tipo,
-      fecha_dia: input.fecha_dia,
-      hora_inicio: input.hora_inicio,
-      hora_fin: input.hora_fin,
-      usuario_id: usuario.id,
-    });
-    setNotaConvertir(null);
-    await invalidarNotasYSemana();
-    toast.success('Nota convertida en evento');
-  }
-
-  // ── Modales ───────────────────────────────────────────────────────────────
+  // ── Modales de tareas ─────────────────────────────────────────────────────
   const modales = useSemanaModales({
     tareasPlan,
     hoyYmd,
     usuario,
-    jefesNotificacion,
+    jefesNotificacion: notasInc.jefesNotificacion,
     mut,
   });
 
@@ -259,12 +108,12 @@ export function useMiSemanaPage() {
     return puedeGestionarTarea(t, usuario);
   }
 
+  // ── OT desde tarea ────────────────────────────────────────────────────────
   async function generarOtDesdeTarea(t: Tarea) {
     if (!usuario || !puedeGestionar(t)) return;
     if (t.es_imprevisto || ['completada', 'cancelada'].includes(t.estado)) return;
     if (ordenesPorTarea.has(t.id)) {
-      const ot = ordenesPorTarea.get(t.id)!;
-      navigate('/ordenes-trabajo', { state: { abrirOtId: ot.id } });
+      navigate('/ordenes-trabajo', { state: { abrirOtId: ordenesPorTarea.get(t.id)!.id } });
       return;
     }
     try {
@@ -283,30 +132,38 @@ export function useMiSemanaPage() {
   }
 
   return {
+    // Navegación
     usuario, esJefe,
     lunes, setLunes, sabado, diasSemana, semanaISO,
     uid, seleccionId, setSeleccionId,
     usuariosJefe, esBannerViernes,
+    // Datos semana
     tareasPlan, eventos, isError, hoyYmd, conteos,
-    incidenciasSemana, incidenciasHoy, notasHoy,
-    ordenesPorTarea, nombresPorId, resumenDia,
-    modalInc, setModalInc,
-    notaRapida, setNotaRapida,
-    notaConvertir, setNotaConvertir,
-    crearIncidenciaHoy, guardarNotaRapida,
-    confirmarConvertirNotaTarea, confirmarConvertirNotaEvento,
+    incidenciasSemana, ordenesPorTarea, nombresPorId, resumenDia,
+    // Catálogos
+    ...catalogos,
+    // Objetivos y usuarios
     objetivosActivos, usuariosAsignables,
-    clientesCatalogo,
-    proyectosActivos,
-    areasCatalogo,
-    areasPorId,
-    moduloClientes,
-    moduloProyectos,
-    moduloAreas,
+    // Notas e incidencias
+    incidenciasHoy:            notasInc.incidenciasHoy,
+    notasHoy:                  notasInc.notasHoy,
+    modalInc:                  notasInc.modalInc,
+    setModalInc:               notasInc.setModalInc,
+    notaRapida:                notasInc.notaRapida,
+    setNotaRapida:             notasInc.setNotaRapida,
+    notaConvertir:             notasInc.notaConvertir,
+    setNotaConvertir:          notasInc.setNotaConvertir,
+    crearIncidenciaHoy:        notasInc.crearIncidenciaHoy,
+    guardarNotaRapida:         notasInc.guardarNotaRapida,
+    confirmarConvertirNotaTarea:  notasInc.confirmarConvertirNotaTarea,
+    confirmarConvertirNotaEvento: notasInc.confirmarConvertirNotaEvento,
+    // OT
     completarPendingId: mut.completarPendingId,
     iniciarPendingId:   mut.iniciarPendingId,
-    tareaDetalle:   modales.tareaDetalle,
-    tareaCompletar: modales.tareaCompletar,
+    generarOtDesdeTarea,
+    // Modales de tareas
+    tareaDetalle:        modales.tareaDetalle,
+    tareaCompletar:      modales.tareaCompletar,
     modal:               modales.modal,
     setModal:            modales.setModal,
     detalleTareaId:      modales.detalleTareaId,
@@ -324,6 +181,6 @@ export function useMiSemanaPage() {
     eliminarDesdeDetalle:  modales.eliminarDesdeDetalle,
     cancelarDesdeDetalle:  modales.cancelarDesdeDetalle,
     iniciarDesdeDetalle:   modales.iniciarDesdeDetalle,
-    generarOtDesdeTarea,
+    moverTareaADia:        modales.moverTareaADia,
   };
 }

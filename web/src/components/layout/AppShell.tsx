@@ -2,10 +2,13 @@ import {
   BarChart2,
   CalendarDays,
   ClipboardList,
+  ChevronsUpDown,
   FileText,
   Folder,
   LayoutGrid,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Target,
   Users,
 } from 'lucide-react';
@@ -93,8 +96,16 @@ function getInitials(nombre?: string): string {
 // ---------------------------------------------------------------------------
 // Indicador realtime
 // ---------------------------------------------------------------------------
-function NavSlaBadge({ count }: { count: number }) {
+function NavSlaBadge({ count, dot }: { count: number; dot?: boolean }) {
   if (count <= 0) return null;
+  if (dot) {
+    return (
+      <span
+        className="mc-sidebar-sla-dot"
+        aria-label={`${count} alerta${count !== 1 ? 's' : ''} SLA`}
+      />
+    );
+  }
   const label = count > 9 ? '9+' : String(count);
   return (
     <span
@@ -139,6 +150,7 @@ export function AppShell() {
   const { conectado } = useRealtimeNotificaciones(notifPrefs ?? undefined);
   const slaAlertCount = useSlaAlertCount();
   useSlaDigestToast(notifPrefs);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mc-sidebar-collapsed') === '1');
   const [masDrawerOpen, setMasDrawerOpen] = useState(false);
   const [confirmandoLogout, setConfirmandoLogout] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
@@ -166,12 +178,21 @@ export function AppShell() {
   const bottomItems  = getBottomItems(rol);
   const bottomNav    = visibleNav.filter((item) => bottomItems.includes(item.to));
   const masNav       = visibleNav.filter((item) => !bottomItems.includes(item.to));
+  const masHasSlaAlert = masNav.some((item) => item.to === '/planificacion') && slaAlertCount > 0;
   const paginaActual = location.pathname.startsWith('/panel/usuarios')
     ? 'Usuarios'
     : location.pathname === '/panel' || location.pathname.startsWith('/panel/')
       ? 'Panel principal'
       : (NAV_ALL.find((item) => location.pathname.startsWith(item.to))?.label ?? '');
   const initials     = getInitials(usuario?.nombre);
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem('mc-sidebar-collapsed', next ? '1' : '0');
+      return next;
+    });
+  }
 
   function abrirOrgMenu(from: HTMLElement) {
     setOrgMenuAnchor(from);
@@ -205,41 +226,26 @@ export function AppShell() {
         <SectionErrorBoundary label="Sidebar">
           <nav
             id="mc-sidebar-nav"
-            className="mc-sidebar"
+            className={`mc-sidebar${collapsed ? ' mc-sidebar--collapsed' : ''}`}
             aria-label="Navegación principal"
           >
             <div className="mc-sidebar-brand">
-              <AppLogo height={28} className="mc-sidebar-brand-logo" />
-              <span className="mc-sidebar-brand-spacer" aria-hidden />
-              <button
-                type="button"
-                className="mc-sidebar-avatar mc-sidebar-avatar-btn"
-                title={usuario?.nombre ?? 'Usuario'}
-                aria-label={`Cuenta de ${usuario?.nombre ?? 'usuario'}`}
-                aria-haspopup="menu"
-                aria-expanded={orgMenuOpen}
-                onClick={(e) => abrirOrgMenu(e.currentTarget)}
-              >
-                {initials}
-              </button>
+              {collapsed
+                ? <AppBrandIcon size={24} aria-hidden />
+                : <AppLogo height={28} className="mc-sidebar-brand-logo" />
+              }
             </div>
-
-            {orgActiva && !enModoPanel && (
-              <div className="mc-sidebar-org-chip" aria-label={`Organización: ${orgActiva.nombre}`}>
-                <OrgAvatar nombre={orgActiva.nombre} size={20} />
-                <span className="mc-sidebar-org-chip__name">{orgActiva.nombre}</span>
-              </div>
-            )}
 
             {!enModoPanel && (
             <div className="mc-sidebar-scroll">
-              <p className="mc-sidebar-section-label">Trabajo</p>
+              {!collapsed && <p className="mc-sidebar-section-label">Trabajo</p>}
               {navWorkspace.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
                   end
                   className="mc-sidebar-nav-link"
+                  title={label}
                 >
                   <Icon {...ICON_NAV} />
                   <span className="mc-sidebar-nav-label">{label}</span>
@@ -248,18 +254,18 @@ export function AppShell() {
 
               {navGestion.length > 0 && (
                 <>
-                  <p className="mc-sidebar-section-label">Gestión</p>
+                  {!collapsed && <p className="mc-sidebar-section-label">Gestión</p>}
                   {navGestion.map(({ to, label, icon: Icon }) => (
                     <NavLink
                       key={to}
                       to={to}
                       end
                       className="mc-sidebar-nav-link"
-                      style={{ display: 'flex', alignItems: 'center', gap: 'var(--mc-space-2)' }}
+                      title={label}
                     >
                       <Icon {...ICON_NAV} />
                       <span className="mc-sidebar-nav-label">{label}</span>
-                      {to === '/planificacion' && <NavSlaBadge count={slaAlertCount} />}
+                      {to === '/planificacion' && <NavSlaBadge count={slaAlertCount} dot={collapsed} />}
                     </NavLink>
                   ))}
                 </>
@@ -267,13 +273,14 @@ export function AppShell() {
 
               {navCatalogos.length > 0 && (
                 <>
-                  <p className="mc-sidebar-section-label">Catálogos</p>
+                  {!collapsed && <p className="mc-sidebar-section-label">Catálogos</p>}
                   {navCatalogos.map(({ to, label, icon: Icon }) => (
                     <NavLink
                       key={to}
                       to={to}
                       end
                       className="mc-sidebar-nav-link"
+                      title={label}
                     >
                       <Icon {...ICON_NAV} />
                       <span className="mc-sidebar-nav-label">{label}</span>
@@ -285,7 +292,50 @@ export function AppShell() {
             )}
 
             <div className="mc-sidebar-footer">
-              <RealtimeIndicator conectado={conectado} />
+              <button
+                type="button"
+                className="mc-sidebar-workspace-btn"
+                title={orgActiva
+                  ? `${orgActiva.nombre} — abrir menú de cuenta`
+                  : 'Abrir menú de cuenta'}
+                aria-label="Abrir menú de cuenta y organización"
+                aria-haspopup="menu"
+                aria-expanded={orgMenuOpen}
+                onClick={(e) => abrirOrgMenu(e.currentTarget)}
+              >
+                {orgActiva
+                  ? <OrgAvatar nombre={orgActiva.nombre} size={24} />
+                  : <span className="mc-sidebar-avatar" aria-hidden>{initials}</span>
+                }
+                {!collapsed && (
+                  <>
+                    <div className="mc-sidebar-workspace-info">
+                      <span className="mc-sidebar-workspace-org">
+                        {orgActiva?.nombre ?? usuario?.nombre ?? '—'}
+                      </span>
+                      <span className="mc-sidebar-workspace-user">
+                        {usuario?.nombre}
+                        {rolActivo ? ` · ${rolActivo === 'jefe' ? 'Jefe' : 'Miembro'}` : ''}
+                      </span>
+                    </div>
+                    <ChevronsUpDown size={13} className="mc-sidebar-workspace-chevron" aria-hidden />
+                  </>
+                )}
+              </button>
+              <div className="mc-sidebar-footer-actions">
+                <RealtimeIndicator conectado={conectado} />
+                <button
+                  type="button"
+                  className="mc-sidebar-collapse-btn"
+                  onClick={toggleCollapsed}
+                  title={collapsed ? 'Expandir panel' : 'Colapsar panel'}
+                  aria-label={collapsed ? 'Expandir panel' : 'Colapsar panel'}
+                >
+                  {collapsed
+                    ? <PanelLeftOpen size={16} strokeWidth={1.75} aria-hidden />
+                    : <PanelLeftClose size={16} strokeWidth={1.75} aria-hidden />}
+                </button>
+              </div>
             </div>
           </nav>
         </SectionErrorBoundary>
@@ -404,11 +454,27 @@ export function AppShell() {
                   className={`mc-bottom-nav-link${masDrawerOpen ? ' mc-bottom-nav-link--active' : ''}`}
                   onClick={() => setMasDrawerOpen((v) => !v)}
                   aria-expanded={masDrawerOpen}
-                  aria-label="Más módulos"
-                  style={{ flex: '1 1 0' }}
+                  aria-label={`Más módulos${masHasSlaAlert ? `, ${slaAlertCount} alerta${slaAlertCount !== 1 ? 's' : ''} SLA` : ''}`}
+                  style={{ flex: '1 1 0', position: 'relative' }}
                 >
                   <MoreHorizontal {...ICON_NAV_MOBILE} />
-                  <span>Más</span>
+                  <span aria-hidden>Más</span>
+                  {masHasSlaAlert && (
+                    <span
+                      className="mc-filter-pill-badge"
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 'calc(50% - 22px)',
+                        minWidth: 16,
+                        padding: '0 4px',
+                        fontSize: 9,
+                      }}
+                      aria-hidden
+                    >
+                      {slaAlertCount > 9 ? '9+' : slaAlertCount}
+                    </span>
+                  )}
                 </button>
               )}
             </div>

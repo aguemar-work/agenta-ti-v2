@@ -2,17 +2,18 @@ import type { TipoAccionLog } from '@/types';
 
 /** Etiqueta corta para badges e historial de tarea. */
 export const LOG_ACCION_LABEL: Record<TipoAccionLog, string> = {
-  creada: 'Creada',
-  iniciada: 'Iniciada',
-  reprogramada: 'Reprogramada',
-  eliminada: 'Eliminada',
-  estado_cambiado: 'Estado actualizado',
+  creada:            'Creada',
+  iniciada:          'Iniciada',
+  reprogramada:      'Reprogramada',
+  eliminada:         'Eliminada',
+  estado_cambiado:   'Estado actualizado',
   prioridad_cambiada: 'Prioridad',
-  editada: 'Editada',
-  cancelada: 'Cancelada',
-  bloqueada: 'Bloqueada',
-  desbloqueada: 'Desbloqueada',
-  completada: 'Completada',
+  editada:           'Editada',
+  cancelada:         'Cancelada',
+  completada:        'Completada',
+  // Legacy histórico — modelo pre-v4:
+  bloqueada:         'Bloqueada',
+  desbloqueada:      'Desbloqueada',
 };
 
 export function labelLogAccion(tipo: TipoAccionLog): string {

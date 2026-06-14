@@ -344,10 +344,11 @@ export function OrdenesTrabajo() {
               variant="primary"
               size="lg"
               fullWidth
+              loading={mutCompletar.isPending}
+              disabled={!canCompletar}
               onClick={() => mutCompletar.mutate(undefined, { onSuccess: () => markModalCompleted('modal-ot-completar') })}
-              disabled={!canCompletar || mutCompletar.isPending}
             >
-              {mutCompletar.isPending ? 'Guardando…' : 'Confirmar cierre'}
+              Confirmar cierre
             </Button>
             <CancelButton onClick={() => setModalCompletar(null)} />
           </>
@@ -397,7 +398,8 @@ export function OrdenesTrabajo() {
               variant="danger"
               size="lg"
               fullWidth
-              disabled={motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS || mutRechazar.isPending}
+              loading={mutRechazar.isPending}
+              disabled={motivoRechazo.trim().length < MIN_JUSTIFICACION_CHARS}
               onClick={() =>
                 modalRechazar &&
                 mutRechazar.mutate(
@@ -406,7 +408,7 @@ export function OrdenesTrabajo() {
                 )
               }
             >
-              {mutRechazar.isPending ? 'Guardando…' : 'Rechazar orden'}
+              Rechazar orden
             </Button>
             <CancelButton
               onClick={() => {

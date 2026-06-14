@@ -198,7 +198,7 @@ export function ModalMiSemana({
       open={open}
       onClose={cerrar}
       title={tituloModal}
-      size="md"
+      size="lg"
       analyticsId="modal-mi-semana-nuevo"
       hasUnsavedChanges={hasChanges}
       bodyClassName="mc-modal-form"

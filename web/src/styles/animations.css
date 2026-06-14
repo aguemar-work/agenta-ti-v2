@@ -10,14 +10,53 @@
   to   { opacity: 1; }
 }
 
+@keyframes mc-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Desktop: entrada con scale sutil */
 @keyframes mc-slide-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Desktop: salida espejo */
+@keyframes mc-slide-down {
+  from { opacity: 1; transform: translateY(0)  scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+/* Mobile bottom sheet: entrada desde el borde inferior */
+@keyframes mc-slide-in-bottom {
+  from { opacity: 0.6; transform: translateY(32px); }
+  to   { opacity: 1;   transform: translateY(0); }
+}
+
+/* Mobile bottom sheet: salida hacia abajo */
+@keyframes mc-slide-out-bottom {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(100%); }
 }
 
 @keyframes mc-slide-in-right {
   from { opacity: 0; transform: translateX(16px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Micro-shake: feedback cuando el backdrop se bloquea por cambios sin guardar */
+@keyframes mc-shake {
+  0%, 100% { transform: translateX(0); }
+  18%       { transform: translateX(-7px); }
+  36%       { transform: translateX( 6px); }
+  54%       { transform: translateX(-4px); }
+  72%       { transform: translateX( 3px); }
+}
+
+/* Pop-in: card de confirmación de descarte */
+@keyframes mc-confirm-pop {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* ── Skeleton loader ───────────────────────────────────────────────── */
@@ -116,4 +155,13 @@
 
   .task-precaucion { border-left-color: var(--mc-state-precaucion-border); }
   .task-urgente    { border-left-color: var(--mc-state-atrasada-border); }
+
+  .mc-modal-overlay,
+  .mc-modal-dialog { animation: none; }
+
+  .mc-modal-overlay--closing { opacity: 0; animation: none; }
+  .mc-modal-overlay--closing .mc-modal-dialog { opacity: 0; animation: none; }
+
+  .mc-modal-dialog--shake { animation: none; }
+  .mc-modal-confirm-card  { animation: none; }
 }

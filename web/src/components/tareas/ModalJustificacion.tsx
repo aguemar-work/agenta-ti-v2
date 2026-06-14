@@ -50,10 +50,11 @@ export function ModalJustificacion({
           </Button>
           <Button
             variant={destructive ? 'danger' : 'primary'}
-            disabled={!ok || busy}
+            loading={busy}
+            disabled={!ok}
             onClick={() => void submit()}
           >
-            {busy ? 'Guardando…' : labelConfirm}
+            {labelConfirm}
           </Button>
         </>
       )}

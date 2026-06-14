@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import {
-  completarTareaConResumen as completarTareaConResumenApi,
   getTareasHoyUsuario,
   marcarAtrasadasEquipo,
   reprogramarTareaConLog as reprogramarTareaConLogApi,
@@ -100,9 +99,6 @@ export async function completarTarea(tareaId: string): Promise<void> {
     .eq('id', tareaId);
   if (error) throw error;
 }
-
-/** @deprecated Importar desde `@/api/semana` — reexport por compatibilidad. */
-export const completarTareaConResumen = completarTareaConResumenApi;
 
 export async function reprogramarTareaConLog(input: {
   tareaId:       string;

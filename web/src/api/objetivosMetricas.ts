@@ -147,54 +147,20 @@ export async function getKpisUsuario(usuarioId: string): Promise<KpisUsuario> {
   };
 }
 
-export async function getKpisRango(
+export type KpisMetricasCompletas = {
+  kpis: KpisRango;
+  porSemana: KpisPorSemana[];
+};
+
+/**
+ * Único fetch a `tarea_activa` para el rango de fechas — calcula KPIs y
+ * agrupación semanal en la misma pasada (antes eran 2 queries paralelas).
+ */
+export async function getKpisRangoYSemana(
   desde: string,
   hasta: string,
   usuarioId?: string,
-): Promise<KpisRango> {
-  const insforge = getInsforge();
-  const hoyYmd = hoyYmdMetricas();
-  let q = insforge.database
-    .from(TAREA_ACTIVA)
-    .select(`${SELECT_METRICA_TAREA},es_imprevisto`)
-    .gte('fecha_planificada', desde)
-    .lte('fecha_planificada', hasta)
-    .neq('estado', 'cancelada');
-  if (usuarioId) q = q.eq('asignado_a', usuarioId);
-  const { data, error } = await q;
-  if (error) throw error;
-  const list = (data ?? []) as Pick<
-    Tarea,
-    'estado' | 'es_imprevisto' | 'fecha_planificada' | 'tipo' | 'situacion' | 'reprogramaciones'
-  >[];
-
-  const buckets = {
-    completadas: 0,
-    en_progreso: 0,
-    pendientes: 0,
-    atrasadas: 0,
-    reprogramadas: 0,
-  };
-  let total = 0;
-  let incidencias = 0;
-
-  for (const t of list) {
-    if (t.es_imprevisto) {
-      incidencias++;
-      continue;
-    }
-    total++;
-    acumularEstadoEfectivo(t, hoyYmd, buckets);
-  }
-
-  return { total, incidencias, ...buckets };
-}
-
-export async function getKpisPorSemana(
-  desde: string,
-  hasta: string,
-  usuarioId?: string,
-): Promise<KpisPorSemana[]> {
+): Promise<KpisMetricasCompletas> {
   const insforge = getInsforge();
   const hoyYmd = hoyYmdMetricas();
   let q = insforge.database
@@ -202,30 +168,32 @@ export async function getKpisPorSemana(
     .select(`${SELECT_METRICA_TAREA},semana_planificada,es_imprevisto`)
     .gte('fecha_planificada', desde)
     .lte('fecha_planificada', hasta)
-    .neq('estado', 'cancelada')
-    .not('semana_planificada', 'is', null);
+    .neq('estado', 'cancelada');
   if (usuarioId) q = q.eq('asignado_a', usuarioId);
   const { data, error } = await q;
   if (error) throw error;
+
   const list = (data ?? []) as Pick<
     Tarea,
     'estado' | 'semana_planificada' | 'es_imprevisto' | 'fecha_planificada' | 'tipo' | 'situacion' | 'reprogramaciones'
   >[];
 
+  const buckets = { completadas: 0, en_progreso: 0, pendientes: 0, atrasadas: 0, reprogramadas: 0 };
+  let total = 0;
+  let incidencias = 0;
   const semMap = new Map<string, KpisPorSemana>();
+
   for (const t of list) {
-    if (t.es_imprevisto || !t.semana_planificada) continue;
+    if (t.es_imprevisto) { incidencias++; continue; }
+    total++;
+    acumularEstadoEfectivo(t, hoyYmd, buckets);
+    if (!t.semana_planificada) continue;
     const sem = t.semana_planificada;
     if (!semMap.has(sem)) {
       semMap.set(sem, {
         semana: `Sem ${sem.slice(4)}`,
         semanaISO: sem,
-        completadas: 0,
-        atrasadas: 0,
-        reprogramadas: 0,
-        en_progreso: 0,
-        pendientes: 0,
-        total: 0,
+        completadas: 0, atrasadas: 0, reprogramadas: 0, en_progreso: 0, pendientes: 0, total: 0,
       });
     }
     const row = semMap.get(sem)!;
@@ -233,7 +201,10 @@ export async function getKpisPorSemana(
     acumularEstadoEfectivo(t, hoyYmd, row);
   }
 
-  return Array.from(semMap.values()).sort((a, b) => a.semanaISO.localeCompare(b.semanaISO));
+  return {
+    kpis: { total, incidencias, ...buckets },
+    porSemana: Array.from(semMap.values()).sort((a, b) => a.semanaISO.localeCompare(b.semanaISO)),
+  };
 }
 
 export async function getKpisComparativa(
