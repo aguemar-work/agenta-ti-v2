@@ -4,7 +4,7 @@ import { MetricasDonutOT } from '@/components/metricas/MetricasDonutOT';
 import { PlanificacionHeatmap } from '@/components/planificacion/PlanificacionHeatmap';
 import { PlanificacionMobile } from '@/components/planificacion/PlanificacionMobile';
 import { PlanificacionPanel } from '@/components/planificacion/PlanificacionPanel';
-import { useKpisComparativa, useKpisPorSemana } from '@/hooks/useObjetivosMetricas';
+import { useKpisComparativa, useKpisRangoYSemana } from '@/hooks/useObjetivosMetricas';
 import { useMetricasOT } from '@/hooks/useMetricasOT';
 import { useMemo } from 'react';
 import type { EstadoTarea } from '@/types';
@@ -38,7 +38,8 @@ export function PlanificacionAnalisisGrid({
   onSelectMiembro,
   onCeldaClick,
 }: Props) {
-  const { data: porSemana = [], isLoading: loadS } = useKpisPorSemana(periodoDesde, periodoHasta, undefined);
+  const { data: metricasCompletas, isLoading: loadS } = useKpisRangoYSemana(periodoDesde, periodoHasta);
+  const porSemana = metricasCompletas?.porSemana ?? [];
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(periodoDesde, periodoHasta, true);
   const { data: otCounts, isLoading: loadOT } = useMetricasOT(periodoDesde, periodoHasta, true);
 

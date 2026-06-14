@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { MetricasChartSemanal } from '@/components/metricas/MetricasChartSemanal';
 import { MetricasComparativa } from '@/components/metricas/MetricasComparativa';
 import { MetricasDonutOT } from '@/components/metricas/MetricasDonutOT';
-import { useKpisComparativa, useKpisPorSemana } from '@/hooks/useObjetivosMetricas';
+import { useKpisComparativa, useKpisRangoYSemana } from '@/hooks/useObjetivosMetricas';
 import { useMetricasOT } from '@/hooks/useMetricasOT';
 import { useMemo } from 'react';
 
@@ -15,7 +15,8 @@ type Props = {
 export function PlanificacionRendimiento({ periodoDesde, periodoHasta }: Props) {
   const [abierto, setAbierto] = useState(false);
 
-  const { data: porSemana = [], isLoading: loadS } = useKpisPorSemana(periodoDesde, periodoHasta, undefined);
+  const { data: metricasCompletas, isLoading: loadS } = useKpisRangoYSemana(periodoDesde, periodoHasta);
+  const porSemana = metricasCompletas?.porSemana ?? [];
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(periodoDesde, periodoHasta, abierto);
   const { data: otCounts, isLoading: loadOT } = useMetricasOT(periodoDesde, periodoHasta, abierto);
 
