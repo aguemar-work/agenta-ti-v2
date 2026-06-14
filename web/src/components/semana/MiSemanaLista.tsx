@@ -35,7 +35,6 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
     filtroEstado,
     filtroRapido,
     busqueda,
-    ordenesPorTarea,
     nombresPorId,
     areasPorId,
     puedeGestionar,
@@ -76,8 +75,9 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
       return result;
     })();
     return filtradas.slice().sort((a, b) => {
-      if (a.fecha_planificada !== b.fecha_planificada)
-        return a.fecha_planificada.localeCompare(b.fecha_planificada);
+      const fa = a.fecha_planificada ?? '';
+      const fb = b.fecha_planificada ?? '';
+      if (fa !== fb) return fa.localeCompare(fb);
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
   }, [tareasPlan, filtroEstado, filtroRapido, hoyYmd]);
