@@ -12,7 +12,7 @@ type Props = {
   objetivos: Pick<Objetivo, 'id' | 'titulo'>[];
   usuariosAsignables: Pick<Usuario, 'id' | 'nombre'>[];
   ot?: OrdenTrabajo | null | undefined;
-  onOtClick?: (ot: OrdenTrabajo) => void;
+  onOtClick?: ((ot: OrdenTrabajo) => void) | undefined;
 };
 
 function iniciales(nombre: string): string {

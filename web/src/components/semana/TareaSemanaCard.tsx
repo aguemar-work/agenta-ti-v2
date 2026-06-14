@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/Button';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { PopoverMenu, type PopoverMenuItem } from '@/components/ui/PopoverMenu';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { PRIORIDAD_LABEL } from '@/lib/estadoConfig';
 import { claveVisualTarea } from '@/lib/tableroEstado';
 import {
   senalSituacionCard,

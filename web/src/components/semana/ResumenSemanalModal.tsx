@@ -77,7 +77,7 @@ export function ResumenSemanalModal({
                 <CalendarClock size={15} aria-hidden />
                 Reprogramar todas al {proximoLunesLabel}
               </Button>
-              <Button variant="ghost" size="md" fullWidth onClick={onClose} disabled={busy}>
+              <Button variant="ghost" size="default" fullWidth onClick={onClose} disabled={busy}>
                 Cerrar sin reprogramar
               </Button>
             </>

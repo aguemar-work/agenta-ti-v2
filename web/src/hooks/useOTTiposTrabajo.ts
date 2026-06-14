@@ -2,19 +2,16 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { crearTipoTrabajoOT, toggleTipoTrabajoOT } from '@/api/ordenTrabajo';
+import { crearTipoTrabajoOT, toggleTipoTrabajoOT, type TipoTrabajoOT } from '@/api/ordenTrabajo';
 import { getWorkspaceId } from '@/store/workspaceStore';
 import { qkWsId } from '@/lib/queryKeys';
 import { Q_TIPOS_OT } from '@/hooks/useOrdenesTrabajoQueries';
-import type { Id } from '@/types';
-
-type TipoTrabajo = { id: Id; nombre: string; activo: boolean };
 
 /**
  * Gestión de tipos de trabajo de OT: crear, activar/desactivar.
  * Recibe `tiposTrabajo` del orquestador (ya en caché por `useOrdenesTrabajoQueries`).
  */
-export function useOTTiposTrabajo(tiposTrabajo: TipoTrabajo[]) {
+export function useOTTiposTrabajo(tiposTrabajo: TipoTrabajoOT[]) {
   const qc = useQueryClient();
   const [nuevoTipoNombre, setNuevoTipoNombre] = useState('');
 
@@ -35,11 +32,11 @@ export function useOTTiposTrabajo(tiposTrabajo: TipoTrabajo[]) {
   });
 
   const mutToggleTipo = useMutation({
-    mutationFn: ({ id, activo }: { id: Id; activo: boolean }) => toggleTipoTrabajoOT(id, activo),
+    mutationFn: ({ id, activo }: { id: TipoTrabajoOT['id']; activo: boolean }) => toggleTipoTrabajoOT(id, activo),
     onMutate: async ({ id, activo }) => {
       await qc.cancelQueries({ queryKey: qkWsId(getWorkspaceId(), Q_TIPOS_OT) });
       const prev = qc.getQueryData([Q_TIPOS_OT]);
-      qc.setQueryData([Q_TIPOS_OT], (old: TipoTrabajo[]) =>
+      qc.setQueryData([Q_TIPOS_OT], (old: TipoTrabajoOT[]) =>
         old.map((t) => (t.id === id ? { ...t, activo } : t)),
       );
       return { prev };

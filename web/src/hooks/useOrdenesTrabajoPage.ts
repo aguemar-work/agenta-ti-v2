@@ -22,7 +22,7 @@ import {
 } from '@/lib/otFormDraft';
 import { useAuthStore } from '@/store/authStore';
 import { getWorkspaceId, useWorkspaceStore } from '@/store/workspaceStore';
-import { useOrdenesTrabajoQueries, Q_OT, Q_OT_BORRADOR, Q_TIPOS_OT } from '@/hooks/useOrdenesTrabajoQueries';
+import { useOrdenesTrabajoQueries, Q_OT, Q_OT_BORRADOR } from '@/hooks/useOrdenesTrabajoQueries';
 import { useOTTiposTrabajo } from '@/hooks/useOTTiposTrabajo';
 import { useOTAcciones } from '@/hooks/useOTAcciones';
 import { qkWsId } from '@/lib/queryKeys';
