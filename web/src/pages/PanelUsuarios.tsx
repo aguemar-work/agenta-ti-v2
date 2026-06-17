@@ -1,9 +1,9 @@
 /**
  * pages/PanelUsuarios.tsx
- * Gestión de usuarios del panel del dueño: listar y asignar a organizaciones.
+ * Gestión de usuarios del panel del dueño: invitar, listar, asignar y eliminar.
  */
 
-import { UserPlus, Users } from 'lucide-react';
+import { Trash2, UserPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -11,12 +11,15 @@ import { getOrgsDelUsuario } from '@/api/workspace';
 import type { UsuarioPlataforma } from '@/api/plataforma';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ModalAsignarUsuario } from '@/components/panel/ModalAsignarUsuario';
+import { ModalInvitarUsuario } from '@/components/panel/ModalInvitarUsuario';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
-import { useUsuariosPlataforma } from '@/hooks/useUsuariosPlataforma';
+import { useEliminarUsuario, useUsuariosPlataforma } from '@/hooks/useUsuariosPlataforma';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
+import { useAuthStore } from '@/store/authStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
 function OrgChip({ nombre, rol }: { nombre: string; rol: string }) {
@@ -28,14 +31,26 @@ function OrgChip({ nombre, rol }: { nombre: string; rol: string }) {
 }
 
 export function PanelUsuarios() {
-  const orgs = useWorkspaceStore((s) => s.orgs);
+  const orgs    = useWorkspaceStore((s) => s.orgs);
   const setOrgs = useWorkspaceStore((s) => s.setOrgs);
+  const usuarioActualId = useAuthStore((s) => s.usuario?.id);
+
   const { data: esOwner } = useEsPlataformaOwner();
   const { data: usuarios, isLoading, isError, error } = useUsuariosPlataforma();
 
   const [cargandoOrgs, setCargandoOrgs] = useState(false);
-  const [usuarioAsignar, setUsuarioAsignar] = useState<UsuarioPlataforma | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+
+  const [modalInvitar, setModalInvitar]         = useState(false);
+  const [usuarioAsignar, setUsuarioAsignar]     = useState<UsuarioPlataforma | null>(null);
+  const [modalAsignar, setModalAsignar]         = useState(false);
+  const [usuarioEliminar, setUsuarioEliminar]   = useState<UsuarioPlataforma | null>(null);
+  const [modalEliminar, setModalEliminar]       = useState(false);
+
+  const { mutate: eliminar, isPending: eliminando } = useEliminarUsuario(() => {
+    toast.success(`Usuario ${usuarioEliminar?.nombre ?? ''} eliminado.`);
+    setModalEliminar(false);
+    setUsuarioEliminar(null);
+  });
 
   useEffect(() => {
     if (orgs.length > 0) return;
@@ -59,20 +74,30 @@ export function PanelUsuarios() {
   }, [orgs.length, setOrgs]);
 
   useEffect(() => {
-    if (isError && error) {
-      console.error('[PanelUsuarios.usuarios]', error);
-    }
+    if (isError && error) console.error('[PanelUsuarios.usuarios]', error);
   }, [isError, error]);
 
   function abrirAsignar(usuario: UsuarioPlataforma) {
     if (!esOwner) return;
     setUsuarioAsignar(usuario);
-    setModalOpen(true);
+    setModalAsignar(true);
   }
 
-  function cerrarModal() {
-    setModalOpen(false);
-    setUsuarioAsignar(null);
+  function abrirEliminar(usuario: UsuarioPlataforma) {
+    if (!esOwner) return;
+    setUsuarioEliminar(usuario);
+    setModalEliminar(true);
+  }
+
+  function confirmarEliminar() {
+    if (!usuarioEliminar) return;
+    eliminar(usuarioEliminar.usuario_id, {
+      onError: (err) => {
+        console.error('[PanelUsuarios.eliminar]', err);
+        const msg = (err as { message?: string })?.message ?? 'No se pudo eliminar el usuario.';
+        toast.error(msg);
+      },
+    });
   }
 
   const lista = usuarios ?? [];
@@ -82,6 +107,14 @@ export function PanelUsuarios() {
       <PageHeader
         title="Usuarios"
         detail="Usuarios registrados en la plataforma y sus organizaciones."
+        actions={
+          esOwner ? (
+            <Button variant="primary" size="sm" onClick={() => setModalInvitar(true)}>
+              <UserPlus size={16} aria-hidden />
+              Invitar usuario
+            </Button>
+          ) : null
+        }
       />
 
       {isLoading ? (
@@ -93,8 +126,8 @@ export function PanelUsuarios() {
       ) : lista.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No hay usuarios activos"
-          desc="Los usuarios aparecerán aquí tras su primer inicio de sesión."
+          title="No hay usuarios"
+          desc="Invita al primer usuario con el botón de arriba."
         />
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -126,27 +159,57 @@ export function PanelUsuarios() {
                   </div>
                 </div>
               </div>
+
               {esOwner ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => abrirAsignar(usuario)}
-                  disabled={cargandoOrgs && orgs.length === 0}
-                >
-                  <UserPlus size={16} aria-hidden />
-                  Asignar a organización
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => abrirAsignar(usuario)}
+                    disabled={cargandoOrgs && orgs.length === 0}
+                  >
+                    <UserPlus size={16} aria-hidden />
+                    Asignar
+                  </Button>
+                  {usuario.usuario_id !== usuarioActualId ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => abrirEliminar(usuario)}
+                      aria-label={`Eliminar a ${usuario.nombre}`}
+                    >
+                      <Trash2 size={16} aria-hidden />
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </li>
           ))}
         </ul>
       )}
 
+      <ModalInvitarUsuario
+        open={modalInvitar}
+        onClose={() => setModalInvitar(false)}
+      />
+
       <ModalAsignarUsuario
-        open={modalOpen}
-        onClose={cerrarModal}
+        open={modalAsignar}
+        onClose={() => { setModalAsignar(false); setUsuarioAsignar(null); }}
         usuario={usuarioAsignar}
         orgs={orgs}
+      />
+
+      <ModalConfirmar
+        open={modalEliminar}
+        titulo="Eliminar usuario"
+        mensaje={`¿Eliminar a ${usuarioEliminar?.nombre ?? 'este usuario'} (${usuarioEliminar?.email ?? ''})? Se revocará su acceso y se borrarán sus datos de la plataforma. Esta acción no se puede deshacer.`}
+        labelConfirmar="Eliminar"
+        variantConfirmar="danger"
+        cargando={eliminando}
+        analyticsId="modal-eliminar-usuario"
+        onConfirmar={confirmarEliminar}
+        onCancelar={() => { setModalEliminar(false); setUsuarioEliminar(null); }}
       />
     </div>
   );

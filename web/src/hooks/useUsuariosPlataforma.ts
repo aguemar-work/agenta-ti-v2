@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   asignarUsuarioAOrg,
+  eliminarUsuario,
   fetchUsuariosPlataforma,
+  invitarUsuario,
   type AsignarUsuarioResult,
+  type InvitarUsuarioResult,
 } from '@/api/plataforma';
 import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
 import { useAuthStore } from '@/store/authStore';
@@ -39,6 +42,30 @@ export function useAsignarUsuario(
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: USUARIOS_PLATAFORMA_QUERY_KEY });
       onSuccess?.(result);
+    },
+  });
+}
+
+export function useInvitarUsuario(onSuccess?: (result: InvitarUsuarioResult) => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (email: string) => invitarUsuario(email),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: USUARIOS_PLATAFORMA_QUERY_KEY });
+      onSuccess?.(result);
+    },
+  });
+}
+
+export function useEliminarUsuario(onSuccess?: () => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (usuarioId: string) => eliminarUsuario(usuarioId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: USUARIOS_PLATAFORMA_QUERY_KEY });
+      onSuccess?.();
     },
   });
 }

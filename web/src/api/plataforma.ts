@@ -203,6 +203,45 @@ export async function reactivarOrg(orgId: string): Promise<z.infer<typeof Reacti
   return parsed.data;
 }
 
+// ---------------------------------------------------------------------------
+// Gestión de usuarios (invite / delete) — requieren edge functions
+// ---------------------------------------------------------------------------
+
+const InvitarResultSchema = z.object({
+  id:         z.string().uuid(),
+  nombre:     z.string(),
+  email:      z.string(),
+  rol:        z.string(),
+  activo:     z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type InvitarUsuarioResult = z.infer<typeof InvitarResultSchema>;
+
+/** Invita a un nuevo usuario por email (crea auth.user + fila public.usuario). Solo dueño. */
+export async function invitarUsuario(email: string): Promise<InvitarUsuarioResult> {
+  const { data, error } = await getInsforge().functions.invoke<{ data: unknown; error?: string }>(
+    'invite-user',
+    { body: { email } },
+  );
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  const parsed = InvitarResultSchema.safeParse(data?.data);
+  if (!parsed.success) throw new Error('Respuesta inesperada al invitar usuario.');
+  return parsed.data;
+}
+
+/** Elimina un usuario de auth.users y public.usuario. Solo dueño. No puede auto-eliminarse. */
+export async function eliminarUsuario(usuarioId: string): Promise<void> {
+  const { data, error } = await getInsforge().functions.invoke<{ data: unknown; error?: string }>(
+    'delete-user',
+    { body: { usuario_id: usuarioId } },
+  );
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
+
 /** Activa/desactiva un módulo de una org (solo dueño). */
 export async function setModuloOrg(
   orgId: string,
