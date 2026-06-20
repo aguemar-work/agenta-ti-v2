@@ -8,6 +8,7 @@ type Announcer = (message: string) => void;
 let announcer: Announcer | null = null;
 
 /** Anuncia un mensaje de forma no intrusiva (aria-live="polite"). */
+// eslint-disable-next-line react-refresh/only-export-components -- announcePolitely usa la closure del announcer definido en LiveRegion; deben estar en el mismo módulo
 export function announcePolitely(message: string) {
   const trimmed = message.trim();
   if (!trimmed) return;

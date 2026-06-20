@@ -2,20 +2,19 @@
  * Grilla semanal Lun–Sáb (sin drag & drop).
  */
 import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { MoreHorizontal, Plus, Send } from 'lucide-react';
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import { EventoCard } from '@/components/semana/EventoCard';
 import { SemanaIncidenciasAcordeon } from '@/components/semana/SemanaIncidenciasAcordeon';
 import { SemanaColumnaScrollArea } from '@/components/semana/SemanaColumnaScrollArea';
 import { TareaSemanaCard } from '@/components/semana/TareaSemanaCard';
-import { Button } from '@/components/ui/Button';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
 import type { FiltroRapido } from '@/components/semana/MiSemanaToolbar';
 import type { Evento, Tarea } from '@/types';
 
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'] as const;
-
-type FiltroEstado = 'pendiente' | 'en_progreso' | 'atrasada' | 'reprogramada' | 'completada';
 
 const SIN_INICIAR_ESTADOS = ['pendiente', 'reprogramada', 'atrasada'] as const;
 
@@ -25,7 +24,6 @@ export type MiSemanaGrillaProps = {
   diaMobileYmd: string;
   tareasPlan: Tarea[];
   eventos: Evento[];
-  filtroEstado: FiltroEstado | null;
   filtroRapido: FiltroRapido | null;
   busqueda?: string;
   incidenciasSemana: Tarea[];
@@ -45,6 +43,12 @@ export type MiSemanaGrillaProps = {
   onCancelarTarea?: (t: Tarea) => void;
   onEliminarTarea?: (t: Tarea) => void;
   onMoverTarea?: (tareaId: string, nuevaFecha: string) => Promise<void>;
+  onEventoClick?: (evento: Evento) => void;
+  onRegistrarIncidenciaRapida?: (titulo: string) => Promise<void>;
+  onCrearTareaRapida?: (titulo: string, fecha: string) => Promise<void>;
+  notasHoyCount?: number;
+  /** Nodo React renderizado solo en la columna "hoy", entre el área de tareas y el pie de incidencias. */
+  notasHoySlot?: ReactNode;
 };
 
 function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
@@ -58,7 +62,6 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
     diaMobileYmd,
     tareasPlan,
     eventos,
-    filtroEstado,
     filtroRapido,
     busqueda,
     incidenciasSemana,
@@ -78,9 +81,38 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
     onEliminarTarea,
     onMoverTarea,
     onOtClick,
+    onEventoClick,
+    onRegistrarIncidenciaRapida,
+    onCrearTareaRapida,
+    notasHoyCount,
+    notasHoySlot,
   } = props;
 
   const [terminadasExpand,  setTerminadasExpand]  = useState<Set<string>>(new Set());
+  const [incRapida,         setIncRapida]         = useState('');
+  const [guardandoInc,      setGuardandoInc]      = useState(false);
+  const [tareasRapidas,     setTareasRapidas]     = useState<Record<string, string>>({});
+  const [guardandoTarea,    setGuardandoTarea]    = useState<string | null>(null);
+
+  async function handleGuardarInc() {
+    if (!incRapida.trim() || guardandoInc || !onRegistrarIncidenciaRapida) return;
+    setGuardandoInc(true);
+    try { await onRegistrarIncidenciaRapida(incRapida.trim()); setIncRapida(''); }
+    finally { setGuardandoInc(false); }
+  }
+
+  function setTareaRapida(ymd: string, v: string) {
+    setTareasRapidas((prev) => ({ ...prev, [ymd]: v }));
+  }
+
+  async function handleGuardarTarea(ymd: string) {
+    const titulo = (tareasRapidas[ymd] ?? '').trim();
+    if (!titulo || guardandoTarea || !onCrearTareaRapida) return;
+    setGuardandoTarea(ymd);
+    try { await onCrearTareaRapida(titulo, ymd); setTareaRapida(ymd, ''); }
+    finally { setGuardandoTarea(null); }
+  }
+
   const [draggingId,        setDraggingId]        = useState<string | null>(null);
   const [draggingFromYmd,   setDraggingFromYmd]   = useState<string | null>(null);
   const [overYmd,           setOverYmd]           = useState<string | null>(null);
@@ -110,7 +142,6 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                 const q = busqueda.toLowerCase();
                 result = result.filter((t) => t.titulo.toLowerCase().includes(q));
               }
-              if (filtroEstado) return result.filter((t) => estadoEfectivoTablero(t, hoyYmd) === filtroEstado);
               if (filtroRapido === 'sin_iniciar') return result.filter((t) => (SIN_INICIAR_ESTADOS as readonly string[]).includes(estadoEfectivoTablero(t, hoyYmd)));
               if (filtroRapido === 'atrasada')    return result.filter((t) => estadoEfectivoTablero(t, hoyYmd) === 'atrasada');
               if (filtroRapido === 'critica')     return result.filter((t) => t.prioridad === 'critica');
@@ -129,7 +160,7 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
             const todoListo = totalCnt > 0 && completadasCnt === totalCnt;
 
             // Separar activas vs terminadas (solo cuando no hay filtro activo)
-            const agrupar = !filtroEstado && !filtroRapido;
+            const agrupar = !filtroRapido && !busqueda;
             const delDiaActivas = agrupar
               ? delDiaVis.filter((t) => t.estado !== 'completada' && t.estado !== 'cancelada')
               : delDiaVis;
@@ -190,16 +221,45 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                       {completadasCnt}/{totalCnt}
                     </span>
                   )}
+                  {esHoy && (notasHoyCount ?? 0) > 0 && (
+                    <span
+                      className="self-center h-1.5 w-1.5 rounded-full bg-[var(--mc-color-accent)] opacity-60"
+                      title={`${notasHoyCount} nota${notasHoyCount! > 1 ? 's' : ''}`}
+                      aria-hidden
+                    />
+                  )}
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="w-full shrink-0 justify-center rounded-none border-b border-[var(--mc-color-border)] !py-2"
-                  onClick={() => onAbrirModalDia(ymd)}
-                >
-                  + Tarea / evento
-                </Button>
+                <div className="flex shrink-0 items-center gap-1 border-b border-[var(--mc-color-border)] px-2 py-1.5">
+                  <input
+                    type="text"
+                    className="min-w-0 flex-1 rounded-[var(--mc-radius-sm)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-2 py-1 text-[11px] placeholder:text-[var(--mc-color-text-secondary)] focus:border-[var(--mc-color-accent)] focus:outline-none disabled:opacity-50"
+                    placeholder="Nueva tarea…"
+                    value={tareasRapidas[ymd] ?? ''}
+                    onChange={(e) => setTareaRapida(ymd, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleGuardarTarea(ymd); } }}
+                    disabled={guardandoTarea === ymd}
+                    aria-label={`Nueva tarea para ${DIAS_CORTO[idx]}`}
+                  />
+                  <button
+                    type="button"
+                    disabled={!(tareasRapidas[ymd] ?? '').trim() || guardandoTarea === ymd}
+                    onClick={() => void handleGuardarTarea(ymd)}
+                    className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-accent)] hover:bg-[var(--mc-color-bg-secondary)] disabled:opacity-40"
+                    aria-label="Crear tarea"
+                  >
+                    <Plus size={12} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onAbrirModalDia(ymd)}
+                    className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]"
+                    title="Crear con más opciones"
+                    aria-label="Abrir formulario completo"
+                  >
+                    <MoreHorizontal size={12} aria-hidden />
+                  </button>
+                </div>
 
                 <SemanaColumnaScrollArea>
                   <div
@@ -225,7 +285,11 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                     )}
 
                     {eventosEnDia(eventos, ymd).map((ev) => (
-                      <EventoCard key={ev.id} evento={ev} />
+                      <EventoCard
+                        key={ev.id}
+                        evento={ev}
+                        {...(onEventoClick ? { onClick: onEventoClick } : {})}
+                      />
                     ))}
 
                     {sinContenido && (
@@ -240,7 +304,7 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                         <div
                           key={t.id}
                           className={[
-                            Boolean(gestiona && onMoverTarea) ? 'mc-semana-task-draggable' : '',
+                            (gestiona && onMoverTarea) ? 'mc-semana-task-draggable' : '',
                             isDragging ? 'mc-semana-task-dragging' : '',
                           ].filter(Boolean).join(' ') || undefined}
                           draggable={Boolean(gestiona && onMoverTarea)}
@@ -313,22 +377,51 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                   </div>
                 </SemanaColumnaScrollArea>
 
-                <div className="mc-semana-dia-col__pie shrink-0">
-                  <SemanaIncidenciasAcordeon
-                    incidencias={incidenciasDia}
-                    hoyYmd={hoyYmd}
-                    esHoy={esHoy}
-                    puedeAbrir={(inc) => ymd === hoyYmd && puedeGestionar(inc)}
-                    onAbrirDetalle={onAbrirDetalle}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onRegistrarIncidencia(ymd)}
-                    className="mc-semana-dia-col__registrar-inc"
-                  >
-                    + Registrar incidencia
-                  </button>
-                </div>
+                {esHoy && notasHoySlot}
+
+                {(incidenciasDia.length > 0 || esHoy) && (
+                  <div className="mc-semana-dia-col__pie shrink-0">
+                    <SemanaIncidenciasAcordeon
+                      incidencias={incidenciasDia}
+                      hoyYmd={hoyYmd}
+                      esHoy={esHoy}
+                      puedeAbrir={(inc) => puedeGestionar(inc)}
+                      onAbrirDetalle={onAbrirDetalle}
+                    />
+                    {esHoy && (
+                      <div className="flex items-center gap-1 px-2 pb-2 pt-1">
+                        <input
+                          type="text"
+                          className="min-w-0 flex-1 rounded-[var(--mc-radius-sm)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-2 py-1 text-[11px] placeholder:text-[var(--mc-color-text-secondary)] focus:border-[var(--mc-color-info)] focus:outline-none disabled:opacity-50"
+                          placeholder="Registrar incidencia…"
+                          value={incRapida}
+                          onChange={(e) => setIncRapida(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleGuardarInc(); } }}
+                          disabled={guardandoInc}
+                          aria-label="Registrar incidencia rápida"
+                        />
+                        <button
+                          type="button"
+                          disabled={!incRapida.trim() || guardandoInc}
+                          onClick={() => void handleGuardarInc()}
+                          className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-info)] hover:bg-[var(--mc-color-bg-secondary)] disabled:opacity-40"
+                          aria-label="Guardar incidencia"
+                        >
+                          <Send size={12} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRegistrarIncidencia(ymd)}
+                          className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]"
+                          title="Más opciones"
+                          aria-label="Abrir formulario completo de incidencia"
+                        >
+                          <MoreHorizontal size={12} aria-hidden />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

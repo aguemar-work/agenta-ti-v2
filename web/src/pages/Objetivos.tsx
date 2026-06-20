@@ -125,7 +125,7 @@ export function Objetivos() {
 
   useEffect(() => {
     const maxPag = Math.max(0, Math.ceil(objetivosFiltrados.length / PAGE_SIZE) - 1);
-    if (pagina > maxPag) setPagina(maxPag);
+    if (pagina > maxPag) setPagina(maxPag); // eslint-disable-line react-hooks/set-state-in-effect -- ajusta página activa cuando el filtrado reduce el total de páginas
   }, [objetivosFiltrados.length, pagina]);
 
   const objetivosPagina = useMemo(() => {

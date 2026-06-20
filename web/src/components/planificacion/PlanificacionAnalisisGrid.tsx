@@ -39,7 +39,7 @@ export function PlanificacionAnalisisGrid({
   onCeldaClick,
 }: Props) {
   const { data: metricasCompletas, isLoading: loadS } = useKpisRangoYSemana(periodoDesde, periodoHasta);
-  const porSemana = metricasCompletas?.porSemana ?? [];
+  const porSemana = useMemo(() => metricasCompletas?.porSemana ?? [], [metricasCompletas?.porSemana]);
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(periodoDesde, periodoHasta, true);
   const { data: otCounts, isLoading: loadOT } = useMetricasOT(periodoDesde, periodoHasta, true);
 

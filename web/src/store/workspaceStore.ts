@@ -24,7 +24,6 @@ export interface Workspace {
   id: string;
   organizacion_id: string;
   nombre: string;
-  tipo: 'interno' | 'agencia';
   activo: boolean;
 }
 
@@ -196,3 +195,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 /** Helper para uso fuera de React (p. ej. header x-workspace-id en el SDK). */
 export const getWorkspaceId = (): string | null =>
   useWorkspaceStore.getState().workspaceActivo?.id ?? null;
+
+/** Helper para uso fuera de React: org activa del contexto operativo. */
+export const getOrgId = (): string | null =>
+  useWorkspaceStore.getState().orgActiva?.id ?? null;

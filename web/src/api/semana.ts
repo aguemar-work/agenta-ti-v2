@@ -4,7 +4,7 @@
  */
 
 import { getInsforge } from '@/lib/insforge';
-import { getWorkspaceId } from '@/store/workspaceStore';
+import { getOrgId, getWorkspaceId } from '@/store/workspaceStore';
 import { MIN_JUSTIFICACION_CHARS, MSG_JUSTIFICACION_CORTA } from '@/lib/constants';
 import { publicarEventoEquipo } from '@/lib/realtimePublish';
 import { parseEvento, parseTarea } from '@/lib/schemas';
@@ -38,14 +38,19 @@ function solapaSemana(ev: Evento, lunes: Date): boolean {
 
 export async function getEventosSemana(usuarioId: string, lunes: Date): Promise<Evento[]> {
   const insforge = getInsforge();
+  const orgId    = getOrgId();
   const startWeek = new Date(lunes); startWeek.setHours(0, 0, 0, 0);
   const endWeek   = agregarDias(lunes, 7); endWeek.setHours(0, 0, 0, 0);
-  const { data, error } = await insforge.database
+  let q = insforge.database
     .from('evento')
     .select('*')
     .eq('usuario_id', usuarioId)
     .lt('fecha_inicio', endWeek.toISOString())
     .gt('fecha_fin', startWeek.toISOString());
+  if (orgId) {
+    q = q.or(`tipo.eq.personal,organizacion_id.eq.${orgId}`);
+  }
+  const { data, error } = await q;
   if (error) throw error;
   return (data ?? []).map((r) => parseEvento(r as Record<string, unknown>))
     .filter((e) => solapaSemana(e, lunes));
@@ -234,6 +239,36 @@ export async function completarTareaConResumen(input: {
 // Eventos
 // ---------------------------------------------------------------------------
 
+export type ActualizarEventoInput = {
+  eventoId:    string;
+  titulo:      string;
+  tipo:        TipoEvento;
+  fecha_dia:   string;
+  hora_inicio: string;
+  hora_fin:    string;
+};
+
+export async function actualizarEvento(input: ActualizarEventoInput): Promise<void> {
+  const { error } = await getInsforge().database
+    .from('evento')
+    .update({
+      titulo:       input.titulo.trim(),
+      tipo:         input.tipo,
+      fecha_inicio: toIsoLocal(input.fecha_dia, input.hora_inicio),
+      fecha_fin:    toIsoLocal(input.fecha_dia, input.hora_fin),
+    })
+    .eq('id', input.eventoId);
+  if (error) throw error;
+}
+
+export async function eliminarEvento(eventoId: string): Promise<void> {
+  const { error } = await getInsforge().database
+    .from('evento')
+    .delete()
+    .eq('id', eventoId);
+  if (error) throw error;
+}
+
 export type CrearEventoUsuarioInput = {
   titulo:        string;
   tipo:          TipoEvento;
@@ -253,19 +288,21 @@ function toIsoLocal(fechaDia: string, hora: string): string {
 
 export async function crearEventoUsuario(input: CrearEventoUsuarioInput): Promise<Evento> {
   const workspaceId = getWorkspaceId();
+  const orgId       = getOrgId();
   if (!workspaceId) throw new Error('Sin workspace activo');
 
   const insforge = getInsforge();
   const { data: inserted, error } = await insforge.database
     .from('evento')
     .insert([{
-      titulo:        input.titulo.trim(),
-      tipo:          input.tipo,
-      fecha_inicio:  toIsoLocal(input.fecha_dia, input.hora_inicio),
-      fecha_fin:     toIsoLocal(input.fecha_dia, input.hora_fin),
-      usuario_id:    input.usuario_id,
-      es_recurrente: input.es_recurrente,
-      workspace_id:  workspaceId,
+      titulo:          input.titulo.trim(),
+      tipo:            input.tipo,
+      fecha_inicio:    toIsoLocal(input.fecha_dia, input.hora_inicio),
+      fecha_fin:       toIsoLocal(input.fecha_dia, input.hora_fin),
+      usuario_id:      input.usuario_id,
+      es_recurrente:   input.es_recurrente,
+      workspace_id:    workspaceId,
+      organizacion_id: input.tipo === 'personal' ? null : orgId,
     }])
     .select('*')
     .single();

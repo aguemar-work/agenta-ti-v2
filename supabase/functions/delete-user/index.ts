@@ -1,3 +1,14 @@
+/**
+ * Edge function: delete-user
+ *
+ * Elimina un usuario de la plataforma: limpia workspace_member,
+ * usuario_preferencia, public.usuario y auth.users.
+ * Gate: solo plataforma_owner. No puede eliminar su propia cuenta.
+ *
+ * Body (JSON):
+ *   - usuario_id  string  UUID del usuario a eliminar (requerido)
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS = {
@@ -24,23 +35,23 @@ Deno.serve(async (req) => {
     if (authErr || !user) return jsonRes({ error: 'Unauthorized' }, 401);
 
     const { data: esOwner, error: rpcErr } = await caller.rpc('sgtd_es_plataforma_owner');
-    if (rpcErr || !esOwner) return jsonRes({ error: 'Forbidden: no eres dueño de plataforma' }, 403);
+    if (rpcErr || !esOwner)
+      return jsonRes({ error: 'Forbidden: no eres dueño de plataforma' }, 403);
 
     const body = await req.json() as { usuario_id?: string };
     const { usuario_id } = body;
-    if (!usuario_id)          return jsonRes({ error: 'usuario_id es requerido' }, 400);
+    if (!usuario_id)           return jsonRes({ error: 'usuario_id es requerido' }, 400);
     if (usuario_id === user.id) return jsonRes({ error: 'No puedes eliminarte a ti mismo' }, 400);
 
     const admin = createClient(url, svcKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Limpiar datos relacionados explícitamente (por si no hay CASCADE)
+    // Limpiar datos relacionados (workspace_member puede no tener CASCADE con auth.users)
     await admin.from('workspace_member').delete().eq('usuario_id', usuario_id);
     await admin.from('usuario_preferencia').delete().eq('usuario_id', usuario_id);
     await admin.from('usuario').delete().eq('id', usuario_id);
 
-    // Eliminar de auth.users
     const { error: delErr } = await admin.auth.admin.deleteUser(usuario_id);
     if (delErr) return jsonRes({ error: delErr.message }, 500);
 

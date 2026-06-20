@@ -50,6 +50,7 @@ export function ObjetivoBadgeRiesgo({ pct, fechaLimite, totalTareas }: BarraProp
 }
 
 /** Clase de color para meta de progreso (p. ej. fila de tabla o detalle). */
+// eslint-disable-next-line react-refresh/only-export-components -- utilidad pura exportada junto a los componentes que la consumen; coubicación intencional
 export function claseProgresoMetaNivel(nivel: NivelRiesgoObjetivo): string {
   if (nivel === 'critico' || nivel === 'moderado' || nivel === 'aceptable') {
     return `mc-objetivo-row__progreso-meta--${nivel}`;

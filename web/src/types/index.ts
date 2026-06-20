@@ -104,6 +104,7 @@ export interface Evento {
   fecha_inicio: string;
   fecha_fin: string;
   usuario_id: Id;
+  organizacion_id: Id | null;
   es_recurrente: boolean;
   created_at: string;
   updated_at: string;

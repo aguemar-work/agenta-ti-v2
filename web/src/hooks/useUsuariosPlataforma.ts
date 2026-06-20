@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  asignarUsuarioAOrg,
   eliminarUsuario,
   fetchUsuariosPlataforma,
-  invitarUsuario,
-  type AsignarUsuarioResult,
-  type InvitarUsuarioResult,
 } from '@/api/plataforma';
+import {
+  invitarAWorkspace,
+  type InvitarAWorkspaceInput,
+  type InvitarResult,
+} from '@/api/invitacion';
 import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
 import { useAuthStore } from '@/store/authStore';
 
@@ -25,20 +26,12 @@ export function useUsuariosPlataforma() {
   });
 }
 
-export type AsignarUsuarioInput = {
-  usuarioId: string;
-  orgId: string;
-  rol: 'jefe' | 'miembro';
-};
-
-export function useAsignarUsuario(
-  onSuccess?: (result: AsignarUsuarioResult) => void,
-) {
+/** Invita a un workspace (email nuevo o existente). Reemplaza asignación directa 049. */
+export function useInvitarAWorkspace(onSuccess?: (result: InvitarResult) => void) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ usuarioId, orgId, rol }: AsignarUsuarioInput) =>
-      asignarUsuarioAOrg(usuarioId, orgId, rol),
+    mutationFn: (input: InvitarAWorkspaceInput) => invitarAWorkspace(input),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: USUARIOS_PLATAFORMA_QUERY_KEY });
       onSuccess?.(result);
@@ -46,16 +39,17 @@ export function useAsignarUsuario(
   });
 }
 
-export function useInvitarUsuario(onSuccess?: (result: InvitarUsuarioResult) => void) {
-  const queryClient = useQueryClient();
+/** @deprecated Alias de useInvitarAWorkspace — misma mutación, contrato 057. */
+export type AsignarUsuarioInput = InvitarAWorkspaceInput & { usuarioId?: string };
 
-  return useMutation({
-    mutationFn: (email: string) => invitarUsuario(email),
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: USUARIOS_PLATAFORMA_QUERY_KEY });
-      onSuccess?.(result);
-    },
-  });
+export function useAsignarUsuario(
+  onSuccess?: (result: InvitarResult) => void,
+) {
+  return useInvitarAWorkspace(onSuccess as ((result: InvitarResult) => void) | undefined);
+}
+
+export function useInvitarUsuario(onSuccess?: (result: InvitarResult) => void) {
+  return useInvitarAWorkspace(onSuccess);
 }
 
 export function useEliminarUsuario(onSuccess?: () => void) {
@@ -69,3 +63,6 @@ export function useEliminarUsuario(onSuccess?: () => void) {
     },
   });
 }
+
+// Re-export para compatibilidad de tipos en modales legacy
+export type { InvitarResult as InvitarUsuarioResult, InvitarResult as AsignarUsuarioResult };

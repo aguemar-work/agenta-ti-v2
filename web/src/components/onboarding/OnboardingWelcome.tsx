@@ -59,7 +59,7 @@ export function OnboardingWelcome({ userId, rol }: Props) {
 
   useEffect(() => {
     if (!isOnboardingCompleted(userId)) {
-      setOpen(true);
+      setOpen(true); // eslint-disable-line react-hooks/set-state-in-effect -- inicialización única desde localStorage
       trackOnboarding('shown');
     }
   }, [userId]);

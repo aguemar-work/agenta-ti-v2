@@ -32,7 +32,6 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
     diasSemana,
     hoyYmd,
     tareasPlan,
-    filtroEstado,
     filtroRapido,
     busqueda,
     nombresPorId,
@@ -60,8 +59,6 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
         const q = busqueda.toLowerCase();
         result = result.filter((t) => t.titulo.toLowerCase().includes(q));
       }
-      if (filtroEstado)
-        return result.filter((t) => estadoEfectivoTablero(t, hoyYmd) === filtroEstado);
       if (filtroRapido === 'sin_iniciar')
         return result.filter((t) =>
           (SIN_INICIAR_ESTADOS as readonly string[]).includes(
@@ -80,7 +77,7 @@ export function MiSemanaLista(props: MiSemanaGrillaProps) {
       if (fa !== fb) return fa.localeCompare(fb);
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [tareasPlan, filtroEstado, filtroRapido, hoyYmd]);
+  }, [tareasPlan, filtroRapido, hoyYmd, busqueda]);
 
   if (tareas.length === 0) {
     return (

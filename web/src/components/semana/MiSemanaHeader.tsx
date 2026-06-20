@@ -43,14 +43,15 @@ export function MiSemanaHeader({
   const muestraSelectorJefe =
     esJefe && Boolean(uid) && Boolean(usuariosJefe?.length) && Boolean(onSeleccionarUsuario);
 
+  const hoyLunes = lunesSemanaActual();
+  const esSemanActual =
+    lunes.getFullYear() === hoyLunes.getFullYear() &&
+    lunes.getMonth()    === hoyLunes.getMonth() &&
+    lunes.getDate()     === hoyLunes.getDate();
+
   return (
     <div className="mc-misemana-hdr__top">
-      <h1 className="mc-misemana-hdr__title">Mi semana</h1>
-
       <div className="mc-misemana-hdr__nav" role="group" aria-label="Navegación de semana">
-        <span className="mc-misemana-hdr__fecha" aria-live="polite">
-          {formatRangoSemana(lunes, sabado)}
-        </span>
         <button
           type="button"
           className="mc-nav-arrow-btn"
@@ -59,6 +60,11 @@ export function MiSemanaHeader({
         >
           <ChevronLeft size={15} strokeWidth={2} aria-hidden />
         </button>
+
+        <span className="mc-misemana-hdr__fecha" aria-live="polite">
+          {formatRangoSemana(lunes, sabado)}
+        </span>
+
         <button
           type="button"
           className="mc-nav-arrow-btn"
@@ -67,18 +73,25 @@ export function MiSemanaHeader({
         >
           <ChevronRight size={15} strokeWidth={2} aria-hidden />
         </button>
-        <button
-          type="button"
-          className="mc-misemana-header__hoy"
-          onClick={onIrHoy}
-        >
-          Hoy
-        </button>
+
+        {!esSemanActual && (
+          <button
+            type="button"
+            className="mc-misemana-header__hoy"
+            onClick={onIrHoy}
+          >
+            Hoy
+          </button>
+        )}
+
         {muestraSelectorJefe && (
-          <div className="mc-misemana-header__ver-semana">
+          <div className="mc-misemana-header__ver-semana flex items-center gap-1.5">
+            <span className="shrink-0 text-xs text-[var(--mc-color-text-secondary)]">
+              Viendo:
+            </span>
             <FilterBar.Select
               id="misemana-ver-semana-de"
-              label="Ver semana de"
+              label="Seleccionar usuario"
               hideLabel
               value={uid!}
               onChange={onSeleccionarUsuario!}
@@ -92,14 +105,17 @@ export function MiSemanaHeader({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- utilidades de navegación coubicadas con el header que las consume
 export function lunesSemanaActual(): Date {
   return inicioSemanaIso(new Date());
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function navegarSemanaAnterior(lunes: Date): Date {
   return agregarDias(lunes, -7);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function navegarSemanaSiguiente(lunes: Date): Date {
   return agregarDias(lunes, 7);
 }

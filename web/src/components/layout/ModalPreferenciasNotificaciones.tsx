@@ -24,7 +24,7 @@ export function ModalPreferenciasNotificaciones({ open, onClose, userId, rol, on
   const eventos = eventosDisponiblesPorRol(rol);
 
   useEffect(() => {
-    if (open) setPrefs(loadNotificationPrefs(userId));
+    if (open) setPrefs(loadNotificationPrefs(userId)); // eslint-disable-line react-hooks/set-state-in-effect -- carga prefs desde localStorage al abrir el modal
   }, [open, userId]);
 
   function toggle(key: keyof NotificationPrefs) {

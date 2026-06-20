@@ -111,6 +111,7 @@ export function useOrdenesTrabajoPage() {
   }, [borradorOTId]);
 
   // Hidrata el form desde el borrador servidor al abrir el modal
+  /* eslint-disable react-hooks/set-state-in-effect -- hidrata formulario desde borrador al abrir el modal; único punto de inicialización del estado de OT */
   useEffect(() => {
     if (!modalForm) { borradorHidratadoRef.current = false; return; }
     if (editandoOT || borradorCargando || borradorHidratadoRef.current) return;
@@ -123,6 +124,7 @@ export function useOrdenesTrabajoPage() {
       setDraftSaveStatus('saved');
     }
   }, [modalForm, editandoOT, borradorCargando, borradorServidor]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Tick por segundo para la etiqueta "guardado hace X"
   useEffect(() => {
@@ -133,6 +135,7 @@ export function useOrdenesTrabajoPage() {
 
   const draftSavedLabel = useMemo(
     () => formatBorradorGuardadoHace(draftUpdatedAt),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- draftTick es intencional: fuerza recompute en cada tick del reloj
     [draftUpdatedAt, draftTick],
   );
 

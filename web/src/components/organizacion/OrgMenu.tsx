@@ -90,7 +90,7 @@ export function OrgMenu({
 
   useLayoutEffect(() => {
     if (!open || !anchorEl) return;
-    calcularPosicion();
+    calcularPosicion(); // eslint-disable-line react-hooks/set-state-in-effect -- useLayoutEffect para cálculo de posición DOM; uso recomendado para medición DOM
     window.addEventListener('resize', calcularPosicion);
     window.addEventListener('scroll', calcularPosicion, true);
     return () => {

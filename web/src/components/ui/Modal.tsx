@@ -55,6 +55,7 @@ interface ModalProps {
   analyticsId?: string;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- re-export de conveniencia para consumidores del modal
 export { markModalCompleted } from '@/lib/analytics';
 
 const STACK_OVERLAY_CLASS: Record<ModalStackLevel, string> = {
@@ -97,7 +98,7 @@ export function Modal({
   // useLayoutEffect: corre síncronamente antes del primer paint cuando open cambia
   // a true — evita que closing=true del ciclo anterior cause flash de apertura.
   useLayoutEffect(() => {
-    if (open) setClosing(false);
+    if (open) setClosing(false); // eslint-disable-line react-hooks/set-state-in-effect -- sincroniza animación con DOM antes del paint
   }, [open]);
 
   function emitClose() {
@@ -181,6 +182,7 @@ export function Modal({
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- tryClose depende de hasUnsavedChanges que ya está en deps; agregar tryClose causaría ejecución en cada render
   }, [open, confirmingClose, hasUnsavedChanges]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {

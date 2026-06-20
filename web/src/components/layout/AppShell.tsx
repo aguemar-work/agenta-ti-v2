@@ -160,7 +160,7 @@ export function AppShell() {
   const location = useLocation();
 
   useEffect(() => {
-    if (usuario?.id) setNotifPrefs(loadNotificationPrefs(usuario.id));
+    if (usuario?.id) setNotifPrefs(loadNotificationPrefs(usuario.id)); // eslint-disable-line react-hooks/set-state-in-effect -- sync desde localStorage al cambiar usuario
   }, [usuario?.id]);
 
   const rolActivo = useWorkspaceStore((s) => s.rolActivo);

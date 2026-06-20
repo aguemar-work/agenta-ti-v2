@@ -77,7 +77,7 @@ export function Planificacion() {
   const { data: resumenSla } = useResumenSlaJefe();
 
   useEffect(() => {
-    if (vistaSla) setHistorialAbierto(true);
+    if (vistaSla) setHistorialAbierto(true); // eslint-disable-line react-hooks/set-state-in-effect -- abre historial SLA cuando se navega con ?vista=sla
   }, [vistaSla]);
 
   useEffect(() => {

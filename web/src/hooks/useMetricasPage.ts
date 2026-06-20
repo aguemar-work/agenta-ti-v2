@@ -39,7 +39,7 @@ export function useMetricasPage() {
 
   const { data: metricasCompletas, isLoading: loadKS } = useKpisRangoYSemana(desde, hasta, uid);
   const kpis = metricasCompletas?.kpis;
-  const porSemana = metricasCompletas?.porSemana ?? [];
+  const porSemana = useMemo(() => metricasCompletas?.porSemana ?? [], [metricasCompletas?.porSemana]);
   const loadK = loadKS;
   const loadS = loadKS;
   const { data: comparativa = [], isLoading: loadC } = useKpisComparativa(desde, hasta, esJefe);

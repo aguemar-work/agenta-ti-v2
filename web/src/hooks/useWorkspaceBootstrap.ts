@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { fetchEsPlataformaOwnerCached } from '@/api/plataforma';
+import { fetchInvitacionesPendientes } from '@/api/invitacion';
 import {
   getModulosDelWorkspace,
   getOrgsDelUsuario,
@@ -34,6 +35,7 @@ async function aplicarContexto(org: Organizacion, ws: WorkspaceConRol) {
 
 export function useWorkspaceBootstrap(): {
   necesitaSelector: boolean;
+  necesitaInvitaciones: boolean;
   error: string | null;
   reintentar: () => void;
 } {
@@ -41,6 +43,7 @@ export function useWorkspaceBootstrap(): {
   const inicializado = useWorkspaceStore((s) => s.inicializado);
 
   const [necesitaSelector, setNecesitaSelector] = useState(false);
+  const [necesitaInvitaciones, setNecesitaInvitaciones] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [intentos, setIntentos] = useState(0);
   const [storeHydrated, setStoreHydrated] = useState(
@@ -50,12 +53,13 @@ export function useWorkspaceBootstrap(): {
   const reintentar = useCallback(() => {
     setError(null);
     setNecesitaSelector(false);
+    setNecesitaInvitaciones(false);
     setIntentos((n) => n + 1);
   }, []);
 
   useEffect(() => {
     if (useWorkspaceStore.persist.hasHydrated()) {
-      setStoreHydrated(true);
+      setStoreHydrated(true); // eslint-disable-line react-hooks/set-state-in-effect -- hidrata desde store persistido al montar
       return;
     }
     return useWorkspaceStore.persist.onFinishHydration(() => {
@@ -67,16 +71,32 @@ export function useWorkspaceBootstrap(): {
     if (!usuario || !storeHydrated) return;
 
     if (useWorkspaceStore.getState().inicializado) {
-      setNecesitaSelector(false);
+      setNecesitaSelector(false); // eslint-disable-line react-hooks/set-state-in-effect -- early-return cuando workspace ya está inicializado
+      setNecesitaInvitaciones(false);
       setError(null);
       return;
     }
 
     let cancelled = false;
 
+    async function mostrarInvitacionesSiHay(): Promise<boolean> {
+      try {
+        const pendientes = await fetchInvitacionesPendientes();
+        if (cancelled) return true;
+        if (pendientes.length > 0) {
+          setNecesitaInvitaciones(true);
+          return true;
+        }
+      } catch (err) {
+        console.error('[useWorkspaceBootstrap] invitaciones', err);
+      }
+      return false;
+    }
+
     async function bootstrap() {
       setError(null);
       setNecesitaSelector(false);
+      setNecesitaInvitaciones(false);
       useWorkspaceStore.getState().setCargando(true);
 
       try {
@@ -120,6 +140,8 @@ export function useWorkspaceBootstrap(): {
             useWorkspaceStore.getState().entrarModoPanel();
             return;
           }
+
+          if (await mostrarInvitacionesSiHay()) return;
 
           setError('No tienes acceso a ninguna organización.');
           toast.error('No tienes acceso a ninguna organización.');
@@ -173,6 +195,8 @@ export function useWorkspaceBootstrap(): {
         );
 
         if (accesibles.length === 0) {
+          if (await mostrarInvitacionesSiHay()) return;
+
           setError('No tienes acceso a ningún espacio de trabajo.');
           toast.error('No tienes acceso a ningún espacio de trabajo.');
           return;
@@ -205,11 +229,12 @@ export function useWorkspaceBootstrap(): {
 
     void bootstrap();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- usuario?.id es el dep correcto; el objeto usuario cambia referencia en cada render aunque el ID sea el mismo
   }, [usuario?.id, inicializado, storeHydrated, intentos]);
 
   if (inicializado) {
-    return { necesitaSelector: false, error: null, reintentar };
+    return { necesitaSelector: false, necesitaInvitaciones: false, error: null, reintentar };
   }
 
-  return { necesitaSelector, error, reintentar };
+  return { necesitaSelector, necesitaInvitaciones, error, reintentar };
 }

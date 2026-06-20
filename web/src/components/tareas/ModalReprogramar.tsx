@@ -24,7 +24,7 @@ export function ModalReprogramar({ tarea, fechaFija, onClose, onConfirm }: Props
   const [just, setJust]   = useState('');
   const [busy, setBusy]   = useState(false);
 
-  useEffect(() => { setFecha(''); setJust(''); }, [tarea?.id]);
+  useEffect(() => { setFecha(''); setJust(''); }, [tarea?.id]); // eslint-disable-line react-hooks/set-state-in-effect -- resetea formulario al cambiar tarea
 
   const fechaElegida = fechaFija ?? fecha;
   const esDom        = esDomingo(fechaElegida);

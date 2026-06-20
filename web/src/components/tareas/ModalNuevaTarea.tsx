@@ -53,7 +53,7 @@ export function ModalNuevaTarea({
   const canSubmit      = form.titulo.trim().length > 0 && !busy;
 
   useEffect(() => {
-    if (open && modo === 'incidencia') setFechaIncidencia(fechaReferencia);
+    if (open && modo === 'incidencia') setFechaIncidencia(fechaReferencia); // eslint-disable-line react-hooks/set-state-in-effect -- sincroniza fecha al abrir en modo incidencia
   }, [open, modo, fechaReferencia]);
 
   async function submit() {

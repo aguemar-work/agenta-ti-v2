@@ -58,6 +58,7 @@ export function ModalConvertirNota({
   const [horaFin, setHoraFin] = useState('10:00');
   const [busy, setBusy] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- inicializa formulario desde nota al abrir modal; patrón estándar de modales controlados */
   useEffect(() => {
     if (!open || !nota) return;
     setTab('tarea');
@@ -70,6 +71,7 @@ export function ModalConvertirNota({
     setHoraIni('09:00');
     setHoraFin('10:00');
   }, [open, nota, sugerencia.titulo, sugerencia.descripcion, hoyYmd, asignadoPorDefectoId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function submitTarea() {
     if (!titulo.trim()) return;

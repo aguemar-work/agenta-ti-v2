@@ -4,11 +4,7 @@
  */
 
 import { Trash2, UserPlus, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 
-import { getOrgsDelUsuario } from '@/api/workspace';
-import type { UsuarioPlataforma } from '@/api/plataforma';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ModalAsignarUsuario } from '@/components/panel/ModalAsignarUsuario';
 import { ModalInvitarUsuario } from '@/components/panel/ModalInvitarUsuario';
@@ -16,91 +12,35 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
-import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
-import { useEliminarUsuario, useUsuariosPlataforma } from '@/hooks/useUsuariosPlataforma';
+import { usePanelUsuariosPage } from '@/hooks/usePanelUsuariosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { useAuthStore } from '@/store/authStore';
-import { useWorkspaceStore } from '@/store/workspaceStore';
 
-function OrgChip({ nombre, rol }: { nombre: string; rol: string }) {
+function OrgChip({
+  nombre,
+  rol,
+  estado,
+}: {
+  nombre: string;
+  rol: string;
+  estado?: 'activo' | 'pendiente' | undefined;
+}) {
   return (
     <span className="mc-badge mc-badge-neutral">
       {nombre} · {rol}
+      {estado === 'pendiente' ? ' · pendiente' : ''}
     </span>
   );
 }
 
 export function PanelUsuarios() {
-  const orgs    = useWorkspaceStore((s) => s.orgs);
-  const setOrgs = useWorkspaceStore((s) => s.setOrgs);
-  const usuarioActualId = useAuthStore((s) => s.usuario?.id);
-
-  const { data: esOwner } = useEsPlataformaOwner();
-  const { data: usuarios, isLoading, isError, error } = useUsuariosPlataforma();
-
-  const [cargandoOrgs, setCargandoOrgs] = useState(false);
-
-  const [modalInvitar, setModalInvitar]         = useState(false);
-  const [usuarioAsignar, setUsuarioAsignar]     = useState<UsuarioPlataforma | null>(null);
-  const [modalAsignar, setModalAsignar]         = useState(false);
-  const [usuarioEliminar, setUsuarioEliminar]   = useState<UsuarioPlataforma | null>(null);
-  const [modalEliminar, setModalEliminar]       = useState(false);
-
-  const { mutate: eliminar, isPending: eliminando } = useEliminarUsuario(() => {
-    toast.success(`Usuario ${usuarioEliminar?.nombre ?? ''} eliminado.`);
-    setModalEliminar(false);
-    setUsuarioEliminar(null);
-  });
-
-  useEffect(() => {
-    if (orgs.length > 0) return;
-
-    let cancelled = false;
-    setCargandoOrgs(true);
-
-    void (async () => {
-      try {
-        const lista = await getOrgsDelUsuario();
-        if (!cancelled) setOrgs(lista);
-      } catch (err) {
-        console.error('[PanelUsuarios.loadOrgs]', err);
-        if (!cancelled) toast.error('No se pudieron cargar las organizaciones.');
-      } finally {
-        if (!cancelled) setCargandoOrgs(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [orgs.length, setOrgs]);
-
-  useEffect(() => {
-    if (isError && error) console.error('[PanelUsuarios.usuarios]', error);
-  }, [isError, error]);
-
-  function abrirAsignar(usuario: UsuarioPlataforma) {
-    if (!esOwner) return;
-    setUsuarioAsignar(usuario);
-    setModalAsignar(true);
-  }
-
-  function abrirEliminar(usuario: UsuarioPlataforma) {
-    if (!esOwner) return;
-    setUsuarioEliminar(usuario);
-    setModalEliminar(true);
-  }
-
-  function confirmarEliminar() {
-    if (!usuarioEliminar) return;
-    eliminar(usuarioEliminar.usuario_id, {
-      onError: (err) => {
-        console.error('[PanelUsuarios.eliminar]', err);
-        const msg = (err as { message?: string })?.message ?? 'No se pudo eliminar el usuario.';
-        toast.error(msg);
-      },
-    });
-  }
-
-  const lista = usuarios ?? [];
+  const {
+    orgs, esOwner, usuarios, isLoading, isError,
+    usuarioActualId, cargandoOrgs, eliminando,
+    modalInvitar, setModalInvitar,
+    usuarioAsignar, modalAsignar, setModalAsignar, setUsuarioAsignar,
+    usuarioEliminar, modalEliminar, setModalEliminar, setUsuarioEliminar,
+    abrirAsignar, abrirEliminar, confirmarEliminar,
+  } = usePanelUsuariosPage();
 
   return (
     <div className={APP_PAGE_CLASS}>
@@ -123,7 +63,7 @@ export function PanelUsuarios() {
         <p className="m-0 text-[13px] text-[var(--mc-color-danger)]" role="alert">
           No se pudieron cargar los usuarios.
         </p>
-      ) : lista.length === 0 ? (
+      ) : usuarios.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No hay usuarios"
@@ -131,7 +71,7 @@ export function PanelUsuarios() {
         />
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {lista.map((usuario) => (
+          {usuarios.map((usuario) => (
             <li key={usuario.usuario_id} className="mc-card flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <Avatar nombre={usuario.nombre} size="md" />
@@ -153,6 +93,7 @@ export function PanelUsuarios() {
                           key={`${org.organizacion_id}-${org.workspace_id}`}
                           nombre={org.organizacion_nombre}
                           rol={org.rol}
+                          estado={org.estado}
                         />
                       ))
                     )}
@@ -169,7 +110,7 @@ export function PanelUsuarios() {
                     disabled={cargandoOrgs && orgs.length === 0}
                   >
                     <UserPlus size={16} aria-hidden />
-                    Asignar
+                    Asignar a otra org
                   </Button>
                   {usuario.usuario_id !== usuarioActualId ? (
                     <Button
@@ -191,6 +132,7 @@ export function PanelUsuarios() {
       <ModalInvitarUsuario
         open={modalInvitar}
         onClose={() => setModalInvitar(false)}
+        orgs={orgs}
       />
 
       <ModalAsignarUsuario

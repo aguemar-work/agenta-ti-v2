@@ -15,6 +15,7 @@ export type EditarTareaDraft = {
   areaId:     string;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- constante de estado inicial coubicada con el componente que la consume
 export const EDITAR_IDLE: EditarTareaDraft = {
   titulo: '', prioridad: 'media', descripcion: '',
   objetivoId: '', asignadoId: '', clienteId: '', proyectoId: '', areaId: '',

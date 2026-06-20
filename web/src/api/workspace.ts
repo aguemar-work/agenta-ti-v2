@@ -15,7 +15,6 @@ const WorkspaceSchema = z.object({
   id:              z.string().uuid(),
   organizacion_id: z.string().uuid(),
   nombre:          z.string(),
-  tipo:            z.enum(['interno', 'agencia']),
   activo:          z.boolean(),
 });
 
@@ -80,7 +79,7 @@ export async function getWorkspacesDelUsuario(orgId: string): Promise<WorkspaceC
   const userId = await requireUserId();
   const { data, error } = await getInsforge().database
     .from('workspace_member')
-    .select('rol, workspace:workspace_id(id, nombre, tipo, organizacion_id, activo)')
+    .select('rol, workspace:workspace_id(id, nombre, organizacion_id, activo)')
     .eq('usuario_id', userId)
     .eq('activo', true)
     .not('joined_at', 'is', null);
@@ -93,7 +92,7 @@ export async function getWorkspacesDelUsuario(orgId: string): Promise<WorkspaceC
 export async function getWorkspacesDeOrg(orgId: string): Promise<WorkspaceConRol[]> {
   const { data, error } = await getInsforge().database
     .from('workspace')
-    .select('id, nombre, tipo, organizacion_id, activo')
+    .select('id, nombre, organizacion_id, activo')
     .eq('organizacion_id', orgId)
     .eq('activo', true)
     .order('nombre');

@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { moverTareaColumna } from '@/api/tablero';
 import {
+  actualizarEvento,
   actualizarTarea,
   cambiarEstadoTarea,
   completarTareaConResumen,
   crearEventoUsuario,
   crearTareaPlanificada,
+  eliminarEvento,
   eliminarTareaConMotivo,
   getEventosSemana,
   getTareasSemana,
@@ -15,7 +17,7 @@ import {
 } from '@/api/semana';
 import { Q_KPIS, Q_OBJ_PROG } from '@/hooks/useObjetivosMetricas';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
-import type { CrearEventoUsuarioInput, CrearTareaPlanificadaInput } from '@/api/semana';
+import type { ActualizarEventoInput, CrearEventoUsuarioInput, CrearTareaPlanificadaInput } from '@/api/semana';
 import { qkWsId } from '@/lib/queryKeys';
 import { getWorkspaceId } from '@/store/workspaceStore';
 import type { Tarea } from '@/types';
@@ -130,6 +132,22 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
     onSuccess: invalidate,
   });
 
+  const invalidateEventos = async () => {
+    const wsId = getWorkspaceId();
+    if (!usuarioId || !wsId) return;
+    await qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana', 'eventos', usuarioId), exact: false });
+  };
+
+  const mActualizarEvento = useMutation({
+    mutationFn: (input: ActualizarEventoInput) => actualizarEvento(input),
+    onSuccess: invalidateEventos,
+  });
+
+  const mEliminarEvento = useMutation({
+    mutationFn: (eventoId: string) => eliminarEvento(eventoId),
+    onSuccess: invalidateEventos,
+  });
+
   return {
     crearPlan: mCrearPlan.mutateAsync,
     moverDia: mMoverDia.mutateAsync,
@@ -140,6 +158,8 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
     completarTareaConResumen: mCompletar.mutateAsync,
     iniciarTarea: mIniciar.mutateAsync,
     crearEvento: mCrearEvento.mutateAsync,
+    actualizarEvento: mActualizarEvento.mutateAsync,
+    eliminarEvento: mEliminarEvento.mutateAsync,
     isPending:
       mCrearPlan.isPending ||
       mMoverDia.isPending ||
@@ -149,7 +169,9 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       mCancelar.isPending ||
       mCompletar.isPending ||
       mIniciar.isPending ||
-      mCrearEvento.isPending,
+      mCrearEvento.isPending ||
+      mActualizarEvento.isPending ||
+      mEliminarEvento.isPending,
     completarPendingId: mCompletar.isPending ? (mCompletar.variables?.tareaId ?? null) : null,
     iniciarPendingId:   mIniciar.isPending   ? (mIniciar.variables?.tareaId   ?? null) : null,
     eliminarPendingId:  mEliminar.isPending  ? (mEliminar.variables?.tareaId  ?? null) : null,

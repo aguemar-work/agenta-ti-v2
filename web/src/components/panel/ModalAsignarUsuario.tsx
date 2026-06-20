@@ -1,14 +1,15 @@
 /**
- * ModalAsignarUsuario — asigna un usuario a una org vía RPC sgtd_asignar_usuario_a_organizacion.
+ * ModalAsignarUsuario — invita a un usuario existente a otra organización (057).
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { UsuarioPlataforma } from '@/api/plataforma';
+import { getWorkspacesDeOrg } from '@/api/workspace';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { useAsignarUsuario } from '@/hooks/useUsuariosPlataforma';
+import { useInvitarAWorkspace } from '@/hooks/useUsuariosPlataforma';
 import type { Organizacion } from '@/store/workspaceStore';
 
 type Props = {
@@ -22,41 +23,73 @@ function mensajeError(err: unknown): string {
   if (err instanceof Error && err.message.trim()) return err.message;
   const msg = (err as { message?: string })?.message;
   if (typeof msg === 'string' && msg.trim()) return msg;
-  return 'No se pudo asignar el usuario.';
+  return 'No se pudo enviar la invitación.';
 }
 
 export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
   const [orgId, setOrgId] = useState('');
   const [rol, setRol] = useState<'jefe' | 'miembro'>('miembro');
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [cargandoWs, setCargandoWs] = useState(false);
 
-  const { mutate, isPending, reset: resetMutation } = useAsignarUsuario(() => {
-    const yaEnOrg = usuario?.orgs.some((o) => o.organizacion_id === orgId);
-    toast.success(yaEnOrg ? 'Asignación actualizada' : 'Usuario asignado');
+  const { mutate, isPending, reset: resetMutation } = useInvitarAWorkspace(() => {
+    toast.success('Invitación enviada. El usuario deberá aceptarla para acceder.');
     onClose();
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect -- resetea formulario al abrir modal */
   useEffect(() => {
     if (!open) return;
     setOrgId(orgs[0]?.id ?? '');
     setRol('miembro');
+    setWorkspaceId('');
     resetMutation();
   }, [open, orgs, resetMutation]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const canSubmit = Boolean(usuario && orgId && !isPending);
+  useEffect(() => {
+    if (!open || !orgId) {
+      setWorkspaceId('');
+      return;
+    }
+
+    let cancelled = false;
+    setCargandoWs(true);
+
+    void (async () => {
+      try {
+        const lista = await getWorkspacesDeOrg(orgId);
+        if (cancelled) return;
+        setWorkspaceId(lista[0]?.id ?? '');
+      } catch (err) {
+        console.error('[ModalAsignarUsuario] workspaces', err);
+        if (!cancelled) setWorkspaceId('');
+      } finally {
+        if (!cancelled) setCargandoWs(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [open, orgId]);
+
+  const canSubmit = Boolean(usuario && orgId && workspaceId && !isPending && !cargandoWs);
 
   const orgLabel = useMemo(
     () => orgs.find((o) => o.id === orgId)?.nombre ?? '',
     [orgs, orgId],
   );
 
-  function cerrar() {
-    onClose();
-  }
+  const membresiaActual = usuario?.orgs.find((o) => o.organizacion_id === orgId);
 
   function submit() {
-    if (!usuario || !orgId) return;
+    if (!usuario || !workspaceId) return;
     mutate(
-      { usuarioId: usuario.usuario_id, orgId, rol },
+      {
+        email: usuario.email,
+        rol,
+        workspace_id: workspaceId,
+        nombre: usuario.nombre,
+      },
       {
         onError: (err) => {
           console.error('[ModalAsignarUsuario]', err);
@@ -67,14 +100,14 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
   }
 
   const description = usuario
-    ? `Asigna a ${usuario.nombre} a una organización con rol operativo.`
+    ? `Invita a ${usuario.nombre} a una organización. Deberá aceptar la invitación para acceder.`
     : 'Selecciona un usuario desde la lista.';
 
   return (
     <Modal
       open={open}
-      onClose={cerrar}
-      title="Asignar a organización"
+      onClose={onClose}
+      title="Invitar a organización"
       analyticsId="modal-asignar-usuario"
       size="md"
       bodyClassName="mc-modal-form"
@@ -90,9 +123,9 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
             disabled={!canSubmit}
             onClick={() => submit()}
           >
-            Asignar
+            Enviar invitación
           </Button>
-          <CancelButton onClick={cerrar} disabled={isPending} />
+          <CancelButton onClick={onClose} disabled={isPending} />
         </>
       )}
     >
@@ -131,10 +164,13 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
                 ))}
               </select>
             )}
-            {orgLabel && usuario.orgs.some((o) => o.organizacion_id === orgId) ? (
-              <p className="mc-field-hint">
-                Ya pertenece a esta organización; se actualizará el rol si cambia.
-              </p>
+            {membresiaActual?.estado === 'activo' ? (
+              <p className="mc-field-hint">Ya es miembro activo en esta organización.</p>
+            ) : membresiaActual?.estado === 'pendiente' ? (
+              <p className="mc-field-hint">Ya tiene una invitación pendiente; se actualizará el rol si cambia.</p>
+            ) : null}
+            {orgLabel && cargandoWs ? (
+              <p className="mc-field-hint">Cargando espacio de trabajo…</p>
             ) : null}
           </div>
 

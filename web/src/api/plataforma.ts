@@ -18,6 +18,7 @@ const OrgMembresiaSchema = z.object({
   organizacion_nombre: z.string(),
   workspace_id:        z.string().uuid(),
   rol:                 z.enum(['jefe', 'miembro']),
+  estado:              z.enum(['activo', 'pendiente']).optional(),
 });
 
 const UsuarioPlataformaSchema = z.object({
@@ -114,7 +115,7 @@ export async function fetchUsuariosPlataforma(): Promise<UsuarioPlataforma[]> {
   });
 }
 
-/** Asigna un usuario a una org con rol operativo jefe/miembro (solo dueño). */
+/** @deprecated Desde 057 — usar invitarAWorkspace() en api/invitacion.ts (invitación con aceptación). */
 export async function asignarUsuarioAOrg(
   usuarioId: string,
   orgId: string,
@@ -204,33 +205,8 @@ export async function reactivarOrg(orgId: string): Promise<z.infer<typeof Reacti
 }
 
 // ---------------------------------------------------------------------------
-// Gestión de usuarios (invite / delete) — requieren edge functions
+// Gestión de usuarios (delete) — requiere edge function
 // ---------------------------------------------------------------------------
-
-const InvitarResultSchema = z.object({
-  id:         z.string().uuid(),
-  nombre:     z.string(),
-  email:      z.string(),
-  rol:        z.string(),
-  activo:     z.boolean(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-
-export type InvitarUsuarioResult = z.infer<typeof InvitarResultSchema>;
-
-/** Invita a un nuevo usuario por email (crea auth.user + fila public.usuario). Solo dueño. */
-export async function invitarUsuario(email: string): Promise<InvitarUsuarioResult> {
-  const { data, error } = await getInsforge().functions.invoke<{ data: unknown; error?: string }>(
-    'invite-user',
-    { body: { email } },
-  );
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  const parsed = InvitarResultSchema.safeParse(data?.data);
-  if (!parsed.success) throw new Error('Respuesta inesperada al invitar usuario.');
-  return parsed.data;
-}
 
 /** Elimina un usuario de auth.users y public.usuario. Solo dueño. No puede auto-eliminarse. */
 export async function eliminarUsuario(usuarioId: string): Promise<void> {

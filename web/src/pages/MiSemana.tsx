@@ -16,8 +16,10 @@ import {
   ModalDetalleTareaSemana,
   type DetalleTareaVistaInicial,
 } from '@/components/semana/ModalDetalleTareaSemana';
+import { ModalDetalleEvento } from '@/components/semana/ModalDetalleEvento';
 import { ModalMiSemana } from '@/components/semana/ModalMiSemana';
 import { ModalConvertirNota } from '@/components/semana/ModalConvertirNota';
+import { NotasColumnaHoy } from '@/components/semana/NotasColumnaHoy';
 import { NotasDrawer } from '@/components/semana/NotasDrawer';
 import { Modal } from '@/components/ui/Modal';
 import { SkeletonSemanaGrilla } from '@/components/ui/Skeletons';
@@ -32,7 +34,7 @@ import { ResumenSemanalModal } from '@/components/semana/ResumenSemanalModal';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
 import { Calendar, LayoutGrid, List, ListChecks } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
-import type { Tarea } from '@/types';
+import type { Evento, Tarea } from '@/types';
 
 const MiSemanaGrilla = lazy(() =>
   import('@/components/semana/MiSemanaGrilla').then((m) => ({ default: m.MiSemanaGrilla })),
@@ -44,15 +46,6 @@ const MiSemanaLista = lazy(() =>
 
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-const CONTEO_CONFIG = [
-  { key: 'pendiente', label: 'pendientes' },
-  { key: 'en_progreso', label: 'en progreso' },
-  { key: 'atrasada', label: 'atrasadas' },
-  { key: 'reprogramada', label: 'reprogramadas' },
-  { key: 'completada', label: 'completadas' },
-] as const;
-
-type FiltroEstado = (typeof CONTEO_CONFIG)[number]['key'];
 
 export function MiSemana() {
   const navigate = useNavigate();
@@ -70,7 +63,6 @@ export function MiSemana() {
     eventos,
     isError,
     hoyYmd,
-    conteos,
     esBannerViernes,
     notasHoy,
     ordenesPorTarea,
@@ -118,6 +110,9 @@ export function MiSemana() {
     incidenciasSemana,
     completarPendingId,
     iniciarPendingId,
+    actualizarEvento,
+    eliminarEvento,
+    crearTareaRapida,
   } = useMiSemanaPage();
 
   const [vistaMode, setVistaModeRaw] = useState<'kanban' | 'lista'>(() => {
@@ -132,9 +127,9 @@ export function MiSemana() {
     try { localStorage.setItem('misemana-vista-modo', mode); } catch { /* ignore */ }
   }
 
-  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado | null>(null);
   const [filtroRapido, setFiltroRapido] = useState<FiltroRapido | null>(null);
   const [busqueda,     setBusqueda]     = useState('');
+  const [eventoDetalle, setEventoDetalle] = useState<Evento | null>(null);
   const [resumenOpen,  setResumenOpen]  = useState(false);
   const [notasDrawerOpen, setNotasDrawerOpen] = useState(false);
   const [otViendo, setOtViendo] = useState<OrdenTrabajo | null>(null);
@@ -146,7 +141,7 @@ export function MiSemana() {
 
   useEffect(() => {
     const ids = diasSemana.map((d) => fechaLocalYmd(d));
-    if (ids.includes(hoyYmd)) setDiaMobileYmd(hoyYmd);
+    if (ids.includes(hoyYmd)) setDiaMobileYmd(hoyYmd); // eslint-disable-line react-hooks/set-state-in-effect -- sincroniza día visible con la semana al navegar
     else setDiaMobileYmd(ids[0] ?? hoyYmd);
   }, [lunes, hoyYmd, diasSemana]);
 
@@ -155,22 +150,16 @@ export function MiSemana() {
   useSwipeDiaSemana(diasYmd, diaMobileYmd, setDiaMobileYmd);
   const isMobile = useIsMobile();
 
-  function toggleFiltro(key: FiltroEstado) {
-    setFiltroRapido(null);
-    setFiltroEstado((prev) => (prev === key ? null : key));
-  }
-
   function toggleFiltroRapido(key: FiltroRapido) {
-    setFiltroEstado(null);
     setFiltroRapido((prev) => (prev === key ? null : key));
   }
 
   function limpiarFiltros() {
-    setFiltroEstado(null);
     setFiltroRapido(null);
     setBusqueda('');
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- resetea búsqueda al navegar de semana; comportamiento UX intencional
   useEffect(() => { setBusqueda(''); }, [lunes]);
 
   // Auto-show resumen el viernes si hay tareas pendientes (una vez por sesión)
@@ -183,31 +172,9 @@ export function MiSemana() {
     );
     if (!hayPendientes) return;
     sessionStorage.setItem(key, '1');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- abre el resumen automáticamente el viernes si hay pendientes; disparo único por semana vía sessionStorage
     setResumenOpen(true);
   }, [esBannerViernes, lunes, tareasPlan]);
-
-  const statsItems = useMemo(
-    () =>
-      CONTEO_CONFIG.map(({ key, label }) => {
-        const n = conteos[key] ?? 0;
-        const active = filtroEstado === key;
-        const visible = n > 0 || active;
-        if (!visible) return null;
-        return {
-          key,
-          label,
-          value: n,
-          active,
-          disabled: false,
-          onClick: () => toggleFiltro(key),
-        };
-      }).filter((item): item is NonNullable<typeof item> => item !== null),
-    [conteos, filtroEstado],
-  );
-
-  const filtroActivoLabel = filtroEstado
-    ? (CONTEO_CONFIG.find((c) => c.key === filtroEstado)?.label.toLowerCase() ?? null)
-    : null;
 
   if (!usuario) return null;
   if (!uid) return <p className="text-sm text-[var(--mc-color-text-secondary)]">Preparando vista…</p>;
@@ -265,8 +232,6 @@ export function MiSemana() {
       {/* Fila 2: KPIs + chips ←————————→ + Nueva tarea + Notas */}
       <div className="mc-misemana-kpi-row">
         <MiSemanaToolbar
-          statsItems={statsItems}
-          filtroActivoLabel={filtroActivoLabel}
           filtroRapido={filtroRapido}
           busqueda={busqueda}
           onToggleFiltroRapido={toggleFiltroRapido}
@@ -366,7 +331,6 @@ export function MiSemana() {
             diaMobileYmd={diaMobileYmd}
             tareasPlan={tareasPlan}
             eventos={eventos}
-            filtroEstado={filtroEstado}
             filtroRapido={filtroRapido}
             busqueda={busqueda}
             incidenciasSemana={incidenciasSemana}
@@ -383,6 +347,37 @@ export function MiSemana() {
             onOtClick={setOtViendo}
             completarPendingId={completarPendingId}
             iniciarPendingId={iniciarPendingId}
+            onEventoClick={setEventoDetalle}
+            onRegistrarIncidenciaRapida={async (titulo) => {
+              await crearIncidenciaHoy({
+                titulo,
+                prioridad: 'normal',
+                descripcion: null,
+                asignado_a: uid!,
+                fecha_planificada: hoyYmd,
+                ya_resuelta: true,
+              });
+            }}
+            onCrearTareaRapida={async (titulo, fecha) => {
+              await crearTareaRapida({
+                titulo,
+                fecha_planificada: fecha,
+                prioridad: 'normal',
+                creado_por: uid!,
+                asignado_a: uid,
+              });
+            }}
+            notasHoyCount={notasHoy.filter((n) => !n.convertida_en).length}
+            notasHoySlot={
+              <NotasColumnaHoy
+                notas={notasHoy}
+                notaRapida={notaRapida}
+                onNotaRapidaChange={setNotaRapida}
+                onGuardar={guardarNotaRapida}
+                onVerTodas={() => setNotasDrawerOpen(true)}
+                onConvertir={setNotaConvertir}
+              />
+            }
             onMoverTarea={moverTareaADia}
             onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
             onCompletarTarea={(t) => setCompletarTareaId(t.id)}
@@ -403,7 +398,6 @@ export function MiSemana() {
             diaMobileYmd={diaMobileYmd}
             tareasPlan={tareasPlan}
             eventos={eventos}
-            filtroEstado={filtroEstado}
             filtroRapido={filtroRapido}
             busqueda={busqueda}
             incidenciasSemana={incidenciasSemana}
@@ -521,6 +515,14 @@ export function MiSemana() {
           </p>
         )}
       </Modal>
+
+      <ModalDetalleEvento
+        open={eventoDetalle !== null}
+        evento={eventoDetalle}
+        onClose={() => setEventoDetalle(null)}
+        onActualizar={actualizarEvento}
+        onEliminar={eliminarEvento}
+      />
 
       <ResumenSemanalModal
         open={resumenOpen}

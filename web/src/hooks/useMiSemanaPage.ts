@@ -157,10 +157,15 @@ export function useMiSemanaPage() {
     guardarNotaRapida:         notasInc.guardarNotaRapida,
     confirmarConvertirNotaTarea:  notasInc.confirmarConvertirNotaTarea,
     confirmarConvertirNotaEvento: notasInc.confirmarConvertirNotaEvento,
+    // Tareas rápidas
+    crearTareaRapida: mut.crearPlan,
     // OT
-    completarPendingId: mut.completarPendingId,
-    iniciarPendingId:   mut.iniciarPendingId,
+    completarPendingId:  mut.completarPendingId,
+    iniciarPendingId:    mut.iniciarPendingId,
     generarOtDesdeTarea,
+    // Eventos
+    actualizarEvento: mut.actualizarEvento,
+    eliminarEvento:   mut.eliminarEvento,
     // Modales de tareas
     tareaDetalle:        modales.tareaDetalle,
     tareaCompletar:      modales.tareaCompletar,

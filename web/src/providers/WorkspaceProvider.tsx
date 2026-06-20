@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { useWorkspaceBootstrap } from '@/hooks/useWorkspaceBootstrap';
+import { InvitacionesPendientes } from '@/pages/InvitacionesPendientes';
 import { WorkspaceSelector } from '@/pages/WorkspaceSelector';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
@@ -43,9 +44,10 @@ function WorkspaceBootstrapError({
 
 export function WorkspaceProvider({ children }: Props) {
   const inicializado = useWorkspaceStore((s) => s.inicializado);
-  const { necesitaSelector, error, reintentar } = useWorkspaceBootstrap();
+  const { necesitaSelector, necesitaInvitaciones, error, reintentar } = useWorkspaceBootstrap();
 
   if (inicializado) return children;
+  if (necesitaInvitaciones) return <InvitacionesPendientes onAceptada={reintentar} />;
   if (necesitaSelector) return <WorkspaceSelector />;
   if (error) return <WorkspaceBootstrapError mensaje={error} onReintentar={reintentar} />;
   return <WorkspaceLoadingSpinner />;

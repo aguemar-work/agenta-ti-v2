@@ -40,7 +40,7 @@ function writeDraft<T>(key: string, value: T) {
 function deleteDraft(key: string) {
   try {
     localStorage.removeItem(DRAFT_PREFIX + key);
-  } catch {}
+  } catch { /* localStorage no disponible — ignorar */ }
 }
 
 function isEqual(a: unknown, b: unknown): boolean {
@@ -88,6 +88,7 @@ export function useDraftForm<T extends object>(
   const initialRef = useRef<T>(initialValues);
 
   // Cuando cambian key/initialValues, restaurar el estado correspondiente.
+  /* eslint-disable react-hooks/set-state-in-effect -- sincroniza desde localStorage al cambiar clave del formulario */
   useEffect(() => {
     initialRef.current = initialValues;
     if (!enabled) {
@@ -99,6 +100,7 @@ export function useDraftForm<T extends object>(
     setRestoredFromDraft(draft !== null);
     setFormRaw(draft ?? initialValues);
   }, [draftKey, enabled, initialValues]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Auto-guardar en localStorage cada vez que cambia el formulario
   useEffect(() => {
@@ -111,7 +113,8 @@ export function useDraftForm<T extends object>(
     writeDraft(draftKey, form);
   }, [form, draftKey, enabled]);
 
-  // Detectar cambios respecto al estado inicial
+  // Detectar cambios respecto al estado inicial.
+  // eslint-disable-next-line react-hooks/refs -- ref contiene valores iniciales estables; leerlo en render es intencional para evitar re-renders al cambiar initialValues
   const hasChanges = !isEqual(form, initialRef.current);
 
   const clearDraft = useCallback(() => {

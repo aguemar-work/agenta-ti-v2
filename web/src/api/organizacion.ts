@@ -20,16 +20,14 @@ export type CrearOrgResult = z.infer<typeof CrearOrgResultSchema>;
 export interface CrearOrgInput {
   nombre: string;
   slug: string;
-  tipo: 'interno' | 'agencia';
   modulos: string[];
 }
 
 export async function crearOrganizacion(input: CrearOrgInput): Promise<CrearOrgResult> {
   const { data, error } = await getInsforge().database.rpc('sgtd_crear_organizacion', {
-    p_nombre:         input.nombre.trim(),
-    p_slug:           input.slug.trim(),
-    p_tipo_workspace: input.tipo,
-    p_modulos:        input.modulos,
+    p_nombre:  input.nombre.trim(),
+    p_slug:    input.slug.trim(),
+    p_modulos: input.modulos,
   });
   if (error) throw error;
   const parsed = CrearOrgResultSchema.safeParse(data);

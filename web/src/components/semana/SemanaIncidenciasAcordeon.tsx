@@ -1,4 +1,4 @@
-import { ChevronUp } from 'lucide-react';
+import { AlertCircle, ChevronUp } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import type { Tarea } from '@/types';
@@ -68,8 +68,13 @@ export function SemanaIncidenciasAcordeon({
           aria-controls={panelId}
           onClick={() => setAbierto((v) => !v)}
         >
-          <span className="mc-semana-inc-acordeon__label">Incidencias</span>
-          <span className="mc-semana-inc-acordeon__count">{count}</span>
+          <span className="mc-semana-inc-acordeon__label">
+            <AlertCircle size={11} aria-hidden />
+            Incidencias
+          </span>
+          {count > 0 && (
+            <span className="mc-semana-inc-acordeon__count">{count}</span>
+          )}
           <ChevronUp
             size={14}
             aria-hidden

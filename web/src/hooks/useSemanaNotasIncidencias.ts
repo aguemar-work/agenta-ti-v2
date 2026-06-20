@@ -32,7 +32,7 @@ export function useSemanaNotasIncidencias({ uid, esJefe, hoyYmd, usuario }: Para
   const workspaceId = useWorkspaceId();
 
   const { data: incidenciasHoy = [] } = useIncidenciasDelDia(uid, hoyYmd);
-  const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid, esJefe);
+  const { data: notasHoy       = [] } = useNotasBitacoraHoy(uid);
   const { data: jefesNotificacion = [] } = useJefesNotificacion({
     enabled: Boolean(usuario && !esJefe),
   });

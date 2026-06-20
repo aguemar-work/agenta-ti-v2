@@ -17,8 +17,6 @@ import {
 } from '@/lib/modulos';
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
-/** Valor fijo enviado a sgtd_crear_organizacion (el usuario ya no elige tipo en UI). */
-const TIPO_WORKSPACE_DEFAULT = 'interno' as const;
 
 type Props = {
   open: boolean;
@@ -49,6 +47,7 @@ export function ModalCrearOrganizacion({ open, onClose, onCreada }: Props) {
     onClose();
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect -- resetea formulario al abrir modal; patrón estándar de modales controlados */
   useEffect(() => {
     if (!open) return;
     setNombre('');
@@ -57,6 +56,7 @@ export function ModalCrearOrganizacion({ open, onClose, onCreada }: Props) {
     setModulosSeleccionados(modulosIniciales());
     resetMutation();
   }, [open, resetMutation]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleNombreChange(value: string) {
     setNombre(value);
@@ -96,9 +96,8 @@ export function ModalCrearOrganizacion({ open, onClose, onCreada }: Props) {
     if (!canSubmit) return;
     mutate(
       {
-        nombre: nombre.trim(),
-        slug:   slug.trim(),
-        tipo: TIPO_WORKSPACE_DEFAULT,
+        nombre:  nombre.trim(),
+        slug:    slug.trim(),
         modulos: Array.from(modulosSeleccionados),
       },
       {

@@ -9,9 +9,7 @@ import {
 import { getUsuariosParaSelector } from '@/api/usuarios';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
 import { fechaLocalYmd } from '@/lib/fecha';
-import { getInsforge } from '@/lib/insforge';
 import { qkWsId } from '@/lib/queryKeys';
-import { TAREA_ACTIVA } from '@/lib/tareaTables';
 
 const Q_HOY = 'tareas-hoy';
 
@@ -89,15 +87,6 @@ export function useUsuariosParaSelector(esJefe: boolean) {
     enabled: esJefe && Boolean(workspaceId),
     queryFn: () => getUsuariosParaSelector(),
   });
-}
-
-export async function completarTarea(tareaId: string): Promise<void> {
-  const insforge = getInsforge();
-  const { error } = await insforge.database
-    .from(TAREA_ACTIVA)
-    .update({ estado: 'completada', fecha_completada: new Date().toISOString() })
-    .eq('id', tareaId);
-  if (error) throw error;
 }
 
 export async function reprogramarTareaConLog(input: {

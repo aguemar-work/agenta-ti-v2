@@ -10,6 +10,8 @@
 --      por RLS directa; las políticas de `usuario` son por workspace.)
 --
 --   2. sgtd_asignar_usuario_a_organizacion(p_usuario_id, p_organizacion_id, p_rol)
+--      **DEPRECADA desde 057** — asignación directa (joined_at=now()). Usar
+--      sgtd_invitar_a_workspace vía edge invite-user. Se mantiene en BD por historial.
 --      Asigna un usuario YA REGISTRADO a UNA organización con rol 'jefe'|'miembro'.
 --      Inserta solo en workspace_member (rol operativo). NO toca organizacion_member
 --      (eso es para org_admin estructural, fuera de alcance de v1).
@@ -169,7 +171,8 @@ REVOKE ALL ON FUNCTION public.sgtd_asignar_usuario_a_organizacion(uuid, uuid, te
 GRANT EXECUTE ON FUNCTION public.sgtd_asignar_usuario_a_organizacion(uuid, uuid, text) TO authenticated;
 
 COMMENT ON FUNCTION public.sgtd_asignar_usuario_a_organizacion IS
-  'V5 049: asigna usuario a una org con rol jefe/miembro en workspace_member (solo plataforma_owner). '
+  'V5 049 (DEPRECADA desde 057): asignación directa joined_at=now(). '
+  'El panel debe usar sgtd_invitar_a_workspace (invitación con aceptación). '
   'ON CONFLICT actualiza rol. NO toca organizacion_member (org_admin es aparte).';
 
 COMMIT;

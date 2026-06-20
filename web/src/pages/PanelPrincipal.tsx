@@ -3,132 +3,35 @@
  * Dashboard del dueño de plataforma: listar orgs, crear y entrar a una.
  */
 
-import { Building2, LayoutGrid, Plus, Trash2, RotateCcw, Clock } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Building2, Clock, LayoutGrid, Plus, RotateCcw, Trash2 } from 'lucide-react';
 
-import {
-  cambiarAOrganizacion,
-  refrescarOrgs,
-  type CrearOrgResult,
-} from '@/api/organizacion';
-import { getOrgsDelUsuario } from '@/api/workspace';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
-import { ModalGestionarModulos } from '@/components/panel/ModalGestionarModulos';
 import { ModalConfirmarDesactivarOrg } from '@/components/panel/ModalConfirmarDesactivarOrg';
+import { ModalGestionarModulos } from '@/components/panel/ModalGestionarModulos';
 import { ModalCrearOrganizacion } from '@/components/organizacion/ModalCrearOrganizacion';
 import { OrgAvatar } from '@/components/organizacion/OrgAvatar';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { usePanelPrincipalPage } from '@/hooks/usePanelPrincipalPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { useWorkspaceStore, type Organizacion } from '@/store/workspaceStore';
-import { useOrgsDesactivadas, useReactivarOrg } from '@/hooks/useOrgsDesactivadas';
 
 function diasRestantes(purga_en: string): number {
   const ms = new Date(purga_en).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
-function mensajeError(err: unknown): string {
-  if (err instanceof Error && err.message.trim()) return err.message;
-  const msg = (err as { message?: string })?.message;
-  if (typeof msg === 'string' && msg.trim()) return msg;
-  return 'No se pudo completar la acción.';
-}
-
 export function PanelPrincipal() {
-  const navigate = useNavigate();
-  const orgs = useWorkspaceStore((s) => s.orgs);
-  const setOrgs = useWorkspaceStore((s) => s.setOrgs);
-  const { data: esOwner } = useEsPlataformaOwner();
-  const mostrarAccionesOwner = esOwner === true;
-
-  const [cargando, setCargando] = useState(false);
-  const [errorCarga, setErrorCarga] = useState(false);
-  const [intentosCarga, setIntentosCarga] = useState(0);
-  const [entrandoId, setEntrandoId] = useState<string | null>(null);
-  const [modalCrearOpen, setModalCrearOpen] = useState(false);
-  const [orgModulos, setOrgModulos] = useState<Organizacion | null>(null);
-  const [modalModulosOpen, setModalModulosOpen] = useState(false);
-  const [orgADesactivar, setOrgADesactivar] = useState<Organizacion | null>(null);
-  const [modalDesactivarOpen, setModalDesactivarOpen] = useState(false);
-
-  const { data: orgsDesactivadas = [] } = useOrgsDesactivadas(mostrarAccionesOwner);
-  const { mutate: reactivar, isPending: reactivando } = useReactivarOrg();
-
-  useEffect(() => {
-    if (orgs.length > 0) return;
-
-    let cancelled = false;
-    setCargando(true);
-    setErrorCarga(false);
-
-    void (async () => {
-      try {
-        const lista = await getOrgsDelUsuario();
-        if (!cancelled) setOrgs(lista);
-      } catch (err) {
-        console.error('[PanelPrincipal.loadOrgs]', err);
-        if (!cancelled) {
-          setErrorCarga(true);
-          toast.error('No se pudieron cargar las organizaciones.');
-        }
-      } finally {
-        if (!cancelled) setCargando(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [orgs.length, setOrgs, intentosCarga]);
-
-  async function handleEntrar(orgId: string) {
-    if (entrandoId) return;
-    setEntrandoId(orgId);
-    try {
-      await cambiarAOrganizacion(orgId);
-      navigate('/semana');
-    } catch (err) {
-      console.error('[PanelPrincipal.entrar]', err);
-      toast.error(mensajeError(err));
-    } finally {
-      setEntrandoId(null);
-    }
-  }
-
-  function abrirModulos(org: Organizacion) {
-    if (!mostrarAccionesOwner) return;
-    setOrgModulos(org);
-    setModalModulosOpen(true);
-  }
-
-  function cerrarModulos() {
-    setModalModulosOpen(false);
-    setOrgModulos(null);
-  }
-
-  function abrirDesactivar(org: Organizacion) {
-    if (!mostrarAccionesOwner) return;
-    setOrgADesactivar(org);
-    setModalDesactivarOpen(true);
-  }
-
-  function cerrarDesactivar() {
-    setModalDesactivarOpen(false);
-    setOrgADesactivar(null);
-  }
-
-  async function handleOrgCreada(result: CrearOrgResult) {
-    try {
-      await refrescarOrgs();
-      await cambiarAOrganizacion(result.organizacion_id);
-      navigate('/semana');
-    } catch (err) {
-      console.error('[PanelPrincipal.onCreada]', err);
-      toast.error(mensajeError(err));
-    }
-  }
+  const {
+    orgs, orgsDesactivadas,
+    cargando, errorCarga, entrandoId,
+    mostrarAccionesOwner, reactivando, reactivar,
+    modalCrearOpen, setModalCrearOpen,
+    orgModulos, modalModulosOpen,
+    orgADesactivar, modalDesactivarOpen,
+    handleEntrar, abrirModulos, cerrarModulos,
+    abrirDesactivar, cerrarDesactivar,
+    handleOrgCreada, reintentar,
+  } = usePanelPrincipalPage();
 
   const botonCrear = mostrarAccionesOwner ? (
     <Button variant="primary" size="sm" onClick={() => setModalCrearOpen(true)}>
@@ -148,7 +51,7 @@ export function PanelPrincipal() {
           <p className="m-0 text-[13px] text-[var(--mc-color-danger)]" role="alert">
             No se pudieron cargar las organizaciones.
           </p>
-          <Button variant="secondary" size="sm" onClick={() => setIntentosCarga((n) => n + 1)}>
+          <Button variant="secondary" size="sm" onClick={reintentar}>
             Reintentar
           </Button>
         </div>

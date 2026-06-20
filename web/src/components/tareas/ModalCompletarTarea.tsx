@@ -25,7 +25,7 @@ export function ModalCompletarTarea({ open, tarea, onClose, onConfirm }: Props) 
     ? estadoEfectivoTablero(tarea, hoyYmd) === 'atrasada'
     : false;
 
-  useEffect(() => { setResumen(''); }, [tarea?.id]);
+  useEffect(() => { setResumen(''); }, [tarea?.id]); // eslint-disable-line react-hooks/set-state-in-effect -- resetea resumen al cambiar tarea
 
   const canSubmit = resumen.trim().length >= MIN_RESUMEN && !busy;
 
