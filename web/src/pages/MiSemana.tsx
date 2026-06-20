@@ -351,7 +351,7 @@ export function MiSemana() {
             onRegistrarIncidenciaRapida={async (titulo) => {
               await crearIncidenciaHoy({
                 titulo,
-                prioridad: 'normal',
+                prioridad: 'media',
                 descripcion: null,
                 asignado_a: uid!,
                 fecha_planificada: hoyYmd,
@@ -362,7 +362,7 @@ export function MiSemana() {
               await crearTareaRapida({
                 titulo,
                 fecha_planificada: fecha,
-                prioridad: 'normal',
+                prioridad: 'media',
                 creado_por: uid!,
                 asignado_a: uid,
               });
