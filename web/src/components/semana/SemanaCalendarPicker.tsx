@@ -19,7 +19,9 @@ function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function calcularSemanas(mes: Date): Date[][] {
+type SemanaRow = [Date, Date, Date, Date, Date, Date, Date];
+
+function calcularSemanas(mes: Date): SemanaRow[] {
   const primerDia = new Date(mes.getFullYear(), mes.getMonth(), 1);
   const ultimoDia = new Date(mes.getFullYear(), mes.getMonth() + 1, 0);
 
@@ -31,12 +33,12 @@ function calcularSemanas(mes: Date): Date[][] {
   const ultimoDomingo = new Date(ultimoDia);
   ultimoDomingo.setDate(ultimoDia.getDate() + (7 - dowN));
 
-  const semanas: Date[][] = [];
+  const semanas: SemanaRow[] = [];
   let cur = new Date(primerLunes);
   while (cur <= ultimoDomingo) {
-    const semana: Date[] = [];
+    const semana = [] as unknown as SemanaRow;
     for (let j = 0; j < 7; j++) {
-      semana.push(new Date(cur));
+      semana[j] = new Date(cur);
       cur = agregarDias(cur, 1);
     }
     semanas.push(semana);

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import {
-  lunesSemanaActual,
   MiSemanaHeader,
   navegarSemanaAnterior,
   navegarSemanaSiguiente,

@@ -77,11 +77,11 @@ type FilaProps = {
   completandoEsta: boolean;
   iniciandoEsta: boolean;
   onAbrirDetalle: (id: string) => void;
-  onIniciarTarea?: (t: Tarea) => void;
-  onCompletarTarea?: (t: Tarea) => void;
-  onReprogramarTarea?: (t: Tarea) => void;
-  onCancelarTarea?: (t: Tarea) => void;
-  onEliminarTarea?: (t: Tarea) => void;
+  onIniciarTarea?: ((t: Tarea) => void) | undefined;
+  onCompletarTarea?: ((t: Tarea) => void) | undefined;
+  onReprogramarTarea?: ((t: Tarea) => void) | undefined;
+  onCancelarTarea?: ((t: Tarea) => void) | undefined;
+  onEliminarTarea?: ((t: Tarea) => void) | undefined;
 };
 
 function ListaFila({
