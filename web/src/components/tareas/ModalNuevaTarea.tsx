@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
 import { CancelButton } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { useDraftForm } from '@/hooks/useDraftForm';
 import type { Objetivo, Tarea, Usuario } from '@/types';
 
@@ -150,9 +151,8 @@ export function ModalNuevaTarea({
 
         <div className="mc-field">
           <label className="mc-field-label" htmlFor="new-prioridad">Prioridad</label>
-          <select
+          <SelectInput
             id="new-prioridad"
-            className="mc-input"
             value={form.prioridad}
             onChange={(e) => setForm((prev) => ({ ...prev, prioridad: e.target.value as Tarea['prioridad'] }))}
           >
@@ -160,7 +160,7 @@ export function ModalNuevaTarea({
             <option value="media">Media</option>
             <option value="alta">Alta</option>
             <option value="critica">Crítica</option>
-          </select>
+          </SelectInput>
         </div>
 
         <div className="mc-field">
@@ -184,9 +184,8 @@ export function ModalNuevaTarea({
         {modo !== 'incidencia' && (
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="new-objetivo">Vincular a objetivo</label>
-            <select
+            <SelectInput
               id="new-objetivo"
-              className="mc-input"
               value={form.objetivoId}
               onChange={(e) => setForm((prev) => ({ ...prev, objetivoId: e.target.value }))}
             >
@@ -194,16 +193,15 @@ export function ModalNuevaTarea({
               {objetivos.map((o) => (
                 <option key={o.id} value={o.id}>{o.titulo}</option>
               ))}
-            </select>
+            </SelectInput>
           </div>
         )}
 
         {modo !== 'incidencia' && usuariosAsignables.length > 0 && (
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="new-asignado">Asignado a</label>
-            <select
+            <SelectInput
               id="new-asignado"
-              className="mc-input"
               value={form.asignadoId}
               onChange={(e) => setForm((prev) => ({ ...prev, asignadoId: e.target.value }))}
             >
@@ -212,7 +210,7 @@ export function ModalNuevaTarea({
                   {u.id === usuarioActualId ? `${u.nombre} (tú)` : u.nombre}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           </div>
         )}
       </div>

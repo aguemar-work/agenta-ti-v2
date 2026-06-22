@@ -5,7 +5,6 @@ import {
   setModuloOrg,
   type SetModuloResult,
 } from '@/api/plataforma';
-import { useEsPlataformaOwner } from '@/hooks/useEsPlataformaOwner';
 import { useAuthStore } from '@/store/authStore';
 
 export function modulosOrgQueryKey(orgId: string) {
@@ -14,12 +13,11 @@ export function modulosOrgQueryKey(orgId: string) {
 
 export function useModulosOrg(orgId: string | null | undefined, queryEnabled = true) {
   const usuarioId = useAuthStore((s) => s.usuario?.id);
-  const { data: esOwner } = useEsPlataformaOwner();
 
   return useQuery({
     queryKey: orgId ? modulosOrgQueryKey(orgId) : ['plataforma', 'modulos', null],
     queryFn: () => fetchModulosOrg(orgId!),
-    enabled: !!orgId && !!usuarioId && esOwner === true && queryEnabled,
+    enabled: !!orgId && !!usuarioId && queryEnabled,
     staleTime: 30_000,
     retry: false,
   });

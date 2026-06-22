@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { SelectInput } from '@/components/ui/SelectInput';
 import type { Area } from '@/api/areas';
 import type { Cliente } from '@/api/clientes';
 import type { Proyecto } from '@/api/proyectos';
@@ -57,9 +58,8 @@ export function TareaCatalogoSelects({
           <label className="mc-field-label" htmlFor={`${idPrefix}-cliente`}>
             Cliente
           </label>
-          <select
+          <SelectInput
             id={`${idPrefix}-cliente`}
-            className="mc-input"
             value={values.clienteId}
             onChange={(e) => {
               const nuevoClienteId = e.target.value;
@@ -81,7 +81,7 @@ export function TareaCatalogoSelects({
             {clientes.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
-          </select>
+          </SelectInput>
         </div>
       )}
       {moduloProyectos && (
@@ -89,9 +89,8 @@ export function TareaCatalogoSelects({
           <label className="mc-field-label" htmlFor={`${idPrefix}-proyecto`}>
             Proyecto
           </label>
-          <select
+          <SelectInput
             id={`${idPrefix}-proyecto`}
-            className="mc-input"
             value={values.proyectoId}
             onChange={(e) => onChange({ proyectoId: e.target.value })}
           >
@@ -101,7 +100,7 @@ export function TareaCatalogoSelects({
             {proyectosFiltrados.map((p) => (
               <option key={p.id} value={p.id}>{p.nombre}</option>
             ))}
-          </select>
+          </SelectInput>
         </div>
       )}
       {moduloAreas && (
@@ -109,9 +108,8 @@ export function TareaCatalogoSelects({
           <label className="mc-field-label" htmlFor={`${idPrefix}-area`}>
             Área
           </label>
-          <select
+          <SelectInput
             id={`${idPrefix}-area`}
-            className="mc-input"
             value={values.areaId}
             onChange={(e) => onChange({ areaId: e.target.value })}
           >
@@ -121,7 +119,7 @@ export function TareaCatalogoSelects({
             {areas.map((a) => (
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
-          </select>
+          </SelectInput>
         </div>
       )}
     </>

@@ -255,9 +255,23 @@
       white-space: nowrap;
     }
   
+    .mc-filter-select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .mc-filter-select-chevron {
+      position: absolute;
+      right: 9px;
+      pointer-events: none;
+      color: var(--mc-color-text-secondary);
+      flex-shrink: 0;
+    }
+
     .mc-filter-select {
       height: 32px;
-      padding: 0 10px;
+      padding: 0 28px 0 10px;
       border: 1px solid var(--mc-color-border);
       border-radius: var(--mc-radius-md);
       background: var(--mc-color-bg);
@@ -265,11 +279,15 @@
       font-size: 13px;
       cursor: pointer;
       transition: border-color 0.15s;
-      appearance: auto;
+      appearance: none;
+      width: 100%;
     }
-  
+
     .mc-filter-select:hover { border-color: var(--mc-color-border-hover, var(--mc-color-accent)); }
     .mc-filter-select:focus { outline: none; border-color: var(--mc-color-accent); }
+    .mc-filter-select:focus + .mc-filter-select-chevron { color: var(--mc-color-accent); }
+    .mc-filter-select:disabled { opacity: 0.5; cursor: not-allowed; }
+    .mc-filter-select:disabled + .mc-filter-select-chevron { opacity: 0.5; }
 
     .mc-filter-select--w120 { min-width: 120px; }
     .mc-filter-select--w150 { min-width: 150px; }

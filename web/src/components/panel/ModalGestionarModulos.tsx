@@ -9,6 +9,7 @@ import { CancelButton } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useModulosOrg, useSetModuloOrg } from '@/hooks/useModulosOrg';
 import { CATALOGO_MODULOS } from '@/lib/modulos';
+import { useWorkspaceStore } from '@/store/workspaceStore';
 import type { Organizacion } from '@/store/workspaceStore';
 
 type Props = {
@@ -28,6 +29,10 @@ export function ModalGestionarModulos({ open, onClose, org }: Props) {
   const orgId = org?.id ?? null;
   const { data: modulosEstado, isLoading, isError } = useModulosOrg(orgId, open);
   const { mutate, isPending } = useSetModuloOrg(orgId ?? '');
+  const orgActivaId = useWorkspaceStore((s) => s.orgActiva?.id ?? null);
+  const workspaceActivoId = useWorkspaceStore((s) => s.workspaceActivo?.id ?? null);
+  const modulosStore = useWorkspaceStore((s) => s.modulos);
+  const setModulosStore = useWorkspaceStore((s) => s.setModulos);
   const [moduloPendiente, setModuloPendiente] = useState<string | null>(null);
 
   const activoPorModulo = useMemo(() => {
@@ -50,7 +55,17 @@ export function ModalGestionarModulos({ open, onClose, org }: Props) {
     mutate(
       { modulo: clave, activo: nuevoActivo },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
+          if (
+            orgId
+            && orgActivaId === orgId
+            && workspaceActivoId === result.workspace_id
+          ) {
+            const next = nuevoActivo
+              ? Array.from(new Set([...modulosStore, clave]))
+              : modulosStore.filter((m) => m !== clave);
+            setModulosStore(next);
+          }
           toast.success(
             nuevoActivo
               ? 'Módulo activado'

@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { AppLogo } from '@/components/brand/AppLogo';
 import { Button } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { useWorkspaceSelectorPage } from '@/hooks/useWorkspaceSelectorPage';
 import type { Organizacion } from '@/store/workspaceStore';
 
@@ -37,9 +38,8 @@ export function WorkspaceSelector() {
                 <label className="mc-field-label" htmlFor="ws-org">
                   Organización
                 </label>
-                <select
+                <SelectInput
                   id="ws-org"
-                  className="mc-input"
                   value={orgId}
                   onChange={(e) => setOrgId(e.target.value)}
                 >
@@ -48,7 +48,7 @@ export function WorkspaceSelector() {
                       {org.nombre}
                     </option>
                   ))}
-                </select>
+                </SelectInput>
               </div>
             )}
 
@@ -56,9 +56,8 @@ export function WorkspaceSelector() {
               <label className="mc-field-label" htmlFor="ws-space">
                 Espacio de trabajo
               </label>
-              <select
+              <SelectInput
                 id="ws-space"
-                className="mc-input"
                 value={workspaceId}
                 disabled={cargandoWs || workspaces.length === 0}
                 onChange={(e) => setWorkspaceId(e.target.value)}
@@ -74,7 +73,7 @@ export function WorkspaceSelector() {
                     </option>
                   ))
                 )}
-              </select>
+              </SelectInput>
             </div>
 
             <Button

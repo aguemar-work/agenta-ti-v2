@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { markModalCompleted, Modal } from '@/components/ui/Modal';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { RecurrenciaForm, type RecurrenciaConfig } from '@/components/semana/RecurrenciaForm';
 import { TareaCatalogoSelects } from '@/components/semana/TareaCatalogoSelects';
 import {
@@ -285,9 +286,8 @@ export function ModalMiSemana({
               <>
                 <div className="mc-field">
                   <label className="mc-field-label" htmlFor="task-prioridad">Prioridad</label>
-                  <select
+                  <SelectInput
                     id="task-prioridad"
-                    className="mc-input"
                     value={form.prioridad}
                     onChange={(e) => setForm((p) => ({ ...p, prioridad: e.target.value as Tarea['prioridad'] }))}
                   >
@@ -295,25 +295,25 @@ export function ModalMiSemana({
                     <option value="media">Media</option>
                     <option value="alta">Alta</option>
                     <option value="critica">Crítica</option>
-                  </select>
+                  </SelectInput>
                 </div>
                 <div className="mc-field">
                   <label className="mc-field-label" htmlFor="task-objetivo">Vincular a objetivo</label>
-                  <select id="task-objetivo" className="mc-input" value={form.objetivoId} onChange={(e) => setForm((p) => ({ ...p, objetivoId: e.target.value }))}>
+                  <SelectInput id="task-objetivo" value={form.objetivoId} onChange={(e) => setForm((p) => ({ ...p, objetivoId: e.target.value }))}>
                     <option value="">Sin objetivo</option>
                     {objetivos.map((o) => (
                       <option key={o.id} value={o.id}>{o.titulo}</option>
                     ))}
-                  </select>
+                  </SelectInput>
                 </div>
                 {usuariosAsignables.length > 0 && (
                   <div className="mc-field">
                     <label className="mc-field-label" htmlFor="task-asignado">Responsable</label>
-                    <select id="task-asignado" className="mc-input" value={form.asignadoId} onChange={(e) => setForm((p) => ({ ...p, asignadoId: e.target.value }))}>
+                    <SelectInput id="task-asignado" value={form.asignadoId} onChange={(e) => setForm((p) => ({ ...p, asignadoId: e.target.value }))}>
                       {usuariosAsignables.map((u) => (
                         <option key={u.id} value={u.id}>{u.nombre}</option>
                       ))}
-                    </select>
+                    </SelectInput>
                   </div>
                 )}
                 {moduloClientes || moduloProyectos || moduloAreas ? (
@@ -344,12 +344,12 @@ export function ModalMiSemana({
             </div>
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="ev-tipo">Tipo</label>
-              <select id="ev-tipo" className="mc-input" value={form.tipoEv} onChange={(e) => setForm((p) => ({ ...p, tipoEv: e.target.value as TipoEvento }))}>
+              <SelectInput id="ev-tipo" value={form.tipoEv} onChange={(e) => setForm((p) => ({ ...p, tipoEv: e.target.value as TipoEvento }))}>
                 <option value="reunion">Reunión</option>
                 <option value="entrega">Entrega</option>
                 <option value="personal">Personal</option>
                 <option value="otro">Otro</option>
-              </select>
+              </SelectInput>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="mc-field">

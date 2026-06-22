@@ -7,6 +7,7 @@ import { AlertCircle, Check, Loader2 } from 'lucide-react';
 
 import { Modal } from '@/components/ui/Modal';
 import { CancelButton } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import type { CrearOTInput, OrdenTrabajo, TipoTrabajoOT } from '@/api/ordenTrabajo';
 import { labelNumeroOT } from '@/lib/otNumero';
 import type { DraftSaveStatus } from '@/hooks/useOrdenesTrabajoPage';
@@ -133,18 +134,17 @@ export function OTFormModal({
                     </p>
                     <label className="mc-field">
                         <span className="mc-field-label">Tipo de trabajo</span>
-                        <select className="mc-input" value={form.tipo_trabajo_id ?? ''} onChange={(e) => upd('tipo_trabajo_id', e.target.value || null)}>
+                        <SelectInput value={form.tipo_trabajo_id ?? ''} onChange={(e) => upd('tipo_trabajo_id', e.target.value || null)}>
                             <option value="">Selecciona…</option>
                             {tiposTrabajo.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                        </select>
+                        </SelectInput>
                     </label>
                     <label className="mc-field">
                         <span className="mc-field-label">
                             Tarea vinculada
                             <span className="ml-1 font-normal text-[var(--mc-color-text-secondary)]">(opcional)</span>
                         </span>
-                        <select
-                            className="mc-input"
+                        <SelectInput
                             value={form.tarea_id ?? ''}
                             onChange={(e) => upd('tarea_id', e.target.value || null)}
                         >
@@ -152,7 +152,7 @@ export function OTFormModal({
                             {tareasVinculables.map((t) => (
                                 <option key={t.id} value={t.id}>{t.titulo}</option>
                             ))}
-                        </select>
+                        </SelectInput>
                         {form.tarea_id && (
                             <p className="m-0 mt-1 text-[11px] text-[var(--mc-color-text-secondary)]">
                                 Al completar la OT, esta tarea se completará automáticamente.
@@ -192,11 +192,11 @@ export function OTFormModal({
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <label className="mc-field">
                             <span className="mc-field-label">Modalidad *</span>
-                            <select className="mc-input" value={form.modalidad} onChange={(e) => upd('modalidad', e.target.value as typeof form.modalidad)}>
+                            <SelectInput value={form.modalidad} onChange={(e) => upd('modalidad', e.target.value as typeof form.modalidad)}>
                                 <option value="presencial">Presencial</option>
                                 <option value="remoto">Remoto</option>
                                 <option value="viaje">Viaje</option>
-                            </select>
+                            </SelectInput>
                         </label>
                         <label className="mc-field">
                             <span className="mc-field-label">Fecha estimada *</span>

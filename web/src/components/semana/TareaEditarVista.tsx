@@ -1,4 +1,5 @@
 import { TareaCatalogoSelects } from '@/components/semana/TareaCatalogoSelects';
+import { SelectInput } from '@/components/ui/SelectInput';
 import type { Area } from '@/api/areas';
 import type { Cliente } from '@/api/clientes';
 import type { Proyecto } from '@/api/proyectos';
@@ -56,9 +57,8 @@ export function TareaEditarVista({
 
       <div className="mc-field">
         <label className="mc-field-label" htmlFor="edit-prioridad">Prioridad</label>
-        <select
+        <SelectInput
           id="edit-prioridad"
-          className="mc-input"
           value={form.prioridad}
           onChange={(e) => onChange({ prioridad: e.target.value as Tarea['prioridad'] })}
         >
@@ -66,7 +66,7 @@ export function TareaEditarVista({
           <option value="media">Media</option>
           <option value="alta">Alta</option>
           <option value="critica">Crítica</option>
-        </select>
+        </SelectInput>
       </div>
 
       <div className="mc-field">
@@ -82,9 +82,8 @@ export function TareaEditarVista({
 
       <div className="mc-field">
         <label className="mc-field-label" htmlFor="edit-objetivo">Objetivo</label>
-        <select
+        <SelectInput
           id="edit-objetivo"
-          className="mc-input"
           value={form.objetivoId}
           onChange={(e) => onChange({ objetivoId: e.target.value })}
         >
@@ -92,22 +91,21 @@ export function TareaEditarVista({
           {objetivos.map((o) => (
             <option key={o.id} value={o.id}>{o.titulo}</option>
           ))}
-        </select>
+        </SelectInput>
       </div>
 
       {usuariosAsignables.length > 0 && (
         <div className="mc-field">
           <label className="mc-field-label" htmlFor="edit-resp">Responsable</label>
-          <select
+          <SelectInput
             id="edit-resp"
-            className="mc-input"
             value={form.asignadoId}
             onChange={(e) => onChange({ asignadoId: e.target.value })}
           >
             {usuariosAsignables.map((u) => (
               <option key={u.id} value={u.id}>{u.nombre}</option>
             ))}
-          </select>
+          </SelectInput>
         </div>
       )}
 

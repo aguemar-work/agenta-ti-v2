@@ -22,6 +22,7 @@ const Planificacion  = lazy(() => import('@/pages/Planificacion').then((m) => ({
 const Objetivos      = lazy(() => import('@/pages/Objetivos').then((m) => ({ default: m.Objetivos })));
 const OrdenesTrabajo = lazy(() => import('@/pages/OrdenesTrabajo').then((m) => ({ default: m.OrdenesTrabajo })));
 const Metricas       = lazy(() => import('@/pages/Metricas').then((m) => ({ default: m.Metricas })));
+const ConfiguracionEmpresa = lazy(() => import('@/pages/ConfiguracionEmpresa').then((m) => ({ default: m.ConfiguracionEmpresa })));
 const Clientes       = lazy(() => import('@/pages/Clientes').then((m) => ({ default: m.Clientes })));
 const Proyectos      = lazy(() => import('@/pages/Proyectos').then((m) => ({ default: m.Proyectos })));
 const Areas          = lazy(() => import('@/pages/Areas').then((m) => ({ default: m.Areas })));
@@ -92,6 +93,11 @@ export default function App() {
         <Route path="metricas" element={
           <JefeRoute>
             <RouteWrapper label="Métricas"><Metricas /></RouteWrapper>
+          </JefeRoute>
+        } />
+        <Route path="configuracion-empresa" element={
+          <JefeRoute>
+            <RouteWrapper label="Configuración de empresa"><ConfiguracionEmpresa /></RouteWrapper>
           </JefeRoute>
         } />
       </Route>

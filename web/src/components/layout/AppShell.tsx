@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   Target,
   Users,
 } from 'lucide-react';
@@ -43,6 +44,7 @@ const NAV_WORKSPACE = [
 const NAV_GESTION = [
   { to: '/planificacion', label: 'Planificación', icon: ClipboardList, roles: ['jefe'] as const },
   { to: '/metricas',       label: 'Métricas',      icon: BarChart2,     roles: ['jefe'] as const },
+  { to: '/configuracion-empresa', label: 'Configuración', icon: Settings, roles: ['jefe'] as const },
 ] as const;
 
 const NAV_CATALOGOS = [

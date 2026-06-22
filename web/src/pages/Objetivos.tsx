@@ -8,6 +8,7 @@ import { ObjetivosLeyendaRiesgos } from '@/components/objetivos/ObjetivosLeyenda
 import { ObjetivosProgresoInfo } from '@/components/objetivos/ObjetivosProgresoInfo';
 import { Modal } from '@/components/ui/Modal';
 import { Button, CancelButton } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { JustificacionField } from '@/components/ui/JustificacionField';
 import { ModalNuevaTarea } from '@/components/tareas/ModalNuevaTarea';
 import { ModalDetalleTareaSemana } from '@/components/semana/ModalDetalleTareaSemana';
@@ -354,9 +355,8 @@ export function Objetivos() {
             <label className="mc-field-label" htmlFor="obj-resp">
               Responsable
             </label>
-            <select
+            <SelectInput
               id="obj-resp"
-              className="mc-input"
               value={nuevoObjetivoForm.responsableId}
               onChange={(e) => setNuevoObjetivoForm((p) => ({ ...p, responsableId: e.target.value }))}
             >
@@ -366,7 +366,7 @@ export function Objetivos() {
                   {u.nombre}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           </div>
         </div>
       </Modal>

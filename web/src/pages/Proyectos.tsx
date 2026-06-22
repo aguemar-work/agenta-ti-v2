@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { useProyectosPage } from '@/hooks/useProyectosPage';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
@@ -174,8 +175,7 @@ export function Proyectos() {
 
         <label className="mc-field">
           <span className="mc-label">Cliente</span>
-          <select
-            className="mc-input"
+          <SelectInput
             value={form.cliente_id}
             onChange={(e) => setForm({ ...form, cliente_id: e.target.value })}
           >
@@ -185,13 +185,12 @@ export function Proyectos() {
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </SelectInput>
         </label>
 
         <label className="mc-field">
           <span className="mc-label">Estado</span>
-          <select
-            className="mc-input"
+          <SelectInput
             value={form.estado}
             onChange={(e) =>
               setForm({ ...form, estado: e.target.value as typeof form.estado })
@@ -199,7 +198,7 @@ export function Proyectos() {
           >
             <option value="activo">Activo</option>
             <option value="completado">Completado</option>
-          </select>
+          </SelectInput>
         </label>
       </Modal>
 

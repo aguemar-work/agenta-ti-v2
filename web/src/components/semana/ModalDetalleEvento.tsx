@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import type { ActualizarEventoInput } from '@/api/semana';
 import type { Evento, TipoEvento } from '@/types';
 
@@ -186,16 +187,15 @@ export function ModalDetalleEvento({ open, evento, onClose, onActualizar, onElim
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="ev-tipo">Tipo</label>
-            <select
+            <SelectInput
               id="ev-tipo"
-              className="mc-input"
               value={tipo}
               onChange={(e) => setTipo(e.target.value as TipoEvento)}
             >
               {(Object.keys(TIPO_LABEL) as TipoEvento[]).map((t) => (
                 <option key={t} value={t}>{TIPO_LABEL[t]}</option>
               ))}
-            </select>
+            </SelectInput>
           </div>
           <div className="mc-field">
             <label className="mc-field-label" htmlFor="ev-fecha">Fecha</label>

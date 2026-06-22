@@ -132,7 +132,7 @@ export async function asignarUsuarioAOrg(
   return parsed.data;
 }
 
-/** Estado de todos los módulos del catálogo para una org (solo dueño). */
+/** Estado de todos los módulos del catálogo para una org (owner o jefe del ws activo). */
 export async function fetchModulosOrg(orgId: string): Promise<ModuloEstado[]> {
   const { data, error } = await getInsforge().database.rpc('sgtd_listar_modulos_organizacion', {
     p_organizacion_id: orgId,
@@ -218,7 +218,7 @@ export async function eliminarUsuario(usuarioId: string): Promise<void> {
   if (data?.error) throw new Error(data.error);
 }
 
-/** Activa/desactiva un módulo de una org (solo dueño). */
+/** Activa/desactiva un módulo de una org (owner o jefe del ws activo). */
 export async function setModuloOrg(
   orgId: string,
   modulo: string,

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 
 import { CancelButton } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { descripcionDesdeNota, tituloDesdeNota } from '@/lib/notaBitacora';
 import type { NotaBitacora, Tarea, TipoEvento, Usuario } from '@/types';
 
@@ -207,9 +208,8 @@ export function ModalConvertirNota({
             </div>
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="conv-prioridad">Prioridad</label>
-              <select
+              <SelectInput
                 id="conv-prioridad"
-                className="mc-input"
                 value={prioridad}
                 onChange={(e) => setPrioridad(e.target.value as Tarea['prioridad'])}
               >
@@ -217,21 +217,20 @@ export function ModalConvertirNota({
                 <option value="media">Media</option>
                 <option value="alta">Alta</option>
                 <option value="critica">Crítica</option>
-              </select>
+              </SelectInput>
             </div>
             {usuariosAsignables.length > 0 && (
               <div className="mc-field">
                 <label className="mc-field-label" htmlFor="conv-asignado">Responsable</label>
-                <select
+                <SelectInput
                   id="conv-asignado"
-                  className="mc-input"
                   value={asignadoId}
                   onChange={(e) => setAsignadoId(e.target.value)}
                 >
                   {usuariosAsignables.map((u) => (
                     <option key={u.id} value={u.id}>{u.nombre}</option>
                   ))}
-                </select>
+                </SelectInput>
               </div>
             )}
           </>
@@ -239,9 +238,8 @@ export function ModalConvertirNota({
           <>
             <div className="mc-field">
               <label className="mc-field-label" htmlFor="conv-tipo">Tipo</label>
-              <select
+              <SelectInput
                 id="conv-tipo"
-                className="mc-input"
                 value={tipoEv}
                 onChange={(e) => setTipoEv(e.target.value as TipoEvento)}
               >
@@ -249,7 +247,7 @@ export function ModalConvertirNota({
                 <option value="entrega">Entrega</option>
                 <option value="personal">Personal</option>
                 <option value="otro">Otro</option>
-              </select>
+              </SelectInput>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="mc-field">

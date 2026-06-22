@@ -9,6 +9,7 @@ import type { UsuarioPlataforma } from '@/api/plataforma';
 import { getWorkspacesDeOrg } from '@/api/workspace';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { useInvitarAWorkspace } from '@/hooks/useUsuariosPlataforma';
 import type { Organizacion } from '@/store/workspaceStore';
 
@@ -150,9 +151,8 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
                 No hay organizaciones disponibles.
               </p>
             ) : (
-              <select
+              <SelectInput
                 id="asignar-org"
-                className="mc-input"
                 value={orgId}
                 disabled={isPending}
                 onChange={(e) => setOrgId(e.target.value)}
@@ -162,7 +162,7 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
                     {org.nombre}
                   </option>
                 ))}
-              </select>
+              </SelectInput>
             )}
             {membresiaActual?.estado === 'activo' ? (
               <p className="mc-field-hint">Ya es miembro activo en esta organización.</p>
@@ -178,16 +178,15 @@ export function ModalAsignarUsuario({ open, onClose, usuario, orgs }: Props) {
             <label className="mc-field-label" htmlFor="asignar-rol">
               Rol
             </label>
-            <select
+            <SelectInput
               id="asignar-rol"
-              className="mc-input"
               value={rol}
               disabled={isPending}
               onChange={(e) => setRol(e.target.value as 'jefe' | 'miembro')}
             >
               <option value="miembro">Miembro</option>
               <option value="jefe">Jefe</option>
-            </select>
+            </SelectInput>
           </div>
         </div>
       )}

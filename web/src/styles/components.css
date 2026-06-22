@@ -2726,6 +2726,195 @@
       border: 1px solid var(--mc-color-border);
       flex-shrink: 0;
     }
+    /* ── Tarjeta compacta (vista semanal compacta) ─────────────────────── */
+    .mc-semana-task-card-compact {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px 4px 0;
+      border-radius: var(--mc-radius-sm);
+      border: 1px solid var(--mc-color-border);
+      background: var(--mc-color-bg);
+      cursor: pointer;
+      min-width: 0;
+      transition: background 0.1s, border-color 0.1s;
+      overflow: hidden;
+    }
+    .mc-semana-task-card-compact:hover {
+      background: var(--mc-color-surface-hover);
+      border-color: var(--mc-color-accent);
+    }
+    .mc-semana-task-card-compact--terminal {
+      opacity: 0.5;
+      background: var(--mc-color-bg-secondary);
+    }
+    .mc-semana-task-card-compact--atrasada {
+      border-left-color: var(--mc-color-danger);
+    }
+    .mc-semana-task-card-compact__title {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--mc-color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Vista lista / tabla ─────────────────────────────────────────── */
+    .mc-semana-lista {
+      display: flex;
+      flex-direction: column;
+    }
+    .mc-semana-lista__vacio {
+      padding: 48px 16px;
+      font-size: var(--mc-text-sm);
+      color: var(--mc-color-text-secondary);
+      text-align: center;
+    }
+    /* Tabla */
+    .mc-lista-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--mc-text-sm);
+    }
+    /* Thead sticky */
+    .mc-lista-thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .mc-lista-th {
+      padding: 8px 12px;
+      background: var(--mc-color-bg-secondary);
+      border-bottom: 1px solid var(--mc-color-border);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mc-color-text-secondary);
+      white-space: nowrap;
+      text-align: left;
+      user-select: none;
+    }
+    .mc-lista-th--acciones { text-align: right; }
+    .mc-lista-th--sort {}
+    .mc-lista-th--active { color: var(--mc-color-accent); }
+    .mc-lista-th-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: inherit;
+      padding: 0;
+      white-space: nowrap;
+    }
+    .mc-lista-th-btn:hover { color: var(--mc-color-text); }
+    .mc-lista-th--active .mc-lista-th-btn { color: var(--mc-color-accent); }
+    .mc-lista-th-btn__unsorted { opacity: 0.4; }
+    /* Filas */
+    .mc-lista-tr {
+      border-bottom: 1px solid var(--mc-color-border);
+      transition: background 0.1s;
+    }
+    .mc-lista-tr:last-child { border-bottom: none; }
+    .mc-lista-tr:hover { background: var(--mc-color-surface-hover); }
+    .mc-lista-tr--terminal { opacity: 0.45; }
+    .mc-lista-tr--atrasada { background: color-mix(in srgb, var(--mc-color-danger) 4%, transparent); }
+    .mc-lista-tr--atrasada:hover { background: color-mix(in srgb, var(--mc-color-danger) 8%, transparent); }
+    /* Celdas */
+    .mc-lista-td {
+      padding: 8px 12px;
+      vertical-align: middle;
+    }
+    .mc-lista-td--prio  { width: 130px; white-space: nowrap; }
+    .mc-lista-td--titulo { min-width: 180px; }
+    .mc-lista-td--meta  { white-space: nowrap; }
+    .mc-lista-td--fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .mc-lista-td--acciones { width: 120px; text-align: right; }
+    /* Celda prioridad */
+    .mc-lista-prio-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mc-lista-prio-dot {
+      display: block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .mc-lista-prio--critica { background: var(--mc-color-danger); }
+    .mc-lista-prio--alta    { background: #f59e0b; }
+    .mc-lista-prio--media   { background: var(--mc-color-accent); }
+    .mc-lista-prio--baja    { background: var(--mc-color-border); }
+    /* Celda título */
+    .mc-lista-titulo-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      font-size: var(--mc-text-sm);
+      font-weight: 500;
+      color: var(--mc-color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 340px;
+      display: block;
+    }
+    .mc-lista-titulo-btn:hover { color: var(--mc-color-accent); text-decoration: underline; }
+    /* Celda meta genérica */
+    .mc-lista-meta-txt {
+      font-size: 12px;
+      color: var(--mc-color-text-secondary);
+      white-space: nowrap;
+    }
+    .mc-lista-meta-vacio {
+      font-size: 12px;
+      color: var(--mc-color-text-secondary);
+      opacity: 0.45;
+    }
+    /* Celda acciones */
+    .mc-lista-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--mc-space-1);
+    }
+    .mc-lista-fila__menu-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border: none;
+      background: transparent;
+      border-radius: var(--mc-radius-sm);
+      color: var(--mc-color-text-secondary);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .mc-lista-fila__menu-btn:hover {
+      background: var(--mc-color-bg-secondary);
+      color: var(--mc-color-text);
+    }
+    /* Mobile: columnas opcionales ocultas */
+    @media (max-width: 767px) {
+      .mc-lista-td--fecha,
+      .mc-lista-th.mc-lista-th--fecha { display: none; }
+    }
+
     .mc-semana-task-card--completada,
     .mc-semana-task-card--cancelada {
       flex-direction: row;
@@ -2942,180 +3131,6 @@
       color: var(--mc-color-text-secondary);
       opacity: 0.55;
       user-select: none;
-    }
-
-    /* ── Vista Lista — tabla horizontal de tareas semanales ──────────────── */
-    /*
-     * Grid de 6 columnas:  fecha | título(1fr) | prioridad | estado | responsable | acción
-     * En mobile se colapsa a 3: fecha | título | estado
-     */
-    .mc-semana-lista {
-      display: flex;
-      flex-direction: column;
-      border: 1px solid var(--mc-color-border);
-      border-radius: var(--mc-radius-lg);
-      overflow: hidden;
-      background: var(--mc-color-surface);
-      margin: var(--mc-space-2);
-    }
-
-    /* Cabecera de columnas */
-    .mc-semana-lista__hdr {
-      display: grid;
-      grid-template-columns: 72px 1fr 88px 130px 150px 110px;
-      gap: var(--mc-space-3);
-      align-items: center;
-      padding: var(--mc-space-2) var(--mc-space-4);
-      background: var(--mc-color-bg-secondary);
-      border-bottom: 1px solid var(--mc-color-border);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--mc-color-text-secondary);
-      user-select: none;
-    }
-
-    /* Fila de tarea */
-    .mc-semana-lista__row {
-      display: grid;
-      grid-template-columns: 72px 1fr 88px 130px 150px 110px;
-      gap: var(--mc-space-3);
-      align-items: center;
-      padding: var(--mc-space-2) var(--mc-space-4);
-      border-bottom: 1px solid var(--mc-color-border);
-      cursor: pointer;
-      transition: background 0.1s;
-      min-width: 0;
-      outline-offset: -2px;
-    }
-    .mc-semana-lista__row:last-child {
-      border-bottom: none;
-    }
-    .mc-semana-lista__row:hover {
-      background: var(--mc-color-surface-hover);
-    }
-    .mc-semana-lista__row:focus-visible {
-      outline: 2px solid var(--mc-color-accent);
-    }
-    .mc-semana-lista__row--terminal {
-      opacity: 0.5;
-    }
-    .mc-semana-lista__row--atrasada {
-      background: color-mix(in srgb, var(--mc-color-danger) 4%, transparent);
-    }
-    .mc-semana-lista__row--atrasada:hover {
-      background: color-mix(in srgb, var(--mc-color-danger) 8%, transparent);
-    }
-    .mc-semana-lista__row--en-progreso {
-      background: color-mix(in srgb, var(--mc-color-accent) 4%, transparent);
-    }
-    .mc-semana-lista__row--en-progreso:hover {
-      background: color-mix(in srgb, var(--mc-color-accent) 8%, transparent);
-    }
-
-    /* Celda: Fecha */
-    .mc-semana-lista__fecha {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--mc-color-text-secondary);
-      white-space: nowrap;
-      font-variant-numeric: tabular-nums;
-    }
-    .mc-semana-lista__fecha--hoy {
-      color: var(--mc-color-accent);
-      font-weight: 700;
-    }
-
-    /* Celda: Título */
-    .mc-semana-lista__titulo {
-      display: flex;
-      align-items: center;
-      gap: var(--mc-space-2);
-      min-width: 0;
-    }
-    .mc-semana-lista__titulo-text {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--mc-color-text);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .mc-semana-lista__area {
-      flex-shrink: 0;
-      font-size: 10px;
-      color: var(--mc-color-text-secondary);
-      padding: 1px 5px;
-      border-radius: var(--mc-radius-sm);
-      background: var(--mc-color-bg-secondary);
-      border: 1px solid var(--mc-color-border);
-    }
-
-    /* Celda: Prioridad */
-    .mc-semana-lista__prio {
-      display: flex;
-      align-items: center;
-    }
-    .mc-semana-lista__prio-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      font-size: 11px;
-    }
-    .mc-semana-lista__prio-baja {
-      font-size: 11px;
-      color: var(--mc-color-text-secondary);
-    }
-
-    /* Celda: Estado */
-    .mc-semana-lista__estado {
-      display: flex;
-      align-items: center;
-    }
-
-    /* Celda: Responsable */
-    .mc-semana-lista__resp {
-      display: flex;
-      align-items: center;
-      gap: var(--mc-space-2);
-      min-width: 0;
-      overflow: hidden;
-    }
-    .mc-semana-lista__resp-nombre {
-      font-size: 11px;
-      color: var(--mc-color-text-secondary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Celda: Acción rápida */
-    .mc-semana-lista__actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: var(--mc-space-2);
-    }
-
-    /* Mobile: colapsar a 3 columnas */
-    @media (max-width: 767px) {
-      .mc-semana-lista__hdr {
-        display: none;
-      }
-      .mc-semana-lista__row {
-        grid-template-columns: 52px 1fr auto;
-        padding: var(--mc-space-2) var(--mc-space-3);
-        gap: var(--mc-space-2);
-      }
-      .mc-semana-lista__col-prio-hdr,
-      .mc-semana-lista__col-resp-hdr,
-      .mc-semana-lista__actions {
-        display: none;
-      }
-      .mc-semana-lista__titulo-text {
-        font-size: 12px;
-      }
     }
 
     /* ── EventoCard — paralelo a tarea: título + tipo + horario; fondo tenue ─ */
@@ -3742,24 +3757,12 @@
       flex-wrap: nowrap;
       gap: 2px;
     }
-    /* Fila 2: KPIs + chips ←————————→ [+ Nueva tarea][Notas] */
-    .mc-misemana-kpi-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--mc-space-3);
-      flex-wrap: wrap;
-    }
-    .mc-misemana-kpi-row .mc-misemana-toolbar {
-      flex: 1;
-      min-width: 0;
-    }
-    .mc-misemana-kpi-row__actions {
+    /* Acciones derechas del header (FILA 1) */
+    .mc-misemana-hdr__actions {
       display: flex;
       flex-shrink: 0;
       align-items: center;
       gap: var(--mc-space-2);
-      padding-top: 2px;
     }
     /* Botón flecha de navegación */
     .mc-nav-arrow-btn {
@@ -3803,30 +3806,129 @@
     .mc-misemana-header__ver-semana .mc-filter-item--no-label {
       gap: 0;
     }
+    /* FILA 2: toolbar — Viendo + filtros + acciones */
     .mc-misemana-toolbar {
       display: flex;
-      flex-direction: column;
-      gap: var(--mc-space-2);
-      padding: var(--mc-space-1) 0;
-    }
-    .mc-misemana-toolbar__row {
-      display: flex;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: var(--mc-space-3);
-    }
-    .mc-misemana-toolbar__left {
-      display: flex;
       flex-wrap: wrap;
-      align-items: baseline;
-      gap: var(--mc-space-3);
-      min-width: 0;
+      padding: var(--mc-space-1) 0;
     }
-    .mc-misemana-toolbar__filtro {
-      display: inline-flex;
+    .mc-misemana-toolbar__viendo {
+      display: flex;
       align-items: center;
       gap: var(--mc-space-2);
+      flex-shrink: 0;
+    }
+    .mc-misemana-toolbar__viendo-label {
+      font-size: var(--mc-text-xs);
+      color: var(--mc-color-text-secondary);
+      white-space: nowrap;
+    }
+    .mc-misemana-toolbar__viendo-valor {
+      font-size: var(--mc-text-xs);
+      font-weight: 500;
+      color: var(--mc-color-text);
+    }
+    .mc-misemana-toolbar__right {
+      display: flex;
+      align-items: center;
+      gap: var(--mc-space-2);
+      flex-wrap: wrap;
+    }
+    /* Trigger + popover del calendario */
+    .mc-semana-cal-trigger {
+      position: relative;
+    }
+    .mc-semana-cal-picker {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      background: var(--mc-color-bg);
+      border: 1px solid var(--mc-color-border);
+      border-radius: var(--mc-radius-lg);
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
+      padding: var(--mc-space-3);
+      width: 238px;
+      user-select: none;
+    }
+    .mc-semana-cal-picker__hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--mc-space-2);
+    }
+    .mc-semana-cal-picker__mes {
+      font-size: var(--mc-text-sm);
+      font-weight: 600;
+      color: var(--mc-color-text);
+    }
+    .mc-semana-cal-picker__hoy-btn {
+      display: block;
+      width: 100%;
+      padding: 4px 0;
+      margin-bottom: var(--mc-space-2);
+      border: 1px solid var(--mc-color-accent);
+      border-radius: var(--mc-radius-sm);
+      background: transparent;
+      font-size: var(--mc-text-xs);
+      font-weight: 500;
+      color: var(--mc-color-accent);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .mc-semana-cal-picker__hoy-btn:hover {
+      background: color-mix(in srgb, var(--mc-color-accent) 8%, transparent);
+    }
+    .mc-semana-cal-picker__dias-hdr {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      margin-bottom: 2px;
+    }
+    .mc-semana-cal-picker__dias-hdr span {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--mc-color-text-secondary);
+      text-align: center;
+      padding: 2px 0;
+    }
+    .mc-semana-cal-picker__semanas {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .mc-semana-cal-picker__semana-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-radius: var(--mc-radius-sm);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .mc-semana-cal-picker__semana-row:hover {
+      background: color-mix(in srgb, var(--mc-color-accent) 8%, transparent);
+    }
+    .mc-semana-cal-picker__semana-row--sel {
+      background: color-mix(in srgb, var(--mc-color-accent) 14%, transparent);
+    }
+    .mc-semana-cal-picker__semana-row--sel:hover {
+      background: color-mix(in srgb, var(--mc-color-accent) 20%, transparent);
+    }
+    .mc-semana-cal-picker__dia {
+      font-size: 11px;
+      text-align: center;
+      padding: 4px 1px;
+      color: var(--mc-color-text);
+    }
+    .mc-semana-cal-picker__dia--otro-mes {
+      opacity: 0.35;
+    }
+    .mc-nav-arrow-btn--active {
+      border-color: var(--mc-color-accent);
+      color: var(--mc-color-accent);
+      background: color-mix(in srgb, var(--mc-color-accent) 8%, transparent);
     }
 
     /* Chip bar de filtros rápidos */

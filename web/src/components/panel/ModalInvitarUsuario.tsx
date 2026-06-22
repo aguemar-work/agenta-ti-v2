@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { getWorkspacesDeOrg } from '@/api/workspace';
 import { Button, CancelButton } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { useInvitarAWorkspace } from '@/hooks/useUsuariosPlataforma';
 import type { Organizacion } from '@/store/workspaceStore';
 
@@ -159,9 +160,8 @@ export function ModalInvitarUsuario({ open, onClose, orgs }: Props) {
               No hay organizaciones disponibles.
             </p>
           ) : (
-            <select
+            <SelectInput
               id="invitar-org"
-              className="mc-input"
               value={orgId}
               disabled={isPending}
               onChange={(e) => setOrgId(e.target.value)}
@@ -171,7 +171,7 @@ export function ModalInvitarUsuario({ open, onClose, orgs }: Props) {
                   {org.nombre}
                 </option>
               ))}
-            </select>
+            </SelectInput>
           )}
           {orgLabel && cargandoWs ? (
             <p className="mc-field-hint">Cargando espacio de trabajo…</p>
@@ -185,16 +185,15 @@ export function ModalInvitarUsuario({ open, onClose, orgs }: Props) {
           <label className="mc-field-label" htmlFor="invitar-rol">
             Rol
           </label>
-          <select
+          <SelectInput
             id="invitar-rol"
-            className="mc-input"
             value={rol}
             disabled={isPending}
             onChange={(e) => setRol(e.target.value as 'jefe' | 'miembro')}
           >
             <option value="miembro">Miembro</option>
             <option value="jefe">Jefe</option>
-          </select>
+          </SelectInput>
         </div>
       </div>
     </Modal>

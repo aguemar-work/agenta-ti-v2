@@ -38,6 +38,7 @@ type Props = {
   onOtClick?: (ot: OrdenTrabajo) => void;
   completandoEsta?: boolean;
   iniciandoEsta?:   boolean;
+  compacta?: boolean;
 };
 
 function estadoEjecucionPill(estado: EstadoTarea): ClaveVisualTarea {
@@ -61,6 +62,7 @@ export function TareaSemanaCard({
   onOtClick,
   completandoEsta = false,
   iniciandoEsta   = false,
+  compacta = false,
 }: Props) {
   const [confirmarEliminar, setConfirmarEliminar] = useState(false);
   const isMobile = useIsMobile();
@@ -115,6 +117,33 @@ export function TareaSemanaCard({
   const hayMenu = menuItems.length > 0;
   const hayFilaAcciones = hayPrimario || hayMenu;
   const accionPrimariaVariant = isMobile ? 'secondary' : 'primary';
+
+  if (compacta) {
+    const chip = PRIORIDAD_CHIP[tarea.prioridad];
+    const terminal = tarea.estado === 'completada' || tarea.estado === 'cancelada';
+    return (
+      <div
+        className={[
+          'mc-semana-task-card-compact',
+          terminal ? 'mc-semana-task-card-compact--terminal' : '',
+          clave === 'atrasada' ? 'mc-semana-task-card-compact--atrasada' : '',
+        ].filter(Boolean).join(' ')}
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpenDetalle?.(tarea)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDetalle?.(tarea); }}
+        aria-label={tarea.titulo}
+      >
+        <div className={`mc-semana-task-card__prio mc-semana-task-card__prio--${tarea.prioridad}`} aria-hidden />
+        <p className="mc-semana-task-card-compact__title">{tarea.titulo}</p>
+        {chip && (
+          <span className={`mc-chip ${chip.clase} mc-semana-task-card__prio-chip`} title={chip.label} aria-label={`Prioridad ${chip.label}`}>
+            <chip.icon size={11} aria-hidden />
+          </span>
+        )}
+      </div>
+    );
+  }
 
   if (tarea.estado === 'completada') {
     return (

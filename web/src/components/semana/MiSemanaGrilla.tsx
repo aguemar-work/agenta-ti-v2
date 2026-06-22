@@ -11,7 +11,7 @@ import { SemanaColumnaScrollArea } from '@/components/semana/SemanaColumnaScroll
 import { TareaSemanaCard } from '@/components/semana/TareaSemanaCard';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { estadoEfectivoTablero } from '@/lib/tableroEstado';
-import type { FiltroRapido } from '@/components/semana/MiSemanaToolbar';
+import type { FiltroRapido, VistaMode } from '@/components/semana/MiSemanaToolbar';
 import type { Evento, Tarea } from '@/types';
 
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'] as const;
@@ -49,6 +49,7 @@ export type MiSemanaGrillaProps = {
   notasHoyCount?: number;
   /** Nodo React renderizado solo en la columna "hoy", entre el área de tareas y el pie de incidencias. */
   notasHoySlot?: ReactNode;
+  vista?: VistaMode;
 };
 
 function eventosEnDia(eventos: Evento[], ymd: string): Evento[] {
@@ -86,7 +87,10 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
     onCrearTareaRapida,
     notasHoyCount,
     notasHoySlot,
+    vista = 'semanal',
   } = props;
+
+  const esCompacta = vista === 'compacta';
 
   const [terminadasExpand,  setTerminadasExpand]  = useState<Set<string>>(new Set());
   const [incRapida,         setIncRapida]         = useState('');
@@ -231,35 +235,35 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1 border-b border-[var(--mc-color-border)] px-2 py-1.5">
-                  <input
-                    type="text"
-                    className="min-w-0 flex-1 rounded-[var(--mc-radius-sm)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-2 py-1 text-[11px] placeholder:text-[var(--mc-color-text-secondary)] focus:border-[var(--mc-color-accent)] focus:outline-none disabled:opacity-50"
-                    placeholder="Nueva tarea…"
-                    value={tareasRapidas[ymd] ?? ''}
-                    onChange={(e) => setTareaRapida(ymd, e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleGuardarTarea(ymd); } }}
-                    disabled={guardandoTarea === ymd}
-                    aria-label={`Nueva tarea para ${DIAS_CORTO[idx]}`}
-                  />
-                  <button
-                    type="button"
-                    disabled={!(tareasRapidas[ymd] ?? '').trim() || guardandoTarea === ymd}
-                    onClick={() => void handleGuardarTarea(ymd)}
-                    className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-accent)] hover:bg-[var(--mc-color-bg-secondary)] disabled:opacity-40"
-                    aria-label="Crear tarea"
-                  >
-                    <Plus size={12} aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onAbrirModalDia(ymd)}
-                    className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]"
-                    title="Crear con más opciones"
-                    aria-label="Abrir formulario completo"
-                  >
-                    <MoreHorizontal size={12} aria-hidden />
-                  </button>
-                </div>
+                    <input
+                      type="text"
+                      className="min-w-0 flex-1 rounded-[var(--mc-radius-sm)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg)] px-2 py-1 text-[11px] placeholder:text-[var(--mc-color-text-secondary)] focus:border-[var(--mc-color-accent)] focus:outline-none disabled:opacity-50"
+                      placeholder="Nueva tarea…"
+                      value={tareasRapidas[ymd] ?? ''}
+                      onChange={(e) => setTareaRapida(ymd, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleGuardarTarea(ymd); } }}
+                      disabled={guardandoTarea === ymd}
+                      aria-label={`Nueva tarea para ${DIAS_CORTO[idx]}`}
+                    />
+                    <button
+                      type="button"
+                      disabled={!(tareasRapidas[ymd] ?? '').trim() || guardandoTarea === ymd}
+                      onClick={() => void handleGuardarTarea(ymd)}
+                      className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-accent)] hover:bg-[var(--mc-color-bg-secondary)] disabled:opacity-40"
+                      aria-label="Crear tarea"
+                    >
+                      <Plus size={12} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirModalDia(ymd)}
+                      className="shrink-0 rounded-[var(--mc-radius-sm)] p-1 text-[var(--mc-color-text-secondary)] hover:bg-[var(--mc-color-bg-secondary)]"
+                      title="Crear con más opciones"
+                      aria-label="Abrir formulario completo"
+                    >
+                      <MoreHorizontal size={12} aria-hidden />
+                    </button>
+                  </div>
 
                 <SemanaColumnaScrollArea>
                   <div
@@ -328,6 +332,7 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                             responsableNombre={nombresPorId.get(t.asignado_a) ?? '—'}
                             {...(areaNombre ? { areaNombre } : {})}
                             readOnly={!gestiona}
+                            compacta={esCompacta}
                             completandoEsta={completarPendingId === t.id}
                             iniciandoEsta={iniciarPendingId === t.id}
                             onOpenDetalle={(x) => onAbrirDetalle(x.id)}
@@ -365,6 +370,7 @@ export function MiSemanaGrilla(props: MiSemanaGrillaProps) {
                               responsableNombre={nombresPorId.get(t.asignado_a) ?? '—'}
                               {...(areaNombre ? { areaNombre } : {})}
                               readOnly={!gestiona}
+                              compacta={esCompacta}
                               completandoEsta={completarPendingId === t.id}
                               iniciandoEsta={iniciarPendingId === t.id}
                               onOpenDetalle={(x) => onAbrirDetalle(x.id)}

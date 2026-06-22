@@ -6,6 +6,7 @@
  * activa el toggle "Recurrente".
  */
 
+import { SelectInput } from '@/components/ui/SelectInput';
 import type { DiaSemana } from '@/api/recurrencia';
 
 export type RecurrenciaConfig = {
@@ -81,16 +82,16 @@ export function RecurrenciaForm({ value, onChange, fechaInicio }: Props) {
       {/* Período a generar */}
       <div className="mc-field !mb-0">
         <label className="mc-field-label" htmlFor="rec-meses">Generar instancias para</label>
-        <select
+        <SelectInput
           id="rec-meses"
-          className="mc-input !w-auto"
+          className="!w-auto"
           value={value.meses}
           onChange={(e) => onChange({ ...value, meses: Number(e.target.value) })}
         >
           <option value={1}>Este mes</option>
           <option value={2}>Los próximos 2 meses</option>
           <option value={3}>Los próximos 3 meses</option>
-        </select>
+        </SelectInput>
         <p className="mt-1 text-[10px] text-[var(--mc-color-text-secondary)]">
           Puedes generar más meses después desde la vista de recurrencias.
         </p>

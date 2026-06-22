@@ -26,6 +26,7 @@
  *   </FilterBar>
  */
 
+import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -77,18 +78,21 @@ FilterBar.Select = function FilterSelect({
   return (
     <label className={['mc-filter-item', hideLabel ? 'mc-filter-item--no-label' : ''].filter(Boolean).join(' ')} htmlFor={id}>
       {hideLabel ? null : <span className="mc-filter-label">{label}</span>}
-      <select
-        id={id}
-        className={['mc-filter-select', widthClass].join(' ')}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        aria-label={hideLabel ? label : undefined}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <div className="mc-filter-select-wrap">
+        <select
+          id={id}
+          className={['mc-filter-select', widthClass].join(' ')}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          aria-label={hideLabel ? label : undefined}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <ChevronDown size={12} className="mc-filter-select-chevron" aria-hidden />
+      </div>
     </label>
   );
 };

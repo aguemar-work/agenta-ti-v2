@@ -1,6 +1,9 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { FilterBar } from '@/components/ui/FilterBar';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, CalendarDays, NotebookPen } from 'lucide-react';
 import { agregarDias, inicioSemanaIso } from '@/lib/semanas';
+import { Button } from '@/components/ui/Button';
+import { SemanaCalendarPicker } from './SemanaCalendarPicker';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'] as const;
 
@@ -15,18 +18,14 @@ function formatRangoSemana(lunes: Date, sabado: Date): string {
     : `${dL} ${mL} – ${dS} ${mS} ${year}`;
 }
 
-type UsuarioOption = { id: string; nombre: string };
-
 type Props = {
   lunes: Date;
   sabado: Date;
   onSemanaAnterior: () => void;
   onSemanaSiguiente: () => void;
-  onIrHoy: () => void;
-  esJefe?: boolean;
-  uid?: string;
-  usuariosJefe?: UsuarioOption[];
-  onSeleccionarUsuario?: (id: string) => void;
+  onSelectLunes: (lunes: Date) => void;
+  onNuevaTarea: () => void;
+  onNota: () => void;
 };
 
 export function MiSemanaHeader({
@@ -34,24 +33,19 @@ export function MiSemanaHeader({
   sabado,
   onSemanaAnterior,
   onSemanaSiguiente,
-  onIrHoy,
-  esJefe = false,
-  uid,
-  usuariosJefe,
-  onSeleccionarUsuario,
+  onSelectLunes,
+  onNuevaTarea,
+  onNota,
 }: Props) {
-  const muestraSelectorJefe =
-    esJefe && Boolean(uid) && Boolean(usuariosJefe?.length) && Boolean(onSeleccionarUsuario);
-
-  const hoyLunes = lunesSemanaActual();
-  const esSemanActual =
-    lunes.getFullYear() === hoyLunes.getFullYear() &&
-    lunes.getMonth()    === hoyLunes.getMonth() &&
-    lunes.getDate()     === hoyLunes.getDate();
+  const [calOpen, setCalOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
     <div className="mc-misemana-hdr__top">
+      {/* Nav izquierda: SEMANA [←][fecha][→][📅] */}
       <div className="mc-misemana-hdr__nav" role="group" aria-label="Navegación de semana">
+        <span className="mc-misemana-hdr__title">Semana</span>
+
         <button
           type="button"
           className="mc-nav-arrow-btn"
@@ -74,32 +68,36 @@ export function MiSemanaHeader({
           <ChevronRight size={15} strokeWidth={2} aria-hidden />
         </button>
 
-        {!esSemanActual && (
+        {/* Icono calendario con picker de semana */}
+        <div className="mc-semana-cal-trigger">
           <button
             type="button"
-            className="mc-misemana-header__hoy"
-            onClick={onIrHoy}
+            className={`mc-nav-arrow-btn${calOpen ? ' mc-nav-arrow-btn--active' : ''}`}
+            onClick={() => setCalOpen((o) => !o)}
+            aria-label="Seleccionar semana"
+            aria-expanded={calOpen}
           >
-            Hoy
+            <CalendarDays size={14} aria-hidden />
           </button>
-        )}
-
-        {muestraSelectorJefe && (
-          <div className="mc-misemana-header__ver-semana flex items-center gap-1.5">
-            <span className="shrink-0 text-xs text-[var(--mc-color-text-secondary)]">
-              Viendo:
-            </span>
-            <FilterBar.Select
-              id="misemana-ver-semana-de"
-              label="Seleccionar usuario"
-              hideLabel
-              value={uid!}
-              onChange={onSeleccionarUsuario!}
-              options={usuariosJefe!.map((u) => ({ value: u.id, label: u.nombre }))}
-              minWidth={140}
+          {calOpen && (
+            <SemanaCalendarPicker
+              lunes={lunes}
+              onSelectLunes={onSelectLunes}
+              onClose={() => setCalOpen(false)}
             />
-          </div>
-        )}
+          )}
+        </div>
+      </div>
+
+      {/* Acciones derecha: [+ Nueva tarea][Notas] */}
+      <div className="mc-misemana-hdr__actions">
+        <Button variant="primary" size="sm" onClick={onNuevaTarea}>
+          {isMobile ? '+ Tarea' : '+ Nueva tarea'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onNota} aria-label="Notas">
+          <NotebookPen size={13} aria-hidden />
+          {!isMobile && 'Notas'}
+        </Button>
       </div>
     </div>
   );

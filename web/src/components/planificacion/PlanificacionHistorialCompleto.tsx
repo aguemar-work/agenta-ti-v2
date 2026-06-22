@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/Button';
+import { SelectInput } from '@/components/ui/SelectInput';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { LogActividadItem } from '@/api/audit';
 import type { FiltrosHistorialLog } from '@/api/audit';
@@ -108,8 +109,8 @@ export function PlanificacionHistorialCompleto({
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
-            <select
-              className="mc-input !w-auto text-xs"
+            <SelectInput
+              className="!w-auto text-xs"
               value={histUsuarioId}
               onChange={(e) => {
                 setHistUsuarioId(e.target.value);
@@ -122,9 +123,9 @@ export function PlanificacionHistorialCompleto({
                   {u.nombre}
                 </option>
               ))}
-            </select>
-            <select
-              className="mc-input !w-auto text-xs"
+            </SelectInput>
+            <SelectInput
+              className="!w-auto text-xs"
               value={histTipoAccion}
               onChange={(e) => {
                 setHistTipoAccion(e.target.value as FiltrosHistorialLog['tipoAccion']);
@@ -135,7 +136,7 @@ export function PlanificacionHistorialCompleto({
               <option value="reprogramada">Reprogramada</option>
               <option value="cancelada">Cancelación</option>
               <option value="completada">Completada</option>
-            </select>
+            </SelectInput>
           </div>
           {loadHist ? (
             <p className="text-sm text-[var(--mc-color-text-secondary)]">Cargando…</p>

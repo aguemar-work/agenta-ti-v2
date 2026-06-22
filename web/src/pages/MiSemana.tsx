@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NotebookPen } from 'lucide-react';
 
 import type { OrdenTrabajo } from '@/api/ordenTrabajo';
 import {
@@ -9,7 +8,8 @@ import {
   navegarSemanaAnterior,
   navegarSemanaSiguiente,
 } from '@/components/semana/MiSemanaHeader';
-import { MiSemanaToolbar, type FiltroRapido } from '@/components/semana/MiSemanaToolbar';
+import { MiSemanaToolbar, type FiltroRapido, type VistaMode } from '@/components/semana/MiSemanaToolbar';
+import { MiSemanaListaVista } from '@/components/semana/MiSemanaListaVista';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useSwipeDiaSemana } from '@/hooks/useSwipeDiaSemana';
 import {
@@ -32,7 +32,7 @@ import { useMiSemanaPage } from '@/hooks/useMiSemanaPage';
 import { fechaLocalYmd } from '@/lib/fecha';
 import { ResumenSemanalModal } from '@/components/semana/ResumenSemanalModal';
 import { APP_PAGE_CLASS } from '@/lib/appLayout';
-import { Calendar, LayoutGrid, List, ListChecks } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { agregarDias } from '@/lib/semanas';
 import type { Evento, Tarea } from '@/types';
 
@@ -40,9 +40,6 @@ const MiSemanaGrilla = lazy(() =>
   import('@/components/semana/MiSemanaGrilla').then((m) => ({ default: m.MiSemanaGrilla })),
 );
 
-const MiSemanaLista = lazy(() =>
-  import('@/components/semana/MiSemanaLista').then((m) => ({ default: m.MiSemanaLista })),
-);
 
 const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -115,20 +112,9 @@ export function MiSemana() {
     crearTareaRapida,
   } = useMiSemanaPage();
 
-  const [vistaMode, setVistaModeRaw] = useState<'kanban' | 'lista'>(() => {
-    try {
-      const saved = localStorage.getItem('misemana-vista-modo');
-      if (saved === 'lista' || saved === 'kanban') return saved;
-    } catch { /* ignore */ }
-    return 'kanban';
-  });
-  function setVistaMode(mode: 'kanban' | 'lista') {
-    setVistaModeRaw(mode);
-    try { localStorage.setItem('misemana-vista-modo', mode); } catch { /* ignore */ }
-  }
-
   const [filtroRapido, setFiltroRapido] = useState<FiltroRapido | null>(null);
   const [busqueda,     setBusqueda]     = useState('');
+  const [vista,        setVista]        = useState<VistaMode>('semanal');
   const [eventoDetalle, setEventoDetalle] = useState<Evento | null>(null);
   const [resumenOpen,  setResumenOpen]  = useState(false);
   const [notasDrawerOpen, setNotasDrawerOpen] = useState(false);
@@ -187,15 +173,13 @@ export function MiSemana() {
         sabado={sabado}
         onSemanaAnterior={() => setLunes((d) => navegarSemanaAnterior(d))}
         onSemanaSiguiente={() => setLunes((d) => navegarSemanaSiguiente(d))}
-        onIrHoy={() => setLunes(lunesSemanaActual())}
-        esJefe={esJefe}
-        uid={uid}
-        usuariosJefe={usuariosJefe ?? []}
-        onSeleccionarUsuario={setSeleccionId}
+        onSelectLunes={setLunes}
+        onNuevaTarea={() => setModal({ fecha: isMobile ? diaMobileYmd : hoyYmd })}
+        onNota={() => setNotasDrawerOpen(true)}
       />
 
-      {/* Mobile: tabs de días — solo en kanban */}
-      {isMobile && vistaMode === 'kanban' && (
+      {/* Mobile: tabs de días */}
+      {isMobile && (
         <div
           className="flex touch-pan-x gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
@@ -229,78 +213,19 @@ export function MiSemana() {
         </div>
       )}
 
-      {/* Fila 2: KPIs + chips ←————————→ + Nueva tarea + Notas */}
-      <div className="mc-misemana-kpi-row">
-        <MiSemanaToolbar
-          filtroRapido={filtroRapido}
-          busqueda={busqueda}
-          onToggleFiltroRapido={toggleFiltroRapido}
-          onLimpiarFiltro={limpiarFiltros}
-          onBusquedaChange={setBusqueda}
-        />
-        <div className="mc-misemana-kpi-row__actions">
-          <div
-            className="flex items-center gap-0.5 rounded-[var(--mc-radius-md)] border border-[var(--mc-color-border)] bg-[var(--mc-color-bg-secondary)] p-0.5"
-            role="group"
-            aria-label="Cambiar vista"
-          >
-            <button
-              type="button"
-              aria-pressed={vistaMode === 'kanban'}
-              title="Vista kanban"
-              onClick={() => setVistaMode('kanban')}
-              className={[
-                'grid place-items-center rounded-[var(--mc-radius-sm)] p-1.5 transition-colors',
-                vistaMode === 'kanban'
-                  ? 'bg-[var(--mc-color-bg)] text-[var(--mc-color-text)] shadow-sm'
-                  : 'text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]',
-              ].join(' ')}
-            >
-              <LayoutGrid size={14} aria-hidden />
-            </button>
-            <button
-              type="button"
-              aria-pressed={vistaMode === 'lista'}
-              title="Vista lista"
-              onClick={() => setVistaMode('lista')}
-              className={[
-                'grid place-items-center rounded-[var(--mc-radius-sm)] p-1.5 transition-colors',
-                vistaMode === 'lista'
-                  ? 'bg-[var(--mc-color-bg)] text-[var(--mc-color-text)] shadow-sm'
-                  : 'text-[var(--mc-color-text-secondary)] hover:text-[var(--mc-color-text)]',
-              ].join(' ')}
-            >
-              <List size={14} aria-hidden />
-            </button>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setModal({ fecha: isMobile ? diaMobileYmd : hoyYmd })}
-          >
-            {isMobile ? '+ Tarea' : '+ Nueva tarea'}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setResumenOpen(true)}
-            title="Ver resumen de la semana"
-          >
-            <ListChecks size={13} aria-hidden />
-            {!isMobile && 'Resumen'}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setNotasDrawerOpen(true)}
-            aria-expanded={notasDrawerOpen}
-            aria-controls="mc-misemana-notas-drawer"
-          >
-            <NotebookPen size={13} aria-hidden />
-            {!isMobile && 'Notas'}
-          </Button>
-        </div>
-      </div>
+      {/* Fila 2: Viendo + filtros + resumen + vista */}
+      <MiSemanaToolbar
+        filtroRapido={filtroRapido}
+        onToggleFiltroRapido={toggleFiltroRapido}
+        onLimpiarFiltro={limpiarFiltros}
+        esJefe={esJefe}
+        uid={uid}
+        usuariosJefe={usuariosJefe ?? []}
+        onSeleccionarUsuario={setSeleccionId}
+        onResumen={() => setResumenOpen(true)}
+        vista={vista}
+        onSetVista={setVista}
+      />
 
       {esBannerViernes && (
         <div className="flex shrink-0 items-center gap-3 rounded-lg border border-[var(--mc-color-accent)] bg-[color-mix(in_srgb,var(--mc-color-accent)_8%,transparent)] px-4 py-3">
@@ -323,8 +248,33 @@ export function MiSemana() {
         <p className="shrink-0 text-sm text-[var(--mc-color-danger)]">Error al cargar datos.</p>
       )}
 
-      <Suspense fallback={<SkeletonSemanaGrilla />}>
-        {vistaMode === 'kanban' ? (
+      {vista === 'lista' ? (
+        <MiSemanaListaVista
+          diasSemana={diasSemana}
+          hoyYmd={hoyYmd}
+          tareasPlan={tareasPlan}
+          filtroRapido={filtroRapido}
+          ordenesPorTarea={ordenesPorTarea}
+          nombresPorId={nombresPorId}
+          areasPorId={areasPorId}
+          puedeGestionar={puedeGestionar}
+          onAbrirDetalle={setDetalleTareaId}
+          completarPendingId={completarPendingId}
+          iniciarPendingId={iniciarPendingId}
+          onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
+          onCompletarTarea={(t) => setCompletarTareaId(t.id)}
+          onReprogramarTarea={(t) => setReprDetalleTarea(t)}
+          onCancelarTarea={(t) => {
+            setDetalleVistaInicial('cancelar');
+            setDetalleTareaId(t.id);
+          }}
+          onEliminarTarea={(t) => {
+            setDetalleVistaInicial('eliminar');
+            setDetalleTareaId(t.id);
+          }}
+        />
+      ) : (
+        <Suspense fallback={<SkeletonSemanaGrilla />}>
           <MiSemanaGrilla
             diasSemana={diasSemana}
             hoyYmd={hoyYmd}
@@ -378,6 +328,7 @@ export function MiSemana() {
                 onConvertir={setNotaConvertir}
               />
             }
+            vista={vista}
             onMoverTarea={moverTareaADia}
             onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
             onCompletarTarea={(t) => setCompletarTareaId(t.id)}
@@ -391,43 +342,8 @@ export function MiSemana() {
               setDetalleTareaId(t.id);
             }}
           />
-        ) : (
-          <MiSemanaLista
-            diasSemana={diasSemana}
-            hoyYmd={hoyYmd}
-            diaMobileYmd={diaMobileYmd}
-            tareasPlan={tareasPlan}
-            eventos={eventos}
-            filtroRapido={filtroRapido}
-            busqueda={busqueda}
-            incidenciasSemana={incidenciasSemana}
-            ordenesPorTarea={ordenesPorTarea}
-            nombresPorId={nombresPorId}
-            areasPorId={areasPorId}
-            puedeGestionar={puedeGestionar}
-            onAbrirModalDia={(fecha) => setModal({ fecha })}
-            onAbrirDetalle={setDetalleTareaId}
-            onRegistrarIncidencia={(fecha) => {
-              setIncidenciaFecha(fecha);
-              setModalInc(true);
-            }}
-            onOtClick={setOtViendo}
-            completarPendingId={completarPendingId}
-            iniciarPendingId={iniciarPendingId}
-            onIniciarTarea={(t) => void iniciarDesdeDetalle(t)}
-            onCompletarTarea={(t) => setCompletarTareaId(t.id)}
-            onReprogramarTarea={(t) => setReprDetalleTarea(t)}
-            onCancelarTarea={(t) => {
-              setDetalleVistaInicial('cancelar');
-              setDetalleTareaId(t.id);
-            }}
-            onEliminarTarea={(t) => {
-              setDetalleVistaInicial('eliminar');
-              setDetalleTareaId(t.id);
-            }}
-          />
-        )}
-      </Suspense>
+        </Suspense>
+      )}
 
       <NotasDrawer
         open={notasDrawerOpen}
