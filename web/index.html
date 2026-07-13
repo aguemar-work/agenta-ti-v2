@@ -4,14 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <!-- ── Tema — anti-flash: aplica .dark ANTES del primer render ───────── -->
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem('mc-theme');
-        if (t === 'dark') document.documentElement.classList.add('dark');
-      } catch (e) {}
-    })();
-  </script>
+  <!-- Externo (no inline) a propósito: permite script-src sin 'unsafe-inline' en la CSP. -->
+  <script src="/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- ── Identidad ────────────────────────────────────────────────────── -->
@@ -54,8 +48,9 @@
     -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"
-    media="print" onload="this.media='all'" />
+  <!-- Swap de media print→all vía theme-init.js (no inline onload) para evitar 'unsafe-inline' en la CSP. -->
+  <link id="gfonts-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet" media="print" />
   <noscript>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   </noscript>

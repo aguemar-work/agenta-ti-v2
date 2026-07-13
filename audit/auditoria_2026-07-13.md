@@ -94,15 +94,18 @@ $ cat .gitignore   # ninguna regla cubre *.sql, *.rar ni backup_*
 
 ## Hallazgos — Alto
 
-### A1. CSP sigue con `script-src 'unsafe-inline'` en producción
+### A1. ✅ Resuelto 2026-07-13 — CSP con `script-src 'unsafe-inline'` en producción
 
-**Evidencia:** `web/vercel.json` línea 20:
-```
-"script-src 'self' 'unsafe-inline'; ..."
-```
-Mismo hallazgo que `AUDIT-018` (auditoría de junio), registrado como "diferido, requiere nonce/hash en build Vite". Sigue sin remediar 5+ semanas después. Reduce significativamente el valor de la CSP como mitigación de XSS (aunque no se encontraron sinks de XSS activos — ver A2 más abajo, es defensa en profundidad la que queda debilitada).
+**Evidencia (antes del fix):** `web/vercel.json` tenía `"script-src 'self' 'unsafe-inline'; ..."`. Mismo hallazgo que `AUDIT-018` (auditoría de junio), registrado entonces como "diferido, requiere nonce/hash en build Vite" — siguió sin remediar 5+ semanas.
 
-**Remediación:** generar nonce o hash por build en Vite y quitar `'unsafe-inline'` de `script-src`.
+**Causa raíz real (no nonce/hash — más simple):** `web/index.html` tenía exactamente dos piezas de script inline en todo el HTML servido: (1) un `<script>` de anti-flash de tema (aplica `.dark` antes del primer render), y (2) un atributo `onload="this.media='all'"` en el `<link>` de Google Fonts (truco `media="print"` para carga no bloqueante). Ninguna otra parte del HTML —React no emite handlers inline en el DOM— dependía de `'unsafe-inline'`.
+
+**Remediación:** en vez de generar nonces/hashes por build (complejidad de `'unsafe-hashes'` para el atributo `onload`, y de infraestructura para nonces por request en un sitio estático), se externalizaron ambos:
+- Nuevo `web/public/theme-init.js` (copiado tal cual al build por Vite, sin bundlear) con la misma lógica de anti-flash + swap de fuente, ahora usando `addEventListener('load', ...)` en vez del atributo `onload`.
+- `web/index.html`: `<script src="/theme-init.js"></script>` (script clásico externo, sigue siendo bloqueante como el inline original — misma garantía anti-flash) reemplaza al `<script>` inline; el `<link>` de fuentes pierde el `onload` y gana `id="gfonts-link"`.
+- `web/vercel.json`: `script-src 'self' 'unsafe-inline'` → `script-src 'self'`.
+
+Verificado: `npm run build` copia `theme-init.js` sin procesar a `dist/`; `vite preview` sirve el HTML sin script inline ni `onload` y `theme-init.js` responde 200; lint (3 errores preexistentes, sin relación) y test suite (207/207) sin regresiones.
 
 ### A2. Cobertura de tests real: 9.21% statements — las capas de lógica de negocio están casi sin probar
 
@@ -185,7 +188,7 @@ No todo es negativo — lo siguiente se comprobó activamente y está en orden:
 | 1 | Habilitar RLS en `modulos` + revocar escritura de `anon`/`authenticated` | Crítico | Bajo | ✅ Resuelto 2026-07-13 (`060_fix_modulos_rls.sql`) |
 | 2 | Eliminar/re-scopear políticas legacy `usuario_select_self_or_jefe` y `usuario_update_self_or_jefe` | Crítico | Medio | ✅ Resuelto 2026-07-13 (`061_fix_usuario_jefe_scope.sql`) |
 | 3 | Sacar los 3 dumps SQL del repo + agregar reglas a `.gitignore` | Crítico | Bajo | ✅ `.gitignore` resuelto — pendiente decidir si mover/borrar los archivos localmente |
-| 4 | Quitar `'unsafe-inline'` de la CSP (nonce/hash en build) | Alto | Medio | Pendiente |
+| 4 | Quitar `'unsafe-inline'` de la CSP (nonce/hash en build) | Alto | Medio | ✅ Resuelto 2026-07-13 (externalización, no nonce/hash) |
 | 5 | Tests de integración sobre `api/` y `hooks/` | Alto | Alto (backlog continuo) | Pendiente |
 | 6 | `git rm -r --cached web/coverage` + `.gitignore` | Alto | Bajo | ✅ Resuelto 2026-07-13 (falta commitear) |
 | 7 | Borrar migración `040` duplicada (confirmar cuál es la vigente) | Medio | Bajo | ✅ Resuelto 2026-07-13 |
