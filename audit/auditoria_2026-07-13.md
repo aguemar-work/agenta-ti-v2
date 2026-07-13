@@ -125,7 +125,12 @@ Por capa:
 
 **Remediación:** priorizar tests de integración sobre `api/*.ts` y los hooks `useXxxPage` (con MSW, que ya está en el proyecto) antes de seguir sumando cobertura incremental en `lib/`. Considerar fijar un umbral mínimo en CI para `api/` y `hooks/` específicamente (ver también AUDIT-043 diferido).
 
-**🔄 En progreso (backlog abierto, no cerrado) — avance 2026-07-13:** se agregó `src/api/__tests__/semana.api.test.ts` (23 tests) cubriendo `api/semana.ts` — el módulo de datos de Mi Semana, índice de la app — incluyendo las reglas de negocio de mayor riesgo silencioso: validación de justificación ≥10 caracteres al cancelar/eliminar/reprogramar, scoping personal-vs-organización de eventos, resolución de responsable (`resolveAsignadoA`), notificación realtime a jefes al completar tarea, y orden por prioridad. Resultado: `semana.ts` 0% → 74.5% statements; capa `api/` completa 3.36% → 11.89%; global 9.21% → 11.87%. Sigue habiendo ~18 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
+**🔄 En progreso (backlog abierto, no cerrado) — avance 2026-07-13:** se agregaron 3 archivos de test nuevos en `src/api/__tests__/`:
+- `semana.api.test.ts` (23 tests) — `api/semana.ts`, datos de Mi Semana (índice de la app): validación de justificación ≥10 caracteres al cancelar/eliminar/reprogramar, scoping personal-vs-organización de eventos, resolución de responsable (`resolveAsignadoA`), notificación realtime a jefes al completar tarea, orden por prioridad.
+- `workspace.api.test.ts` (15 tests) — `api/workspace.ts`, resolución de organización/workspace accesible (V5 multi-tenant): fallback membresía→dueño de plataforma→`[]` en `getWorkspacesAccesiblesDeOrg`, filtrado defensivo de workspaces de otra organización o inactivos, y las dos formas en que PostgREST puede embeber el workspace relacionado (`workspace` vs objeto anidado en `workspace_id`).
+- `invitacion.api.test.ts` (10 tests) — `api/invitacion.ts`, flujo de invitaciones: normalización de email antes de invocar la edge function `invite-user`, y que una respuesta de RPC/edge function con forma inesperada lance error explícito en vez de devolver datos corruptos silenciosamente.
+
+Resultado acumulado de la sesión: capa `api/` completa 3.36% → 22.78% statements (`semana.ts` 74.5%, `workspace.ts` 84.4%, `invitacion.ts` 91.4%); global 9.21% → 14.72%. Sigue habiendo ~16 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
 
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
