@@ -132,7 +132,9 @@ Por capa:
 
 - `plataforma.api.test.ts` (21 tests) — `api/plataforma.ts`, operaciones de dueño de plataforma (alto privilegio: eliminar usuarios, desactivar organizaciones, activar módulos). Cubre el dedupe por sesión de `fetchEsPlataformaOwnerCached` vía TanStack Query (incluyendo que cambiar de usuario invalida el cache anterior, para no arrastrar el resultado de otro usuario), la normalización de `orgs` cuando la RPC la devuelve como string JSON en vez de array, y que respuestas corruptas de RPC/edge function fallen explícito.
 
-Resultado acumulado de la sesión: capa `api/` completa 3.36% → 31.53% statements (`semana.ts` 74.5%, `workspace.ts` 84.4%, `invitacion.ts` 91.4%, `plataforma.ts` 85.7%); global 9.21% → 17.02%. Sigue habiendo ~15 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
+- `ordenTrabajo.api.test.ts` (15 tests) — `api/ordenTrabajo.ts`, flujo de Órdenes de Trabajo (`borrador→pendiente→aprobada→completada`). Documenta y verifica una regla no obvia: `actualizarOrdenTrabajo` preserva el estado `pendiente` al editar, pero **cualquier otro estado actual (incluida `aprobada`) cae silenciosamente a `borrador`** — comportamiento actual capturado en un test explícito, no una suposición. También cubre el dedupe de "última OT por tarea" en `getOrdenesPorTareaIds`, el patrón RPC+re-fetch de `enviarOTAlJefe` (con propagación de error en cualquiera de los dos pasos), y el recorte/normalización de campos de texto antes de enviarlos a los RPCs.
+
+Resultado acumulado de la sesión: capa `api/` completa 3.36% → 36.47% statements (`semana.ts` 74.5%, `workspace.ts` 84.4%, `invitacion.ts` 91.4%, `plataforma.ts` 85.7%, `ordenTrabajo.ts` 54.9%); global 9.21% → 18.46%. Sigue habiendo ~14 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
 
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
