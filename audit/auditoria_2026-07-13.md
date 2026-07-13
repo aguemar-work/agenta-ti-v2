@@ -137,9 +137,13 @@ $ git ls-files web/coverage | wc -l
 
 ## Hallazgos — Medio
 
-### M1. Migración `040` duplicada sigue sin resolver
+### M1. ✅ Resuelto 2026-07-13 — Migración `040` duplicada
 
-`db/migrations/040_rebind_funciones_vivos.sql` y `040_reduccion_enums_y_limpieza.sql` coexisten. Ya estaba anotado como pendiente en el resumen de sesión de junio ("borrar del repo el duplicado `040_rebind_funciones_vivos.sql`") — sigue presente 5+ semanas después. Riesgo de confusión sobre cuál es la migración vigente al aplicar en un entorno nuevo.
+`db/migrations/040_rebind_funciones_vivos.sql` y `040_reduccion_enums_y_limpieza.sql` coexistían. Ya estaba anotado como pendiente en el resumen de sesión de junio ("borrar del repo el duplicado `040_rebind_funciones_vivos.sql`") — siguió presente 5+ semanas.
+
+**Verificación antes de borrar:** `040_rebind_funciones_vivos.sql` empieza con "Fragmento de la 040 — NO ejecutar solo" y su contenido (7 RPCs) está embebido palabra por palabra en el paso §5 de `040_reduccion_enums_y_limpieza.sql`, que es la migración real (`BEGIN...COMMIT` autocontenido, incluye guard, enum surgery, rebind de RPCs, índices y vista). El fragmento era material de trabajo, no una migración aplicable por sí sola.
+
+**Remediación:** archivo eliminado; se actualizó el único comentario de rollback que lo referenciaba (`046_workspace_id_rpcs_catalogos`) para apuntar a `040_reduccion_enums_y_limpieza.sql §5` en su lugar.
 
 ### M2. `db.rar` trackeado en el historial de git
 
@@ -182,7 +186,7 @@ No todo es negativo — lo siguiente se comprobó activamente y está en orden:
 | 4 | Quitar `'unsafe-inline'` de la CSP (nonce/hash en build) | Alto | Medio | Pendiente |
 | 5 | Tests de integración sobre `api/` y `hooks/` | Alto | Alto (backlog continuo) | Pendiente |
 | 6 | `git rm -r --cached web/coverage` + `.gitignore` | Alto | Bajo | ✅ Resuelto 2026-07-13 (falta commitear) |
-| 7 | Borrar migración `040` duplicada (confirmar cuál es la vigente) | Medio | Bajo | Pendiente |
+| 7 | Borrar migración `040` duplicada (confirmar cuál es la vigente) | Medio | Bajo | ✅ Resuelto 2026-07-13 |
 | 8 | Retirar `db.rar` del working tree | Medio | Bajo | Pendiente |
 | 9 | Fijar fecha de revisión para deuda diferida (`AUDIT-020/021/035/043`) con Legal/DevOps | Medio | Bajo (es proceso, no código) | Pendiente |
 

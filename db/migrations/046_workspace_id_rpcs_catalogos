@@ -942,7 +942,7 @@ COMMIT;
 -- ROLLBACK — solo staging
 -- =============================================================================
 -- Recrear los cuerpos previos (sin workspace_id ni catálogos) desde:
---   040_rebind_funciones_vivos.sql (crear_tarea_planificada, crear_incidencia,
+--   040_reduccion_enums_y_limpieza.sql §5 (crear_tarea_planificada, crear_incidencia,
 --     actualizar_tarea, convertir_nota, cambiar_estado, completar_resumen, completar_ot)
 --   039 (reprogramar_tarea_con_log)
 --   034 (eliminar_tarea_con_motivo)
