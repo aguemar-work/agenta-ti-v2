@@ -107,7 +107,7 @@ $ cat .gitignore   # ninguna regla cubre *.sql, *.rar ni backup_*
 
 Verificado: `npm run build` copia `theme-init.js` sin procesar a `dist/`; `vite preview` sirve el HTML sin script inline ni `onload` y `theme-init.js` responde 200; lint (3 errores preexistentes, sin relación) y test suite (207/207) sin regresiones.
 
-### A2. Cobertura de tests real: 9.21% statements — las capas de lógica de negocio están casi sin probar
+### A2. ✅ Resuelto 2026-07-13 — Cobertura de tests real: 9.21% statements — las capas de lógica de negocio están casi sin probar
 
 **Evidencia (ejecución real de `npm run test:coverage`):**
 ```
@@ -170,7 +170,17 @@ Resultado tras ese lote: `hooks/` 34.1% → 45.77% statements; global cruza el 5
 - `useObjetivosPage`: `puedeEliminar` (jefe o creador) y `puedeCompletar` (jefe siempre; el responsable solo al 100% de avance) — las reglas de permisos del módulo, probadas con las 4 combinaciones relevantes.
 - `usePlanificacionPage`: `cuenta`/`totalDiaEquipo`/`conteoEstadosDia`/`resumenAlertas` son agregaciones puras sobre `tarea_activa` — el lugar donde un error de categorización "atrasada" pasaría desapercibido, mostrando solo un número equivocado en el resumen ejecutivo del jefe.
 
-Resultado acumulado: `hooks/` 45.77% → 60.13% statements; **global cruza el 60%: 51.69% → 60.2%**. Quedan `useHoyColumnas` (hook), `useMiSemana`, `useMiSemanaPage`, `useOrdenesTrabajoPage`, `useOrdenesTrabajoQueries` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
+Resultado tras ese lote: `hooks/` 45.77% → 60.13% statements; global cruza el 60%: 51.69% → 60.2%.
+
+**Sexto y último lote — cierra `hooks/` por completo:** `useHoyColumnas` (hook), `useMiSemana`, `useOrdenesTrabajoQueries` (gates simples), y los dos orquestadores más grandes del proyecto, `useMiSemanaPage` y `useOrdenesTrabajoPage`. Para estos dos últimos, en vez de ejercitar los ~8 sub-hooks que componen cada uno (ya tienen su propia suite dedicada de rondas anteriores), se mockeó cada sub-hook directamente y se cubrió solo la lógica propia del orquestador:
+- `useMiSemanaPage`: `conteos`/`resumenDia` (agregaciones sobre `tareasPlan`) y los 4 guards de `generarOtDesdeTarea` (tarea imprevista o ya completada/cancelada no genera OT; si ya existe una OT vinculada, navega a verla en vez de duplicar; caso feliz crea y navega).
+- `useOrdenesTrabajoPage`: `ordenesFiltradas` (los 6 modos de filtro, incluida la regla "urgente" que excluye completada/cancelada/rechazada) y `resumenOT`/`pendientesCount`.
+
+**✅ Capa `hooks/` completa — las 34 unidades de test ahora cubren los 34 archivos de `hooks/*.ts`, igual que `api/` quedó completo antes.**
+
+**Resultado final de A2:** `api/` 3.36% → 70.48% statements; `hooks/` 1.99% → 71.05% statements; **global 9.21% → 66.33%** (`branches` 10.54%→57.13%, `functions` 8.21%→66.42%, `lines` 9.52%→70.35%). 111 archivos de test nuevos, ~450 tests nuevos, sin una sola regresión en ninguna de las ~25 rondas de verificación (build + lint + test suite completa) a lo largo de la sesión. `lib/` (46.97%) queda fuera del alcance original de A2 y como posible trabajo futuro, igual que subir del ~70% actual de `api/`/`hooks/` hacia una cobertura más exhaustiva por archivo — pero el hallazgo original (0% de facto en las capas de lógica de negocio) queda resuelto.
+
+**Efecto colateral positivo de este trabajo:** se encontraron y documentaron 2 bugs reales de producción que no estaban en ningún radar (`useOTTiposTrabajo.ts` — actualización optimista que escribe en la cache key equivocada; `useRealtimeNotificaciones.ts` — reconexión de más por un parámetro por defecto no memoizado). Ninguno se corrigió (fuera de alcance de "agregar tests"), pero ambos quedan documentados con evidencia reproducible para que el equipo los priorice.
 
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
@@ -236,7 +246,7 @@ No todo es negativo — lo siguiente se comprobó activamente y está en orden:
 | 2 | Eliminar/re-scopear políticas legacy `usuario_select_self_or_jefe` y `usuario_update_self_or_jefe` | Crítico | Medio | ✅ Resuelto 2026-07-13 (`061_fix_usuario_jefe_scope.sql`) |
 | 3 | Sacar los 3 dumps SQL del repo + agregar reglas a `.gitignore` | Crítico | Bajo | ✅ `.gitignore` resuelto — pendiente decidir si mover/borrar los archivos localmente |
 | 4 | Quitar `'unsafe-inline'` de la CSP (nonce/hash en build) | Alto | Medio | ✅ Resuelto 2026-07-13 (externalización, no nonce/hash) |
-| 5 | Tests de integración sobre `api/` y `hooks/` | Alto | Alto (backlog continuo) | Pendiente |
+| 5 | Tests de integración sobre `api/` y `hooks/` | Alto | Alto (backlog continuo) | ✅ Resuelto 2026-07-13 (`api/` 70.48%, `hooks/` 71.05%, global 66.33% — ambas capas al 100% de archivos cubiertos) |
 | 6 | `git rm -r --cached web/coverage` + `.gitignore` | Alto | Bajo | ✅ Resuelto 2026-07-13 (falta commitear) |
 | 7 | Borrar migración `040` duplicada (confirmar cuál es la vigente) | Medio | Bajo | ✅ Resuelto 2026-07-13 |
 | 8 | Retirar `db.rar` del working tree | Medio | Bajo | ✅ Resuelto 2026-07-13 (queda en historial, ver M2) |
