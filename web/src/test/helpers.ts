@@ -3,8 +3,25 @@
  * Factories y utilidades compartidas entre todos los archivos de test.
  */
 
+import { createElement, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Tarea, Usuario } from '@/types';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+
+/**
+ * Wrapper de `renderHook` para hooks basados en TanStack Query.
+ * Usa React.createElement (no JSX) — el archivo es `.ts`, no `.tsx`, y el CI
+ * (vite.config.ts, filesystem case-sensitive en ubuntu-latest) solo incluye
+ * `*.test.ts`, no `.tsx`.
+ *
+ * Uso: `renderHook(() => useAlgo(), { wrapper: wrapWithQueryClient() })`
+ */
+export function wrapWithQueryClient() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: qc }, children);
+  };
+}
 
 /** Sincroniza rolActivo del workspaceStore para tests (V5). */
 export function setRolActivoTest(rol: 'jefe' | 'miembro' | null): void {
