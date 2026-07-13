@@ -162,7 +162,15 @@ Resultado tras ese lote: `hooks/` 18.45% → 34.1% statements; global 36.73% →
 
 **Cuarto lote (5 hooks `Page` de catálogos + selector de workspace):** `useObjetivosMetricas` (hook, wrappers de KPIs), `useAreasPage`, `useClientesPage`, `useProyectosPage`, `useWorkspaceSelectorPage`. Los tres primeros comparten patrón (form + hasChanges + crear/actualizar/desactivar); se verificó explícitamente que `submitForm` elige crear vs. actualizar según `editandoId`, y que un nombre vacío/solo-espacios no dispara ninguna llamada. `useWorkspaceSelectorPage` tiene un atajo de rendimiento (org única + workspaces ya en el store → no reconsulta el backend) verificado con un test dedicado.
 
-Resultado acumulado: `hooks/` 34.1% → 45.77% statements; **global cruza el 50%: 45.3% → 51.69%**. Sigue habiendo ~10 archivos de `hooks/` en 0% (los hooks `Page` más grandes: objetivos, planificación, órdenes de trabajo, panel, métricas, Mi Semana) — este hallazgo permanece abierto como backlog, no se marca resuelto.
+Resultado tras ese lote: `hooks/` 34.1% → 45.77% statements; global cruza el 50%: 45.3% → 51.69%.
+
+**Quinto lote (5 hooks `Page` grandes — panel, métricas, objetivos, planificación):** `usePanelPrincipalPage`, `usePanelUsuariosPage`, `useMetricasPage`, `useObjetivosPage`, `usePlanificacionPage`. Foco en las reglas de permisos y agregaciones derivadas, no en cada handler:
+- `usePanelPrincipalPage`/`usePanelUsuariosPage`: `mostrarAccionesOwner`/`esOwner` gatean las acciones de dueño de plataforma (abrir modal de módulos/desactivar/eliminar) verificado llamando la función directamente, no solo confirmando que el botón esté oculto.
+- `useMetricasPage`: un miembro (no jefe) **siempre** filtra sus propias métricas sin importar qué traiga el query string (`filtros.m`); solo el jefe puede elegir "todos" o un miembro específico.
+- `useObjetivosPage`: `puedeEliminar` (jefe o creador) y `puedeCompletar` (jefe siempre; el responsable solo al 100% de avance) — las reglas de permisos del módulo, probadas con las 4 combinaciones relevantes.
+- `usePlanificacionPage`: `cuenta`/`totalDiaEquipo`/`conteoEstadosDia`/`resumenAlertas` son agregaciones puras sobre `tarea_activa` — el lugar donde un error de categorización "atrasada" pasaría desapercibido, mostrando solo un número equivocado en el resumen ejecutivo del jefe.
+
+Resultado acumulado: `hooks/` 45.77% → 60.13% statements; **global cruza el 60%: 51.69% → 60.2%**. Quedan `useHoyColumnas` (hook), `useMiSemana`, `useMiSemanaPage`, `useOrdenesTrabajoPage`, `useOrdenesTrabajoQueries` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
 
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
