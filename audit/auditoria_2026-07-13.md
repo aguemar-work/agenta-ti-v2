@@ -130,7 +130,9 @@ Por capa:
 - `workspace.api.test.ts` (15 tests) — `api/workspace.ts`, resolución de organización/workspace accesible (V5 multi-tenant): fallback membresía→dueño de plataforma→`[]` en `getWorkspacesAccesiblesDeOrg`, filtrado defensivo de workspaces de otra organización o inactivos, y las dos formas en que PostgREST puede embeber el workspace relacionado (`workspace` vs objeto anidado en `workspace_id`).
 - `invitacion.api.test.ts` (10 tests) — `api/invitacion.ts`, flujo de invitaciones: normalización de email antes de invocar la edge function `invite-user`, y que una respuesta de RPC/edge function con forma inesperada lance error explícito en vez de devolver datos corruptos silenciosamente.
 
-Resultado acumulado de la sesión: capa `api/` completa 3.36% → 22.78% statements (`semana.ts` 74.5%, `workspace.ts` 84.4%, `invitacion.ts` 91.4%); global 9.21% → 14.72%. Sigue habiendo ~16 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
+- `plataforma.api.test.ts` (21 tests) — `api/plataforma.ts`, operaciones de dueño de plataforma (alto privilegio: eliminar usuarios, desactivar organizaciones, activar módulos). Cubre el dedupe por sesión de `fetchEsPlataformaOwnerCached` vía TanStack Query (incluyendo que cambiar de usuario invalida el cache anterior, para no arrastrar el resultado de otro usuario), la normalización de `orgs` cuando la RPC la devuelve como string JSON en vez de array, y que respuestas corruptas de RPC/edge function fallen explícito.
+
+Resultado acumulado de la sesión: capa `api/` completa 3.36% → 31.53% statements (`semana.ts` 74.5%, `workspace.ts` 84.4%, `invitacion.ts` 91.4%, `plataforma.ts` 85.7%); global 9.21% → 17.02%. Sigue habiendo ~15 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
 
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
