@@ -125,6 +125,8 @@ Por capa:
 
 **Remediación:** priorizar tests de integración sobre `api/*.ts` y los hooks `useXxxPage` (con MSW, que ya está en el proyecto) antes de seguir sumando cobertura incremental en `lib/`. Considerar fijar un umbral mínimo en CI para `api/` y `hooks/` específicamente (ver también AUDIT-043 diferido).
 
+**🔄 En progreso (backlog abierto, no cerrado) — avance 2026-07-13:** se agregó `src/api/__tests__/semana.api.test.ts` (23 tests) cubriendo `api/semana.ts` — el módulo de datos de Mi Semana, índice de la app — incluyendo las reglas de negocio de mayor riesgo silencioso: validación de justificación ≥10 caracteres al cancelar/eliminar/reprogramar, scoping personal-vs-organización de eventos, resolución de responsable (`resolveAsignadoA`), notificación realtime a jefes al completar tarea, y orden por prioridad. Resultado: `semana.ts` 0% → 74.5% statements; capa `api/` completa 3.36% → 11.89%; global 9.21% → 11.87%. Sigue habiendo ~18 archivos en `api/` y ~35 en `hooks/` en 0% — este hallazgo permanece abierto como backlog, no se marca resuelto.
+
 ### A3. ✅ Resuelto 2026-07-13 — Reporte de cobertura trackeado en git
 
 **Evidencia:**
