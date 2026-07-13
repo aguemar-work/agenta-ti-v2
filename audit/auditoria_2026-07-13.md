@@ -145,9 +145,11 @@ $ git ls-files web/coverage | wc -l
 
 **Remediación:** archivo eliminado; se actualizó el único comentario de rollback que lo referenciaba (`046_workspace_id_rpcs_catalogos`) para apuntar a `040_reduccion_enums_y_limpieza.sql §5` en su lugar.
 
-### M2. `db.rar` trackeado en el historial de git
+### M2. ✅ Resuelto 2026-07-13 (parcial) — `db.rar` trackeado en el historial de git
 
-`db.rar` (114 KB, commit `cf2dc0e`) contiene únicamente los `.sql` de `db/migrations/002`–`009` en formato comprimido — verificado con `7z l db.rar`, sin datos, solo esquema. No expone PII, pero duplica contenido que ya vive sin comprimir en `db/migrations/`, sin aportar valor y quedando permanentemente en el historial.
+`db.rar` (114 KB, commit `cf2dc0e`) contenía únicamente los `.sql` de `db/migrations/002`–`009` en formato comprimido — verificado con `7z l db.rar`, sin datos, solo esquema. No exponía PII, pero duplicaba contenido que ya vive sin comprimir en `db/migrations/`, sin aportar valor.
+
+**Remediación:** `git rm db.rar` — ya no se rastrea hacia adelante. **Sigue en el historial** (commit `cf2dc0e` y siguientes) porque reescribir el historial (`git filter-repo`/BFG) es una operación destructiva que reescribe hashes de commit y afecta a cualquier clon existente del repo; no se ejecuta sin que el equipo lo decida explícitamente. Impacto de dejarlo: bajo — el contenido es solo esquema, no PII.
 
 ### M3. Deuda diferida de auditorías previas, sin fecha de revisión
 
@@ -187,7 +189,7 @@ No todo es negativo — lo siguiente se comprobó activamente y está en orden:
 | 5 | Tests de integración sobre `api/` y `hooks/` | Alto | Alto (backlog continuo) | Pendiente |
 | 6 | `git rm -r --cached web/coverage` + `.gitignore` | Alto | Bajo | ✅ Resuelto 2026-07-13 (falta commitear) |
 | 7 | Borrar migración `040` duplicada (confirmar cuál es la vigente) | Medio | Bajo | ✅ Resuelto 2026-07-13 |
-| 8 | Retirar `db.rar` del working tree | Medio | Bajo | Pendiente |
+| 8 | Retirar `db.rar` del working tree | Medio | Bajo | ✅ Resuelto 2026-07-13 (queda en historial, ver M2) |
 | 9 | Fijar fecha de revisión para deuda diferida (`AUDIT-020/021/035/043`) con Legal/DevOps | Medio | Bajo (es proceso, no código) | Pendiente |
 
 **Los ítems 1, 2 y 6 quedaron resueltos y verificados en vivo el 2026-07-13. El ítem 3 está mitigado (ya no hay riesgo de commit accidental) pero requiere una decisión del equipo sobre qué hacer con los archivos en sí — ver detalle en C3.**
