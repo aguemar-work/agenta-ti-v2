@@ -1,16 +1,11 @@
 /**
- * Cierre de OT — validación de receptor (migración 028).
+ * Cierre de OT — validación de receptor.
  *
- * Tras ejecutar `db/migrations/028_check_ot_completada_receptor.sql` en InsForge,
- * activar en `.env`:
- *   VITE_OT_MIGRATION_028=true
- *
- * Con el flag en false (default), el parseo Zod de OT no exige receptor en completadas
- * (compatibilidad hasta que la migración esté en todos los entornos).
+ * La migración 028 (CHECK ck_ot_completada_tiene_receptor) está aplicada en
+ * todos los entornos, por lo que la validación es incondicional. El flag
+ * VITE_OT_MIGRATION_028 que la condicionaba se eliminó (auditoría 2026-07-17,
+ * A2: se apagaba en silencio si el .env no definía la variable).
  */
-
-export const OT_MIGRATION_028_APLICADA =
-  import.meta.env.VITE_OT_MIGRATION_028 === 'true';
 
 /** Mínimo para habilitar el botón "Confirmar cierre" (UI + RPC migr. 036). */
 export function puedeCompletarOTReceptor(
@@ -21,7 +16,7 @@ export function puedeCompletarOTReceptor(
   return receptorNombre.trim().length > 0 && /^[0-9]{8}$/.test(dni);
 }
 
-/** Regla de integridad al parsear filas desde la BD (solo si migración 028 activa en app). */
+/** Regla de integridad al parsear filas desde la BD (espejo del CHECK de 028). */
 export function ordenTrabajoCompletadaTieneReceptor(ot: {
   estado: string;
   receptor_nombre: string | null;

@@ -160,7 +160,7 @@
 .mc-org-avatar--hue-0 { background: var(--mc-color-accent-soft); color: var(--mc-color-accent); }
 .mc-org-avatar--hue-1 { background: var(--mc-color-danger-soft); color: var(--mc-color-danger); }
 .mc-org-avatar--hue-2 { background: var(--mc-color-info-soft); color: var(--mc-color-info); }
-.mc-org-avatar--hue-3 { background: var(--mc-color-warning-soft); color: var(--mc-color-warning); }
+.mc-org-avatar--hue-3 { background: var(--mc-color-warning-soft); color: var(--mc-color-warning-text); }
 .mc-org-avatar--hue-4 { background: var(--mc-color-success-soft); color: var(--mc-color-success); }
 .mc-org-avatar--hue-5 {
   background: color-mix(in srgb, var(--mc-color-accent) 8%, var(--mc-color-info) 10%, transparent);

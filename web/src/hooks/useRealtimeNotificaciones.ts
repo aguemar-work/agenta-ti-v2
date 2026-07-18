@@ -67,7 +67,12 @@ function invalidatePlanificacionYsla(qc: ReturnType<typeof useQueryClient>) {
   ]);
 }
 
-export function useRealtimeNotificaciones(prefs: NotificationPrefs = getDefaultNotificationPrefs()) {
+// Constante module-level: un default creado por render entraba a las deps del
+// efecto de conexión y forzaba teardown/reconnect del websocket en cada render
+// de AppShell hasta cargar las prefs reales (auditoría 2026-07-17, P8).
+const DEFAULT_PREFS: NotificationPrefs = getDefaultNotificationPrefs();
+
+export function useRealtimeNotificaciones(prefs: NotificationPrefs = DEFAULT_PREFS) {
   const usuario = useAuthStore((s) => s.usuario);
   const esJefe  = useWorkspaceStore((s) => s.esJefe());
   const qc      = useQueryClient();

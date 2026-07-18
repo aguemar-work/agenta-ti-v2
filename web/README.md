@@ -124,7 +124,6 @@ Copiar `web/.env.example` → `web/.env` (no versionar credenciales):
 | `VITE_INSFORGE_URL` | URL del proyecto InsForge (**obligatoria**) |
 | `VITE_INSFORGE_ANON_KEY` | Clave anónima (**obligatoria**) |
 | `VITE_ALLOWED_EMAIL_DOMAINS` | **Obligatorio en producción:** whitelist de dominios al alta |
-| `VITE_OT_MIGRATION_028` | `true` tras ejecutar migración 028 (validación Zod OT completada) |
 | `VITE_SENTRY_DSN` | **Producción:** DSN del proyecto Sentry (errores + performance) |
 | `VITE_SENTRY_ENVIRONMENT` | Opcional: override del entorno Sentry (default `production` en build prod) |
 | `VITE_ANALYTICS_ENDPOINT` | Opcional: POST para eventos de producto |

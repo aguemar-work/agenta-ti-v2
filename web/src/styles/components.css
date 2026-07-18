@@ -78,7 +78,7 @@
   
     .mc-badge-warning {
       background: color-mix(in srgb, var(--mc-color-warning) 18%, transparent);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
   
     .mc-badge-danger {
@@ -104,7 +104,7 @@
 
     .mc-badge-prioridad-media {
       background: color-mix(in srgb, var(--mc-color-warning) 18%, transparent);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
 
     .mc-badge-prioridad-baja {
@@ -194,7 +194,7 @@
     }
     .mc-meta-pill--prioridad-media {
       background: color-mix(in srgb, var(--mc-color-warning) 14%, transparent);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
       border-color: color-mix(in srgb, var(--mc-color-warning) 30%, transparent);
     }
     .mc-meta-pill--estado-ejecucion {
@@ -1456,7 +1456,7 @@
       gap: var(--mc-space-2) var(--mc-space-3);
     }
     .mc-misemana-stats__value--warning {
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-misemana-stats__value--danger {
       color: var(--mc-color-danger);
@@ -2263,7 +2263,7 @@
       color: var(--mc-state-atrasada-meta);
     }
     .mc-metricas-comparativa__num--warn {
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-metricas-comparativa__cumpl {
       padding: 8px;
@@ -2390,7 +2390,7 @@
       height: 44px;
       border-radius: 50%;
       background: var(--mc-color-warning-soft);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2532,7 +2532,7 @@
       color: var(--mc-color-info);
     }
     .mc-semana-task-card__aviso--warning {
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-semana-task-card__aviso-link {
       padding: 0;
@@ -3183,7 +3183,7 @@
     }
     .mc-meta-pill--evento-entrega {
       background: color-mix(in srgb, var(--mc-color-warning) 14%, transparent);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
       border-color: color-mix(in srgb, var(--mc-color-warning) 28%, transparent);
     }
     .mc-meta-pill--evento-personal {
@@ -4544,7 +4544,7 @@
       gap: var(--mc-space-1);
     }
     .mc-misemana-resumen__item--alert {
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-misemana-resumen__close {
       flex-shrink: 0;
@@ -4625,7 +4625,7 @@
     }
     .mc-chip--vence-hoy {
       background: var(--mc-color-warning-soft);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-chip--ot {
       background: var(--mc-color-accent-soft);
@@ -4645,7 +4645,7 @@
     }
     .mc-chip--prioridad-media {
       background: color-mix(in srgb, var(--mc-color-warning) 14%, transparent);
-      color: var(--mc-color-warning);
+      color: var(--mc-color-warning-text);
     }
     .mc-chip--prioridad-baja {
       background: color-mix(in srgb, var(--mc-color-neutral) 12%, transparent);

@@ -19,6 +19,7 @@ import {
 import { createPortal } from 'react-dom';
 
 import { trackModalClose, trackModalOpen } from '@/lib/analytics';
+import { FOCUSABLE, isTopDialog, popDialog, pushDialog, type DialogToken } from '@/lib/modalStack';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 /** 0 = base · 1 = sobre otro modal · 2 = confirmaciones críticas encima de todo */
@@ -63,11 +64,6 @@ const STACK_OVERLAY_CLASS: Record<ModalStackLevel, string> = {
   1: 'mc-modal-overlay--stack',
   2: 'mc-modal-overlay--top',
 };
-
-const FOCUSABLE =
-  'a[href], area[href], input:not([disabled]), select:not([disabled]), ' +
-  'textarea:not([disabled]), button:not([disabled]), iframe, object, embed, ' +
-  '[tabindex]:not([tabindex="-1"]), [contenteditable]';
 
 export function Modal({
   open,
@@ -164,18 +160,32 @@ export function Modal({
     };
   }, [open]);
 
+  // Registro en la pila global + foco inicial + restauración del foco al
+  // disparador al cerrar (WCAG 2.4.3; auditoría 2026-07-17, A3/M1).
+  const stackTokenRef = useRef<DialogToken | null>(null);
   useEffect(() => {
     if (!open) return;
+    stackTokenRef.current = pushDialog();
+    const previo = document.activeElement as HTMLElement | null;
+
     const el = dialogRef.current;
-    if (!el) return;
-    const first = el.querySelectorAll<HTMLElement>(FOCUSABLE)[0];
-    (first ?? el).focus();
+    const first = el?.querySelectorAll<HTMLElement>(FOCUSABLE)[0];
+    (first ?? el)?.focus();
+
+    return () => {
+      popDialog(stackTokenRef.current);
+      stackTokenRef.current = null;
+      if (previo && document.contains(previo)) previo.focus();
+    };
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onKey(e: globalThis.KeyboardEvent) {
       if (e.key !== 'Escape') return;
+      // Solo el diálogo superior de la pila responde a Escape (con stackLevel
+      // en uso, un Escape cerraba el modal base y el apilado a la vez).
+      if (!isTopDialog(stackTokenRef.current)) return;
       e.stopPropagation();
       if (confirmingClose) cancelDiscard();
       else tryClose();

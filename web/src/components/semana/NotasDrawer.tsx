@@ -1,5 +1,8 @@
+import { useRef } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import { etiquetaConvertidaEn } from '@/lib/notaBitacora';
 import type { NotaBitacora } from '@/types';
 
@@ -24,6 +27,9 @@ export function NotasDrawer({
   onGuardarNota,
   onConvertir,
 }: Props) {
+  const panelRef = useRef<HTMLElement>(null);
+  useDialogA11y(open, onClose, panelRef);
+
   if (!open) return null;
 
   const activas = notas.filter((n) => !n.convertida_en);
@@ -37,11 +43,13 @@ export function NotasDrawer({
         aria-hidden
       />
       <aside
+        ref={panelRef}
         id="mc-misemana-notas-drawer"
         className="mc-drawer-panel"
         role="dialog"
         aria-modal="true"
         aria-label="Notas del día"
+        tabIndex={-1}
       >
         <div className="mc-drawer-panel-header">
           <h2 className="mc-drawer-panel-title">Notas</h2>

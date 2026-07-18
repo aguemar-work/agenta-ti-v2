@@ -1,13 +1,15 @@
 /**
  * Edge function: invite-user (InsForge)
  *
- * Flujo (V5 / 057):
+ * Flujo (V5 / 057 + 063):
  *   1. Autentica al caller vía JWT.
- *   2. Resuelve o crea auth.users del invitado (API admin con API_KEY).
+ *   2. Pre-chequeo sgtd_puede_invitar_a_workspace() con el JWT del caller:
+ *      sin permiso NO se toca auth.users (evita cuentas huérfanas / squatting).
+ *   3. Resuelve o crea auth.users del invitado (API admin con API_KEY).
  *      InsForge NO expone inviteUserByEmail ni POST /api/auth/invite.
- *   3. Llama sgtd_invitar_a_workspace() con el JWT del caller (+ x-workspace-id)
- *      para que el gate (owner OR jefe-de-su-ws) se evalúe en la RPC.
- *   4. Si la cuenta es nueva, envía correo de reset (flujo código → /verify-reset-code).
+ *   4. Llama sgtd_invitar_a_workspace() con el JWT del caller (+ x-workspace-id)
+ *      para que el gate real (owner OR jefe-de-su-ws) se evalúe en la RPC.
+ *   5. Si la cuenta es nueva, envía correo de reset (flujo código → /verify-reset-code).
  *
  * Body (JSON):
  *   - email         string  requerido
@@ -22,11 +24,31 @@
 
 import { createClient } from 'npm:@insforge/sdk';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
+const CORS_BASE = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-workspace-id',
 };
+
+/**
+ * Origins permitidos vía env ALLOWED_ORIGINS (lista separada por comas, p. ej.
+ * "https://app.materen.com,https://materen.vercel.app"). Sin configurar se
+ * mantiene '*' por compatibilidad — configurar en prod (auditoría S6).
+ */
+function corsFor(req: Request): Record<string, string> {
+  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+  if (allowed.length === 0) {
+    return { ...CORS_BASE, 'Access-Control-Allow-Origin': '*' };
+  }
+  const origin = (req.headers.get('Origin') ?? '').replace(/\/$/, '');
+  return {
+    ...CORS_BASE,
+    'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
+    Vary: 'Origin',
+  };
+}
 
 type AuthUserRow = { id: string; email: string };
 
@@ -38,7 +60,10 @@ type InviteBody = {
 };
 
 export default async function (req: Request): Promise<Response> {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  const cors = corsFor(req);
+  const json = (body: unknown, status: number) => jsonWith(cors, body, status);
+
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
 
   try {
@@ -75,6 +100,21 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const nombre = body.nombre?.trim() || email.split('@')[0];
+
+    // ── 0. Gate ANTES de tocar auth.users (063): sin permiso, ninguna cuenta
+    //       se crea. El gate real sigue viviendo en sgtd_invitar_a_workspace.
+    const targetWs = body.workspace_id?.trim() || '';
+    const { data: puedeInvitar, error: gateErr } = await caller.database.rpc(
+      'sgtd_puede_invitar_a_workspace',
+      targetWs ? { p_workspace_id: targetWs } : {},
+    );
+    if (gateErr) {
+      const msg = gateErr.message ?? 'No se pudo verificar el permiso para invitar';
+      return json({ error: msg }, rpcHttpStatus(gateErr.code));
+    }
+    if (puedeInvitar !== true) {
+      return json({ error: 'No tienes permiso para invitar usuarios a este espacio.' }, 403);
+    }
 
     // ── 1. Resolver auth.users (GET admin) o crear (POST admin) ───────────────
     let authUserId: string;
@@ -219,9 +259,9 @@ function rpcHttpStatus(code: string | undefined): number {
   }
 }
 
-function json(body: unknown, status: number): Response {
+function jsonWith(cors: Record<string, string>, body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
   });
 }

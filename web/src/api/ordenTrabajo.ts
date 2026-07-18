@@ -3,6 +3,7 @@
  * Capa de acceso a datos para Órdenes de Trabajo.
  */
 
+import { fechaLocalYmd } from '@/lib/fecha';
 import { getInsforge } from '@/lib/insforge';
 import { parseOrdenTrabajo, parseTipoTrabajoOT } from '@/lib/schemas';
 import { TAREA_ACTIVA } from '@/lib/tareaTables';
@@ -150,23 +151,109 @@ const OT_SELECT = `
   objetivo(titulo)
 `;
 
-export async function getOrdenesTrabajoMiembro(usuarioId: Id): Promise<OrdenTrabajo[]> {
-  const { data, error } = await getInsforge().database
+/** Tamaño de página de la lista (auditoría 2026-07-17, P2: antes sin límite). */
+export const OT_PAGE_SIZE = 100;
+
+export const ESTADOS_OT_ACTIVOS: readonly EstadoOT[] = ['borrador', 'pendiente', 'aprobada'];
+
+/** Filtros de la lista, resueltos en servidor (antes se filtraba en cliente). */
+export type FiltroOTLista =
+  | 'todos'
+  | 'activas'
+  | 'completadas'
+  | 'urgentes'
+  | 'vencidas'
+  | EstadoOT;
+
+async function getOrdenesTrabajoPagina(
+  filtro: FiltroOTLista,
+  offset: number,
+  creadoPor?: Id,
+): Promise<OrdenTrabajo[]> {
+  const hoy = fechaLocalYmd(new Date());
+  let q = getInsforge().database
     .from('orden_trabajo')
-    .select(OT_SELECT)
-    .eq('creado_por', usuarioId)
-    .order('created_at', { ascending: false });
+    .select(OT_SELECT);
+
+  if (creadoPor) q = q.eq('creado_por', creadoPor);
+
+  // 'vencidas'/'urgentes' excluyen estados cerrados; con 6 estados totales,
+  // "no cerrado" ≡ ESTADOS_OT_ACTIVOS (mismo criterio que lib/otHelpers.otVencida).
+  if (filtro === 'activas')          q = q.in('estado', [...ESTADOS_OT_ACTIVOS]);
+  else if (filtro === 'completadas') q = q.eq('estado', 'completada');
+  else if (filtro === 'urgentes')    q = q.eq('prioridad', 'urgente').in('estado', [...ESTADOS_OT_ACTIVOS]);
+  else if (filtro === 'vencidas')    q = q.lt('fecha_estimada', hoy).in('estado', [...ESTADOS_OT_ACTIVOS]);
+  else if (filtro !== 'todos')       q = q.eq('estado', filtro);
+
+  const { data, error } = await q
+    .order('created_at', { ascending: false })
+    .range(offset, offset + OT_PAGE_SIZE - 1);
   if (error) throw error;
   return (data ?? []).map((r) => parseOrdenTrabajo(r as Record<string, unknown>)) as OrdenTrabajo[];
 }
 
-export async function getOrdenesTrabajoTodas(): Promise<OrdenTrabajo[]> {
+export async function getOrdenesTrabajoMiembro(
+  usuarioId: Id,
+  filtro: FiltroOTLista = 'todos',
+  offset = 0,
+): Promise<OrdenTrabajo[]> {
+  return getOrdenesTrabajoPagina(filtro, offset, usuarioId);
+}
+
+export async function getOrdenesTrabajoTodas(
+  filtro: FiltroOTLista = 'todos',
+  offset = 0,
+): Promise<OrdenTrabajo[]> {
+  return getOrdenesTrabajoPagina(filtro, offset);
+}
+
+/** OT puntual (deep-link abrirOtId: puede no estar en las páginas cargadas). */
+export async function getOrdenTrabajoPorId(id: Id): Promise<OrdenTrabajo | null> {
   const { data, error } = await getInsforge().database
     .from('orden_trabajo')
     .select(OT_SELECT)
-    .order('created_at', { ascending: false });
+    .eq('id', id)
+    .limit(1);
   if (error) throw error;
-  return (data ?? []).map((r) => parseOrdenTrabajo(r as Record<string, unknown>)) as OrdenTrabajo[];
+  const row = (data ?? [])[0];
+  return row ? (parseOrdenTrabajo(row as Record<string, unknown>) as OrdenTrabajo) : null;
+}
+
+export type ResumenOTs = {
+  activas:    number;
+  pendientes: number;
+  urgentes:   number;
+  vencidas:   number;
+};
+
+/**
+ * Contadores del resumen ejecutivo vía `count head:true` (exactos aunque la
+ * lista esté paginada; antes se contaba en cliente sobre la lista completa).
+ */
+export async function getResumenOTs(creadoPor?: Id): Promise<ResumenOTs> {
+  const hoy = fechaLocalYmd(new Date());
+  const base = () => {
+    let q = getInsforge().database
+      .from('orden_trabajo')
+      .select('id', { count: 'exact', head: true });
+    if (creadoPor) q = q.eq('creado_por', creadoPor);
+    return q;
+  };
+
+  const [activas = 0, pendientes = 0, urgentes = 0, vencidas = 0] = await Promise.all(
+    [
+      base().in('estado', [...ESTADOS_OT_ACTIVOS]),
+      base().eq('estado', 'pendiente'),
+      base().eq('prioridad', 'urgente').in('estado', [...ESTADOS_OT_ACTIVOS]),
+      base().lt('fecha_estimada', hoy).in('estado', [...ESTADOS_OT_ACTIVOS]),
+    ].map(async (consulta) => {
+      const { count, error } = await consulta;
+      if (error) throw error;
+      return count ?? 0;
+    }),
+  );
+
+  return { activas, pendientes, urgentes, vencidas };
 }
 
 /** Última OT en borrador del usuario (autoguardado C-03). */

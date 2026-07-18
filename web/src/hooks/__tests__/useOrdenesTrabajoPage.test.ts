@@ -2,10 +2,10 @@
  * src/hooks/__tests__/useOrdenesTrabajoPage.test.ts
  *
  * Orquestador de Órdenes de Trabajo. useOrdenesTrabajoQueries/useOTTiposTrabajo/
- * useOTAcciones ya tienen su propia suite — se mockean aquí. Foco en la lógica
- * propia: el filtrado por estado (ordenesFiltradas) y el resumen ejecutivo
- * (resumenOT), incluida la regla de "urgente" (excluye completada/cancelada/
- * rechazada) y "vencida" (delegada a otVencida).
+ * useOTAcciones ya tienen su propia suite — se mockean aquí. Desde 2026-07-18
+ * el filtrado y el resumen se resuelven en servidor (useOrdenesTrabajoQueries);
+ * aquí se verifica que el filtro de la URL viaje a la capa de queries y que el
+ * resumen del servidor se exponga tal cual.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -18,15 +18,21 @@ import { useAuthStore } from '@/store/authStore';
 import { setRolActivoTest } from '@/test/helpers';
 
 let ordenesMock: unknown[] = [];
+let resumenMock = { activas: 0, pendientes: 0, urgentes: 0, vencidas: 0 };
+let ultimoInputQueries: Record<string, unknown> | null = null;
 
 vi.mock('@/hooks/useOrdenesTrabajoQueries', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useOrdenesTrabajoQueries')>();
   return {
     ...actual,
-    useOrdenesTrabajoQueries: () => ({
-      ordenes: ordenesMock, isLoading: false, isError: false,
-      tiposTrabajo: [], tareasVinculables: [], borradorServidor: undefined, borradorCargando: false,
-    }),
+    useOrdenesTrabajoQueries: (input: Record<string, unknown>) => {
+      ultimoInputQueries = input;
+      return {
+        ordenes: ordenesMock, isLoading: false, isError: false,
+        resumen: resumenMock, hayMas: false, cargarMas: vi.fn(), cargandoMas: false,
+        tiposTrabajo: [], tareasVinculables: [], borradorServidor: undefined, borradorCargando: false,
+      };
+    },
   };
 });
 
@@ -68,61 +74,48 @@ function ot(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   ordenesMock = [];
+  resumenMock = { activas: 0, pendientes: 0, urgentes: 0, vencidas: 0 };
+  ultimoInputQueries = null;
   useAuthStore.setState({ usuario: { id: 'u1', nombre: 'Ana', email: 'a@x.com', rol: 'jefe', activo: true, created_at: '', updated_at: '' } });
   setRolActivoTest('jefe');
 });
 
-describe('ordenesFiltradas', () => {
-  it('"activas" incluye borrador/pendiente/aprobada, excluye el resto', () => {
-    ordenesMock = [
-      ot({ id: '1', estado: 'borrador' }), ot({ id: '2', estado: 'pendiente' }),
-      ot({ id: '3', estado: 'aprobada' }), ot({ id: '4', estado: 'completada' }),
-    ];
-    const { result } = renderHook(() => useOrdenesTrabajoPage(), {
-      wrapper: ({ children }) => wrapper({ children }),
-    });
+describe('filtro en servidor', () => {
+  it('el filtro por defecto es "todos" y viaja a useOrdenesTrabajoQueries', () => {
+    renderHook(() => useOrdenesTrabajoPage(), { wrapper });
+
+    expect(ultimoInputQueries?.filtro).toBe('todos');
+  });
+
+  it('setFiltroEstado actualiza la URL y re-consulta con el filtro nuevo', () => {
+    const { result } = renderHook(() => useOrdenesTrabajoPage(), { wrapper });
 
     act(() => { result.current.setFiltroEstado('activas'); });
 
-    expect(result.current.ordenes.map((o) => o.id)).toEqual(['1', '2', '3']);
+    expect(result.current.filtroEstado).toBe('activas');
+    expect(ultimoInputQueries?.filtro).toBe('activas');
   });
 
-  it('"urgentes" excluye urgentes ya completadas/canceladas/rechazadas', () => {
-    ordenesMock = [
-      ot({ id: '1', prioridad: 'urgente', estado: 'pendiente' }),
-      ot({ id: '2', prioridad: 'urgente', estado: 'completada' }),
-      ot({ id: '3', prioridad: 'normal', estado: 'pendiente' }),
-    ];
-    const { result } = renderHook(() => useOrdenesTrabajoPage(), { wrapper });
-
-    act(() => { result.current.setFiltroEstado('urgentes'); });
-
-    expect(result.current.ordenes.map((o) => o.id)).toEqual(['1']);
-  });
-
-  it('filtro por estado exacto (p. ej. "rechazada")', () => {
+  it('la lista expuesta es la del servidor, sin re-filtrar en cliente', () => {
     ordenesMock = [ot({ id: '1', estado: 'rechazada' }), ot({ id: '2', estado: 'pendiente' })];
     const { result } = renderHook(() => useOrdenesTrabajoPage(), { wrapper });
 
     act(() => { result.current.setFiltroEstado('rechazada'); });
 
-    expect(result.current.ordenes.map((o) => o.id)).toEqual(['1']);
+    // El servidor es la fuente de verdad: lo que devuelve la query se muestra tal cual
+    expect(result.current.ordenes.map((o) => o.id)).toEqual(['1', '2']);
   });
 });
 
 describe('resumenOT', () => {
-  it('agrega activas/urgentes/pendientes correctamente', () => {
-    ordenesMock = [
-      ot({ id: '1', estado: 'pendiente', prioridad: 'urgente' }),
-      ot({ id: '2', estado: 'borrador' }),
-      ot({ id: '3', estado: 'completada' }),
-    ];
+  it('expone el resumen del servidor tal cual (count head:true)', () => {
+    resumenMock = { activas: 2, pendientes: 1, urgentes: 1, vencidas: 3 };
 
     const { result } = renderHook(() => useOrdenesTrabajoPage(), { wrapper });
 
-    expect(result.current.resumenOT.activas).toBe(2); // pendiente + borrador
+    expect(result.current.resumenOT.activas).toBe(2);
     expect(result.current.resumenOT.urgentes).toBe(1);
-    expect(result.current.resumenOT.pendientes).toBe(1);
+    expect(result.current.resumenOT.vencidas).toBe(3);
     expect(result.current.pendientesCount).toBe(1);
   });
 });

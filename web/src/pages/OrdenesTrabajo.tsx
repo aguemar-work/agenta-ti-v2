@@ -78,6 +78,9 @@ export function OrdenesTrabajo() {
     ordenes,
     isLoading,
     isError,
+    hayMas,
+    cargarMas,
+    cargandoMas,
     pendientesCount,
     resumenOT,
     tiposActivos,
@@ -303,6 +306,19 @@ export function OrdenesTrabajo() {
                   onSelect={() => toggleOT(ot)}
                 />
               ))
+            )}
+
+            {hayMas && !isLoading && (
+              <div className="flex justify-center p-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={cargandoMas}
+                  onClick={() => void cargarMas()}
+                >
+                  Cargar más
+                </Button>
+              </div>
             )}
           </div>
         </div>

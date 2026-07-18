@@ -56,6 +56,7 @@
 
   --mc-color-warning:          #ffb224;
   --mc-color-warning-soft:     #fff4d5;
+  --mc-color-warning-text:     #8a5c00; /* texto/ícono warning sobre fondo claro: #ffb224 da ~1.8:1, AA exige 4.5:1 */
 
   --mc-color-danger:           #e5484d;
   --mc-color-danger-hover:     #dc3d43;
@@ -301,6 +302,7 @@ html.dark {
   --mc-color-success-soft:     #18301f;
   --mc-color-warning:          #ffc53d;
   --mc-color-warning-soft:     #2e2410;
+  --mc-color-warning-text:     #ffc53d; /* en dark el ámbar claro sí cumple AA */
   --mc-color-danger:           #ff6369;
   --mc-color-danger-hover:     #ff7a7f;
   --mc-color-danger-soft:      #341518;

@@ -13,7 +13,7 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
-  actualizarOrdenTrabajo, crearOrdenTrabajo, enviarOTAlJefe,
+  actualizarOrdenTrabajo, crearOrdenTrabajo, enviarOTAlJefe, getOrdenTrabajoPorId,
   type CrearOTInput, type EstadoOT, type OrdenTrabajo,
 } from '@/api/ordenTrabajo';
 import {
@@ -26,8 +26,6 @@ import { useOrdenesTrabajoQueries, Q_OT, Q_OT_BORRADOR } from '@/hooks/useOrdene
 import { useOTTiposTrabajo } from '@/hooks/useOTTiposTrabajo';
 import { useOTAcciones } from '@/hooks/useOTAcciones';
 import { qkWsId } from '@/lib/queryKeys';
-import { fechaLocalYmd } from '@/lib/fecha';
-import { otVencida } from '@/lib/otHelpers';
 import { labelNumeroOT } from '@/lib/otNumero';
 import type { Id } from '@/types';
 
@@ -58,26 +56,7 @@ export function useOrdenesTrabajoPage() {
   const [modalForm,  setModalForm]  = useState(false);
   const [editandoOT, setEditandoOT] = useState<OrdenTrabajo | null>(null);
 
-  const {
-    ordenes, isLoading, isError,
-    tiposTrabajo, tareasVinculables,
-    borradorServidor, borradorCargando,
-  } = useOrdenesTrabajoQueries({
-    usuarioId:            usuario?.id,
-    esJefe,
-    borradorModalAbierto: modalForm,
-    editandoOT:           Boolean(editandoOT),
-  });
-
-  // ── Sub-hooks ─────────────────────────────────────────────────────────────
-  const tipos    = useOTTiposTrabajo(tiposTrabajo);
-  const acciones = useOTAcciones({ ordenes, usuario });
-
-  // ── Estado auxiliar de vista ──────────────────────────────────────────────
-  const [viendoOT,      setViendoOT]      = useState<OrdenTrabajo | null>(null);
-  const [imprimiendoOT, setImprimiendoOT] = useState<OrdenTrabajo | null>(null);
-
-  // ── Filtro por URL ────────────────────────────────────────────────────────
+  // ── Filtro por URL (se resuelve en servidor: alimenta la query de lista) ──
   const [searchParams, setSearchParams] = useSearchParams();
   const filtroEstadoRaw = searchParams.get('estado') ?? 'todos';
   const filtroEstado: FiltroEstadoOT =
@@ -96,6 +75,27 @@ export function useOrdenesTrabajoPage() {
       { replace: true },
     );
   };
+
+  const {
+    ordenes, isLoading, isError,
+    resumen, hayMas, cargarMas, cargandoMas,
+    tiposTrabajo, tareasVinculables,
+    borradorServidor, borradorCargando,
+  } = useOrdenesTrabajoQueries({
+    usuarioId:            usuario?.id,
+    esJefe,
+    borradorModalAbierto: modalForm,
+    editandoOT:           Boolean(editandoOT),
+    filtro:               filtroEstado,
+  });
+
+  // ── Sub-hooks ─────────────────────────────────────────────────────────────
+  const tipos    = useOTTiposTrabajo(tiposTrabajo);
+  const acciones = useOTAcciones({ ordenes, usuario });
+
+  // ── Estado auxiliar de vista ──────────────────────────────────────────────
+  const [viendoOT,      setViendoOT]      = useState<OrdenTrabajo | null>(null);
+  const [imprimiendoOT, setImprimiendoOT] = useState<OrdenTrabajo | null>(null);
 
   // ── Form / draft / autosave ───────────────────────────────────────────────
   const [form,           setForm]           = useState<CrearOTInput>(() => formInicialOT(usuario?.id ?? ''));
@@ -266,47 +266,33 @@ export function useOrdenesTrabajoPage() {
     setEditandoOT(null);
   }
 
-  // Abre la OT indicada por navegación (state.abrirOtId) al cargar la lista
+  // Abre la OT indicada por navegación (state.abrirOtId) al cargar la lista.
+  // Con la lista paginada la OT puede no estar en las páginas cargadas: fallback por id.
   useEffect(() => {
     const otId = pendingAbrirOtIdRef.current;
     if (!otId || isLoading) return;
+    pendingAbrirOtIdRef.current = null;
     const ot = ordenes.find((o) => o.id === otId);
     if (ot) {
-      pendingAbrirOtIdRef.current = null;
       abrirEditarOT(ot);
       navigate('.', { replace: true, state: null });
+      return;
     }
+    void getOrdenTrabajoPorId(otId)
+      .then((otRemota) => { if (otRemota) abrirEditarOT(otRemota); })
+      .catch((err) => console.error('[abrirOtId]', err))
+      .finally(() => navigate('.', { replace: true, state: null }));
   }, [ordenes, isLoading, navigate]);
 
-  // ── Filtrado y resumen ────────────────────────────────────────────────────
-  const ESTADOS_OT_ACTIVAS: EstadoOT[] = ['borrador', 'pendiente', 'aprobada'];
-  const hoy = fechaLocalYmd(new Date());
-
-  const ordenesFiltradas = (() => {
-    if (filtroEstado === 'todos')       return ordenes;
-    if (filtroEstado === 'activas')     return ordenes.filter((o) => ESTADOS_OT_ACTIVAS.includes(o.estado));
-    if (filtroEstado === 'completadas') return ordenes.filter((o) => o.estado === 'completada');
-    if (filtroEstado === 'urgentes')    return ordenes.filter(
-      (o) => o.prioridad === 'urgente' && !['completada', 'cancelada', 'rechazada'].includes(o.estado),
-    );
-    if (filtroEstado === 'vencidas')    return ordenes.filter((o) => otVencida(o, hoy));
-    return ordenes.filter((o) => o.estado === filtroEstado);
-  })();
-
-  const pendientesCount = ordenes.filter((o) => o.estado === 'pendiente').length;
-
-  const resumenOT = {
-    activas:    ordenes.filter((o) => ESTADOS_OT_ACTIVAS.includes(o.estado)).length,
-    urgentes:   ordenes.filter(
-      (o) => o.prioridad === 'urgente' && !['completada', 'cancelada', 'rechazada'].includes(o.estado),
-    ).length,
-    vencidas:   ordenes.filter((o) => otVencida(o, hoy)).length,
-    pendientes: pendientesCount,
-  };
+  // ── Resumen ejecutivo (contadores exactos en servidor; el filtrado de la
+  //    lista también se resuelve en servidor vía useOrdenesTrabajoQueries) ───
+  const pendientesCount = resumen.pendientes;
+  const resumenOT = resumen;
 
   return {
     usuario, esJefe,
-    ordenes: ordenesFiltradas, isLoading, isError,
+    ordenes, isLoading, isError,
+    hayMas, cargarMas, cargandoMas,
     pendientesCount, resumenOT,
     tiposTrabajo, tareasVinculables,
     filtroEstado, setFiltroEstado,

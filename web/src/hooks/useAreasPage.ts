@@ -14,6 +14,7 @@ import {
   getAreas,
 } from '@/api/areas';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
+import { mensajeErrorInsforge } from '@/lib/insforgeError';
 import { qkWsId } from '@/lib/queryKeys';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
@@ -60,7 +61,7 @@ export function useAreasPage() {
       toast.success('Área creada');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo crear el área'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo crear el área')),
   });
 
   const mutActualizar = useMutation({
@@ -70,7 +71,7 @@ export function useAreasPage() {
       toast.success('Área actualizada');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo actualizar el área'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo actualizar el área')),
   });
 
   const mutDesactivar = useMutation({
@@ -80,7 +81,7 @@ export function useAreasPage() {
       toast.success('Área desactivada');
       setDesactivarId(null);
     },
-    onError: () => toast.error('No se pudo desactivar el área'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo desactivar el área')),
   });
 
   function abrirNuevo() {

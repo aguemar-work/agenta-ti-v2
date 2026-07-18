@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { Evento, NotaBitacora, Tarea, Usuario } from '@/types';
-import { OT_MIGRATION_028_APLICADA, ordenTrabajoCompletadaTieneReceptor } from '@/lib/otComplecion';
+import { ordenTrabajoCompletadaTieneReceptor } from '@/lib/otComplecion';
 
 const id      = z.string().uuid();
 const idNul   = z.string().uuid().nullable();
@@ -180,7 +180,6 @@ export const OrdenTrabajoSchema = z.object({
   tarea:        z.object({ titulo: z.string() }).nullable().optional(),
   objetivo:     z.object({ titulo: z.string() }).nullable().optional(),
 }).superRefine((ot, ctx) => {
-  if (!OT_MIGRATION_028_APLICADA) return;
   if (ordenTrabajoCompletadaTieneReceptor(ot)) return;
   if (!ot.receptor_nombre?.trim()) {
     ctx.addIssue({

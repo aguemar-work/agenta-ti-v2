@@ -1,13 +1,36 @@
 import { createClient } from 'npm:@insforge/sdk';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
+const CORS_BASE = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+/**
+ * Origins permitidos vía env ALLOWED_ORIGINS (lista separada por comas).
+ * Sin configurar se mantiene '*' por compatibilidad — configurar en prod
+ * (auditoría 2026-07-17, S6).
+ */
+function corsFor(req: Request): Record<string, string> {
+  const allowed = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+  if (allowed.length === 0) {
+    return { ...CORS_BASE, 'Access-Control-Allow-Origin': '*' };
+  }
+  const origin = (req.headers.get('Origin') ?? '').replace(/\/$/, '');
+  return {
+    ...CORS_BASE,
+    'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
+    Vary: 'Origin',
+  };
+}
+
 export default async function (req: Request): Promise<Response> {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  const cors = corsFor(req);
+  const json = (body: unknown, status: number) => jsonWith(cors, body, status);
+
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
 
   try {
@@ -62,9 +85,9 @@ export default async function (req: Request): Promise<Response> {
   }
 }
 
-function json(body: unknown, status: number): Response {
+function jsonWith(cors: Record<string, string>, body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
   });
 }

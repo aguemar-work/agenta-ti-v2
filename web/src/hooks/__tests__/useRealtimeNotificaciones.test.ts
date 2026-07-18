@@ -48,9 +48,13 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// QueryClient estable a nivel de módulo: crearlo dentro del wrapper le daba una
+// identidad nueva por render y, como `qc` está en las deps del efecto del hook,
+// cada rerender reconectaba (en producción es el singleton de lib/queryClient).
+let testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
 function wrapper({ children }: { children: ReactNode }) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return createElement(MemoryRouter, null, createElement(QueryClientProvider, { client: qc }, children));
+  return createElement(MemoryRouter, null, createElement(QueryClientProvider, { client: testQueryClient }, children));
 }
 
 const USUARIO = { id: 'u1', nombre: 'Ana', email: 'a@x.com', rol: 'jefe' as const, activo: true, created_at: '', updated_at: '' };
@@ -58,6 +62,7 @@ const USUARIO = { id: 'u1', nombre: 'Ana', email: 'a@x.com', rol: 'jefe' as cons
 beforeEach(() => {
   vi.clearAllMocks();
   handlers.clear();
+  testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   mockConnect.mockResolvedValue(undefined);
   useAuthStore.setState({ authUser: null, usuario: null, isLoading: false });
   useWorkspaceStore.setState({ rolActivo: null });
@@ -146,22 +151,23 @@ describe('useRealtimeNotificaciones', () => {
     expect(mockDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it('🐛 bug real: sin prefs explícitas, el parámetro por defecto crea un objeto nuevo en cada render y reconecta de más', async () => {
-    // AppShell.tsx llama useRealtimeNotificaciones(notifPrefs ?? undefined) — mientras
-    // notifPrefs es null (ventana inicial antes de cargar preferencias, useEffect en
-    // AppShell), el default param `prefs = getDefaultNotificationPrefs()` se re-evalúa
-    // en cada render con una identidad nueva. Como `prefs` está en el array de deps del
-    // useEffect, esto dispara cleanup+reconexión de más (no infinito: se autolimita
-    // porque setConectado(true) no cambia tras la 2da vez, pero sí duplica connect/
-    // subscribe/unsubscribe/disconnect innecesariamente). No se corrige aquí — es un
-    // cambio de código de producción fuera del alcance de "agregar tests".
+  it('sin prefs explícitas, el default es estable y conecta exactamente una vez (fix P8, 2026-07-18)', async () => {
+    // Antes el default param `prefs = getDefaultNotificationPrefs()` se re-evaluaba
+    // en cada render con identidad nueva y, al estar `prefs` en las deps del efecto,
+    // duplicaba connect/subscribe/unsubscribe/disconnect (este test documentaba el
+    // bug con toBeGreaterThan(1)). Ahora el default es DEFAULT_PREFS module-level:
+    // la ventana inicial de AppShell (notifPrefs null) ya no reconecta de más.
     useAuthStore.setState({ usuario: USUARIO });
     useWorkspaceStore.setState({ rolActivo: 'jefe' });
 
-    const { result } = renderHook(() => useRealtimeNotificaciones(), { wrapper });
+    const { result, rerender } = renderHook(() => useRealtimeNotificaciones(), { wrapper });
 
     await waitFor(() => expect(result.current.conectado).toBe(true));
-    await waitFor(() => expect(mockConnect.mock.calls.length).toBeGreaterThan(1));
+    rerender();
+    rerender();
+    await waitFor(() => expect(result.current.conectado).toBe(true));
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockDisconnect).not.toHaveBeenCalled();
   });
 
   it('si connect() falla, reintenta hasta 3 veces con backoff y luego se rinde (conectado=false)', async () => {

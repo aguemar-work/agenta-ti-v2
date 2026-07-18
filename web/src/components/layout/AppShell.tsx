@@ -13,7 +13,7 @@ import {
   Target,
   Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { AppBrandIcon, AppLogo } from '@/components/brand/AppLogo';
@@ -24,6 +24,7 @@ import { ModalPreferenciasNotificaciones } from '@/components/layout/ModalPrefer
 import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { ModalConfirmar } from '@/components/ui/ModalConfirmar';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import { useRealtimeNotificaciones } from '@/hooks/useRealtimeNotificaciones';
 import { useSlaAlertCount } from '@/hooks/useResumenSlaJefe';
 import { useSlaDigestToast } from '@/hooks/useSlaDigestToast';
@@ -154,6 +155,8 @@ export function AppShell() {
   useSlaDigestToast(notifPrefs);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mc-sidebar-collapsed') === '1');
   const [masDrawerOpen, setMasDrawerOpen] = useState(false);
+  const masDrawerRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(masDrawerOpen, () => setMasDrawerOpen(false), masDrawerRef);
   const [confirmandoLogout, setConfirmandoLogout] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [prefsModalOpen, setPrefsModalOpen] = useState(false);
@@ -385,11 +388,14 @@ export function AppShell() {
           )}
 
           <div
+            ref={masDrawerRef}
             className={`mc-mas-drawer ${masDrawerOpen ? 'mc-mas-drawer--open' : 'mc-mas-drawer--closed'}`}
             role={masDrawerOpen ? 'dialog' : undefined}
             aria-label={masDrawerOpen ? 'Más módulos' : undefined}
             aria-modal={masDrawerOpen ? true : undefined}
             aria-hidden={!masDrawerOpen}
+            inert={!masDrawerOpen || undefined}
+            tabIndex={masDrawerOpen ? -1 : undefined}
           >
             {masNav.map(({ to, label, icon: Icon }) => (
               <NavLink

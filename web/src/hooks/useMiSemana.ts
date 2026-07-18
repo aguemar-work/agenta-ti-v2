@@ -53,7 +53,13 @@ export function useMiSemanaData(usuarioId: string | undefined, semanaISO: string
 export function useMiSemanaMutations(usuarioId: string | undefined) {
   const qc = useQueryClient();
 
-  const invalidate = async () => {
+  // Invalidaciones escalonadas (auditoría 2026-07-17, rendimiento #5):
+  // antes toda mutación invalidaba las 9 familias (incluida la lista OT sin
+  // paginar y los KPIs que descargan histórico). Cada mutación invalida solo
+  // lo que puede haber cambiado.
+
+  /** Vistas de la semana/día: siempre afectadas por cualquier mutación de tarea/evento. */
+  const invalidateBase = async () => {
     const wsId = getWorkspaceId();
     if (!usuarioId || !wsId) return;
     await Promise.all([
@@ -62,8 +68,26 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tareas-hoy', usuarioId), exact: false }),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, 'tablero'), exact: false }),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, 'planificacion'), exact: false }),
+    ]);
+  };
+
+  /** + métricas: la mutación puede cambiar progreso de objetivos o KPIs (estado/creación). */
+  const invalidateConMetricas = async () => {
+    const wsId = getWorkspaceId();
+    if (!usuarioId || !wsId) return;
+    await Promise.all([
+      invalidateBase(),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_OBJ_PROG), exact: false }),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, Q_KPIS), exact: false }),
+    ]);
+  };
+
+  /** + OTs: la mutación puede afectar una OT vinculada o su embed (título/estado). */
+  const invalidateCompleto = async () => {
+    const wsId = getWorkspaceId();
+    if (!usuarioId || !wsId) return;
+    await Promise.all([
+      invalidateConMetricas(),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, 'ordenes-trabajo'), exact: false }),
       qc.invalidateQueries({ queryKey: qkWsId(wsId, 'semana', 'ot-por-tarea'), exact: false }),
     ]);
@@ -71,18 +95,18 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
 
   const mCrearPlan = useMutation({
     mutationFn: (input: CrearTareaPlanificadaInput) => crearTareaPlanificada(input),
-    onSuccess: invalidate,
+    onSuccess: invalidateConMetricas,
   });
 
   const mMoverDia = useMutation({
     mutationFn: (p: { tareaId: string; fecha: string; semana: string }) =>
       moverTareaADia(p.tareaId, p.fecha, p.semana),
-    onSuccess: invalidate,
+    onSuccess: invalidateConMetricas,
   });
 
   const mMoverEntre = useMutation({
     mutationFn: (p: { tareaId: string; nuevaFecha: string }) => moverTareaEntreDias(p.tareaId, p.nuevaFecha),
-    onSuccess: invalidate,
+    onSuccess: invalidateConMetricas,
   });
 
   const mEditar = useMutation({
@@ -95,18 +119,18 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       objetivo_id?: string | null;
       asignado_a?: string | null;
     }) => actualizarTarea(input),
-    onSuccess: invalidate,
+    onSuccess: invalidateCompleto,
   });
 
   const mEliminar = useMutation({
     mutationFn: (input: { tareaId: string; usuarioId: string; motivo: string }) => eliminarTareaConMotivo(input),
-    onSuccess: invalidate,
+    onSuccess: invalidateCompleto,
   });
 
   const mCancelar = useMutation({
     mutationFn: (input: { tareaId: string; motivo: string }) =>
       cambiarEstadoTarea({ tareaId: input.tareaId, nuevoEstado: 'cancelada', justificacion: input.motivo }),
-    onSuccess: invalidate,
+    onSuccess: invalidateCompleto,
   });
 
   const mCompletar = useMutation({
@@ -119,17 +143,17 @@ export function useMiSemanaMutations(usuarioId: string | undefined) {
       jefeIds?: string[];
     }) =>
       completarTareaConResumen(input),
-    onSuccess: invalidate,
+    onSuccess: invalidateCompleto,
   });
 
   const mIniciar = useMutation({
     mutationFn: (input: { tareaId: string; usuarioId: string }) => moverTareaColumna(input.tareaId, 'en_progreso', input.usuarioId),
-    onSuccess: invalidate,
+    onSuccess: invalidateConMetricas,
   });
 
   const mCrearEvento = useMutation({
     mutationFn: (input: CrearEventoUsuarioInput) => crearEventoUsuario(input),
-    onSuccess: invalidate,
+    onSuccess: invalidateBase,
   });
 
   const invalidateEventos = async () => {

@@ -16,6 +16,7 @@ import {
   type EstadoProyecto,
 } from '@/api/proyectos';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
+import { mensajeErrorInsforge } from '@/lib/insforgeError';
 import { qkWsId } from '@/lib/queryKeys';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
@@ -105,7 +106,7 @@ export function useProyectosPage() {
       toast.success('Proyecto creado');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo crear el proyecto'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo crear el proyecto')),
   });
 
   const mutActualizar = useMutation({
@@ -115,7 +116,7 @@ export function useProyectosPage() {
       toast.success('Proyecto actualizado');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo actualizar el proyecto'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo actualizar el proyecto')),
   });
 
   const mutArchivar = useMutation({
@@ -125,7 +126,7 @@ export function useProyectosPage() {
       toast.success('Proyecto archivado');
       setArchivarId(null);
     },
-    onError: () => toast.error('No se pudo archivar el proyecto'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo archivar el proyecto')),
   });
 
   function abrirNuevo() {

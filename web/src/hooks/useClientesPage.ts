@@ -14,6 +14,7 @@ import {
   getClientes,
 } from '@/api/clientes';
 import { useWorkspaceId } from '@/hooks/useWorkspaceId';
+import { mensajeErrorInsforge } from '@/lib/insforgeError';
 import { qkWsId } from '@/lib/queryKeys';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 
@@ -60,7 +61,7 @@ export function useClientesPage() {
       toast.success('Cliente creado');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo crear el cliente'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo crear el cliente')),
   });
 
   const mutActualizar = useMutation({
@@ -70,7 +71,7 @@ export function useClientesPage() {
       toast.success('Cliente actualizado');
       cerrarModal();
     },
-    onError: () => toast.error('No se pudo actualizar el cliente'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo actualizar el cliente')),
   });
 
   const mutDesactivar = useMutation({
@@ -80,7 +81,7 @@ export function useClientesPage() {
       toast.success('Cliente desactivado');
       setDesactivarId(null);
     },
-    onError: () => toast.error('No se pudo desactivar el cliente'),
+    onError: (err) => toast.error(mensajeErrorInsforge(err, 'No se pudo desactivar el cliente')),
   });
 
   function abrirNuevo() {
